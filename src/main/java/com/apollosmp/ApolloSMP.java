@@ -163,6 +163,20 @@ public class ApolloSMP extends JavaPlugin {
             long refresh = Math.max(5L, getConfig().getLong("scoreboard.refresh-ticks", 20));
             getServer().getScheduler().runTaskTimer(this, () -> board.updateAll(), refresh, refresh);
         }
+
+        // Ambient particles above business blocks.
+        getServer().getScheduler().runTaskTimer(this, () -> businesses.spawnParticles(), 40L, 15L);
+        // Live-refresh any open business panel (ticks the countdown + updates stored goods).
+        getServer().getScheduler().runTaskTimer(this, this::refreshBusinessMenus, 20L, 20L);
+    }
+
+    private void refreshBusinessMenus() {
+        for (Player player : getServer().getOnlinePlayers()) {
+            if (player.getOpenInventory().getTopInventory().getHolder()
+                    instanceof com.apollosmp.gui.menus.BusinessMenu menu) {
+                menu.redraw();
+            }
+        }
     }
 
     public void saveAll() {

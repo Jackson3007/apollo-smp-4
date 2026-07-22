@@ -72,12 +72,35 @@ public class BusinessMenu extends Gui {
         }
 
         double hourly = def != null ? def.hourlyValue(plugin.sell()) : 0;
+        List<String> info = new ArrayList<>();
+        info.add("<gray>Owner: <white>" + block.ownerName() + "</white>");
+        info.add("<gray>Income: <green>" + plugin.msg().money(hourly) + "/hr</green>");
+        if (def != null) {
+            info.add("<dark_gray>―――――――――――");
+            info.add("<gray>Produces per hour:");
+            for (Business.Product p : def.products()) {
+                info.add("  <white>" + Items.pretty(p.material()) + "</white> <dark_gray>-</dark_gray> <green>"
+                        + def.perHour(p) + "/hr</green>");
+            }
+            info.add("<dark_gray>―――――――――――");
+            boolean full = true;
+            for (Business.Product p : def.products()) {
+                if (block.storage().getOrDefault(p.material(), 0) < def.capacityFor(p)) {
+                    full = false;
+                    break;
+                }
+            }
+            if (full) {
+                info.add("<red><bold>Storage full!</bold></red> <gray>Collect to resume");
+            } else {
+                long nextInMs = Math.max(0, def.intervalMillis() - (System.currentTimeMillis() - block.lastGen()));
+                info.add("<gray>Next batch in: <#f9d423>" + formatTime(nextInMs) + "</#f9d423>");
+            }
+        }
+        info.add("<gray>Stored value: <#f9d423>" + plugin.msg().money(totalValue) + "</#f9d423>");
         inventory.setItem(4, Items.of(def != null ? def.block() : Material.CHEST)
                 .name(def != null ? def.displayName() : "<#f9d423>Business")
-                .lore("<gray>Owner: <white>" + block.ownerName() + "</white>",
-                        "<gray>Income: <green>" + plugin.msg().money(hourly) + "/hr</green>",
-                        "<gray>Stored value: <#f9d423>" + plugin.msg().money(totalValue) + "</#f9d423>")
-                .glow(true).hideAttributes().build());
+                .lore(info).glow(true).hideAttributes().build());
 
         for (int s = 36; s < 45; s++) {
             inventory.setItem(s, Items.filler(Material.BLACK_STAINED_GLASS_PANE));
@@ -161,6 +184,14 @@ public class BusinessMenu extends Gui {
         plugin.businesses().save();
         plugin.msg().send(player, "<green>Sold <white>" + sold + "</white> goods for <#f9d423>"
                 + plugin.msg().money(total) + "</#f9d423>.");
+    }
+
+    private static String formatTime(long millis) {
+        long totalSeconds = millis / 1000;
+        long minutes = totalSeconds / 60;
+        long seconds = totalSeconds % 60;
+        if (minutes > 0) return minutes + "m " + seconds + "s";
+        return seconds + "s";
     }
 
     /** Give up to {@code amount} of a material; returns the leftover that didn't fit. */

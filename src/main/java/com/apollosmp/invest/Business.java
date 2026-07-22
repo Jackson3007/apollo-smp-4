@@ -17,17 +17,20 @@ public class Business {
     private final String id;
     private final String displayName;   // MiniMessage
     private final String tagline;       // MiniMessage, short
+    private final String particleName;  // Bukkit Particle enum name (resolved safely)
     private final Material block;
     private final double price;
     private final int intervalSeconds;
     private final int capacityHours;
     private final List<Product> products;
 
-    public Business(String id, String displayName, String tagline, Material block, double price,
-                    int intervalSeconds, int capacityHours, List<Product> products) {
+    public Business(String id, String displayName, String tagline, String particleName,
+                    Material block, double price, int intervalSeconds, int capacityHours,
+                    List<Product> products) {
         this.id = id;
         this.displayName = displayName;
         this.tagline = tagline;
+        this.particleName = particleName;
         this.block = block;
         this.price = price;
         this.intervalSeconds = intervalSeconds;
@@ -38,12 +41,18 @@ public class Business {
     public String id() { return id; }
     public String displayName() { return displayName; }
     public String tagline() { return tagline; }
+    public String particleName() { return particleName; }
     public Material block() { return block; }
     public double price() { return price; }
     public int intervalSeconds() { return intervalSeconds; }
     public List<Product> products() { return products; }
 
     public long intervalMillis() { return intervalSeconds * 1000L; }
+
+    /** How many of a product are produced per hour. */
+    public int perHour(Product product) {
+        return product.amountPerInterval() * 3600 / intervalSeconds;
+    }
 
     /** Max amount of a given product this business can hold before it stops producing. */
     public int capacityFor(Product product) {

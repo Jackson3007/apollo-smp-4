@@ -39,9 +39,10 @@ public class BusinessShopMenu extends Gui {
             lore.add("<dark_gray>―――――――――――");
             lore.add("<gray>Price: <#f9d423>" + plugin.msg().money(b.price()) + "</#f9d423>");
             lore.add("<gray>Income: <green>" + plugin.msg().money(b.hourlyValue(plugin.sell())) + "/hr</green>");
-            lore.add("<gray>Produces:");
+            lore.add("<gray>Produces per hour:");
             for (Business.Product p : b.products()) {
-                lore.add("  <dark_gray>+</dark_gray> <white>" + Items.pretty(p.material()) + "</white>");
+                lore.add("  <dark_gray>+</dark_gray> <white>" + Items.pretty(p.material()) + "</white> "
+                        + "<gray>(<green>" + b.perHour(p) + "/hr</green>)");
             }
             lore.add("");
             lore.add(canAfford ? "<green>Click to buy" : "<red>You can't afford this yet");

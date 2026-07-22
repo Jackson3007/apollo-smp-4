@@ -2,9 +2,12 @@ package com.apollosmp.invest;
 
 import com.apollosmp.ApolloSMP;
 import com.apollosmp.util.Msg;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.Particle;
+import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -15,6 +18,7 @@ import org.bukkit.persistence.PersistentDataType;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -49,10 +53,11 @@ public class BusinessManager {
             lore.add(Msg.lore("<dark_gray>―――――――――――"));
             lore.add(Msg.lore("<gray>Income: <#f9d423>" + plugin.msg().money(business.hourlyValue(plugin.sell()))
                     + "/hr</#f9d423>"));
-            lore.add(Msg.lore("<gray>Produces:"));
+            lore.add(Msg.lore("<gray>Produces per hour:"));
             for (Business.Product p : business.products()) {
                 lore.add(Msg.lore("  <dark_gray>+</dark_gray> <white>"
-                        + com.apollosmp.util.Items.pretty(p.material()) + "</white>"));
+                        + com.apollosmp.util.Items.pretty(p.material()) + "</white> "
+                        + "<gray>(<green>" + business.perHour(p) + "/hr</green>)"));
             }
             lore.add(Msg.lore(""));
             lore.add(Msg.lore("<yellow>Place to start your business!"));
@@ -123,6 +128,37 @@ public class BusinessManager {
         int n = 0;
         for (BusinessBlock b : blocks.values()) if (b.owner().equals(owner)) n++;
         return n;
+    }
+
+    public Collection<BusinessBlock> all() {
+        return blocks.values();
+    }
+
+    /** Spawn ambient particles above every placed business block (called on a timer). */
+    public void spawnParticles() {
+        for (BusinessBlock b : blocks.values()) {
+            World world = Bukkit.getWorld(b.worldName());
+            if (world == null) continue;
+            if (!world.isChunkLoaded(b.x() >> 4, b.z() >> 4)) continue;
+            Business def = Businesses.get(b.businessId());
+            if (def == null) continue;
+            Particle particle = resolveParticle(def.particleName());
+            if (particle == null) continue;
+            Location loc = new Location(world, b.x() + 0.5, b.y() + 1.15, b.z() + 0.5);
+            world.spawnParticle(particle, loc, 6, 0.25, 0.2, 0.25, 0.01);
+        }
+    }
+
+    private Particle resolveParticle(String name) {
+        try {
+            return Particle.valueOf(name);
+        } catch (IllegalArgumentException | NullPointerException e) {
+            try {
+                return Particle.valueOf("HAPPY_VILLAGER");
+            } catch (Exception ignored) {
+                return null;
+            }
+        }
     }
 
     // ---- persistence ----
