@@ -108,7 +108,7 @@ orders:
 homes:
   # Home limits per permission rank. The plugin grants the HIGHEST matching value.
   # Give a rank permission like apollo.homes.5 to allow 5 homes.
-  default-limit: 2
+  default-limit: 5
   limits:
     "apollo.homes.5": 5
     "apollo.homes.10": 10
@@ -163,6 +163,7 @@ scoreboard:
     - ""
     - "<#f9d423>Stats</#f9d423>"
     - " <gray>Homes:</gray> <white>%homes%</white>"
+    - " <gray>Businesses:</gray> <white>%businesses%</white>"
     - " <gray>Listings:</gray> <white>%listings%</white>"
     - " <gray>Online:</gray> <white>%online%</white>"
     - "<dark_gray>▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪</dark_gray>"

@@ -131,7 +131,7 @@ public class HomesManager {
 
     /** Highest home limit granted by the player's permissions. */
     public int limitFor(Player player) {
-        int limit = plugin.getConfig().getInt("homes.default-limit", 2);
+        int limit = plugin.getConfig().getInt("homes.default-limit", 5);
         ConfigurationSection limits = plugin.getConfig().getConfigurationSection("homes.limits");
         if (limits != null) {
             for (String perm : limits.getKeys(false)) {

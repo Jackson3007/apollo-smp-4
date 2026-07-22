@@ -11,6 +11,7 @@ import com.apollosmp.commands.MenuCommand;
 import com.apollosmp.commands.OrderCommand;
 import com.apollosmp.commands.RtpCommand;
 import com.apollosmp.commands.SellCommand;
+import com.apollosmp.commands.TpaCommand;
 import com.apollosmp.economy.EconomyManager;
 import com.apollosmp.gui.GuiListener;
 import com.apollosmp.homes.HomesManager;
@@ -112,6 +113,13 @@ public class ApolloSMP extends JavaPlugin {
 
         reg("apollo", new AdminCommand(this));
         reg("invest", new InvestCommand(this));
+
+        TpaCommand tpaCommand = new TpaCommand(this);
+        reg("tpa", tpaCommand);
+        reg("tpahere", tpaCommand);
+        reg("tpaccept", tpaCommand);
+        reg("tpdeny", tpaCommand);
+        reg("tpacancel", tpaCommand);
     }
 
     private void reg(String name, CommandExecutor executor) {

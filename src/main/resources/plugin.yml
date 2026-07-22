@@ -64,6 +64,23 @@ commands:
     description: Open the investments menu
     aliases: [investments, business, businesses]
     usage: /invest
+  tpa:
+    description: Request to teleport to a player
+    usage: /tpa <player>
+  tpahere:
+    description: Request a player to teleport to you
+    usage: /tpahere <player>
+  tpaccept:
+    description: Accept a teleport request
+    aliases: [tpyes]
+    usage: /tpaccept [player]
+  tpdeny:
+    description: Deny a teleport request
+    aliases: [tpno]
+    usage: /tpdeny [player]
+  tpacancel:
+    description: Cancel your outgoing teleport request
+    usage: /tpacancel
 
 permissions:
   apollo.admin:
