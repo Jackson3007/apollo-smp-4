@@ -13,9 +13,11 @@ public class BusinessBlock {
     private final String worldName;
     private final int x, y, z;
     private final String businessId;
-    private final UUID owner;
-    private final String ownerName;
+    private UUID owner;
+    private String ownerName;
     private long lastGen;
+    private int level = 1;
+    private long producedSinceUpgrade = 0;
     private final Map<Material, Integer> storage = new EnumMap<>(Material.class);
 
     public BusinessBlock(String worldName, int x, int y, int z, String businessId,
@@ -45,14 +47,20 @@ public class BusinessBlock {
     public int y() { return y; }
     public int z() { return z; }
     public String businessId() { return businessId; }
+
     public UUID owner() { return owner; }
     public String ownerName() { return ownerName; }
+    public void setOwner(UUID owner, String ownerName) { this.owner = owner; this.ownerName = ownerName; }
+
     public long lastGen() { return lastGen; }
     public void setLastGen(long lastGen) { this.lastGen = lastGen; }
-    public Map<Material, Integer> storage() { return storage; }
 
-    public boolean isEmpty() {
-        for (int amount : storage.values()) if (amount > 0) return true;
-        return false;
-    }
+    public int level() { return level; }
+    public void setLevel(int level) { this.level = Math.max(1, level); }
+
+    public long producedSinceUpgrade() { return producedSinceUpgrade; }
+    public void setProducedSinceUpgrade(long value) { this.producedSinceUpgrade = Math.max(0, value); }
+    public void addProduced(long amount) { this.producedSinceUpgrade += Math.max(0, amount); }
+
+    public Map<Material, Integer> storage() { return storage; }
 }

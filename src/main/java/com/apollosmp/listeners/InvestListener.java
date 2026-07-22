@@ -6,6 +6,7 @@ import com.apollosmp.invest.Business;
 import com.apollosmp.invest.BusinessBlock;
 import com.apollosmp.invest.Businesses;
 import com.apollosmp.util.Items;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -36,11 +37,12 @@ public class InvestListener implements Listener {
         if (id == null) return;
         Business def = Businesses.get(id);
         if (def == null) return;
+        int level = plugin.businesses().readBusinessLevel(event.getItemInHand());
         Player player = event.getPlayer();
-        plugin.businesses().register(event.getBlockPlaced().getLocation(), id,
+        plugin.businesses().register(event.getBlockPlaced().getLocation(), id, level,
                 player.getUniqueId(), player.getName());
-        plugin.msg().send(player, "<green>You founded <reset>" + def.displayName()
-                + " <green>here! Right-click it to manage.");
+        plugin.msg().send(player, "<green>You set up <reset>" + def.displayName()
+                + " <gray>[L" + level + "]</gray> <green>here! Right-click it to manage.");
     }
 
     @EventHandler
@@ -49,23 +51,15 @@ public class InvestListener implements Listener {
         if (block == null) return;
         Player player = event.getPlayer();
 
-        boolean isOwner = block.owner().equals(player.getUniqueId());
-        if (!isOwner && !player.hasPermission("apollo.admin")) {
-            event.setCancelled(true);
-            plugin.msg().send(player, "<red>This business belongs to <white>"
-                    + block.ownerName() + "</white>.");
-            return;
-        }
-
-        // Owner (or admin) picks it up: return the business item and any stored product.
+        // Businesses are stealable: whoever breaks it takes the block (at its level) + stored goods.
         plugin.businesses().updateProduction(block);
         Business def = Businesses.get(block.businessId());
         event.setDropItems(false);
 
         if (def != null) {
-            Items.give(player, plugin.businesses().createItem(def));
+            Items.give(player, plugin.businesses().createItem(def, block.level()));
         }
-        for (Map.Entry<org.bukkit.Material, Integer> e : block.storage().entrySet()) {
+        for (Map.Entry<Material, Integer> e : block.storage().entrySet()) {
             int amount = e.getValue();
             while (amount > 0) {
                 int chunk = Math.min(e.getKey().getMaxStackSize(), amount);
@@ -74,7 +68,19 @@ public class InvestListener implements Listener {
             }
         }
         plugin.businesses().remove(block);
-        plugin.msg().send(player, "<yellow>Business collected. Place it again to relocate.");
+
+        boolean stole = !block.owner().equals(player.getUniqueId());
+        if (stole) {
+            plugin.msg().send(player, "<gold>You seized <white>" + block.ownerName()
+                    + "</white>'s business! It's yours to place now.");
+            Player victim = plugin.getServer().getPlayer(block.owner());
+            if (victim != null) {
+                plugin.msg().send(victim, "<red><white>" + player.getName()
+                        + "</white> stole your " + (def != null ? def.displayName() : "business") + "<red>!");
+            }
+        } else {
+            plugin.msg().send(player, "<yellow>Business collected. Place it again to relocate.");
+        }
     }
 
     @EventHandler
@@ -86,14 +92,9 @@ public class InvestListener implements Listener {
         BusinessBlock block = plugin.businesses().getAt(clicked.getLocation());
         if (block == null) return;
 
-        // It's a business block: take over the interaction.
+        // Anyone can open a business panel (they're not locked to one person).
         event.setCancelled(true);
         Player player = event.getPlayer();
-        if (!block.owner().equals(player.getUniqueId()) && !player.hasPermission("apollo.admin")) {
-            plugin.msg().send(player, "<red>This is <white>" + block.ownerName()
-                    + "</white>'s business.");
-            return;
-        }
         plugin.businesses().updateProduction(block);
         new BusinessMenu(plugin, player, block).open();
     }

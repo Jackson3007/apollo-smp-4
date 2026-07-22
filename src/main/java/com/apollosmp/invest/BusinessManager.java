@@ -1,7 +1,9 @@
 package com.apollosmp.invest;
 
 import com.apollosmp.ApolloSMP;
+import com.apollosmp.util.Items;
 import com.apollosmp.util.Msg;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -11,6 +13,7 @@ import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
@@ -24,12 +27,15 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Tracks placed business blocks: production, persistence, and the buyable item. */
+/** Tracks placed business blocks: production, upgrades, persistence, and the buyable item. */
 public class BusinessManager {
+
+    public enum UpgradeResult { SUCCESS, MAXED, NOT_ENOUGH_PRODUCED, NO_FUNDS, ERROR }
 
     private final ApolloSMP plugin;
     private final File file;
     private final NamespacedKey idKey;
+    private final NamespacedKey levelKey;
     private final Map<String, BusinessBlock> blocks = new ConcurrentHashMap<>();
     private volatile boolean dirty = false;
 
@@ -37,43 +43,56 @@ public class BusinessManager {
         this.plugin = plugin;
         this.file = new File(plugin.getDataFolder(), "businesses.yml");
         this.idKey = new NamespacedKey(plugin, "business_id");
+        this.levelKey = new NamespacedKey(plugin, "business_level");
         load();
     }
 
-    // ---- the buyable item ----
+    // ---- the buyable / tradeable item ----
 
-    /** Build the placeable item that represents a business. */
     public ItemStack createItem(Business business) {
+        return createItem(business, 1);
+    }
+
+    /** Build the placeable item for a business at a given level (level travels with it). */
+    public ItemStack createItem(Business business, int level) {
         ItemStack item = new ItemStack(business.block());
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(Msg.lore(business.displayName()));
-            List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
+            String name = business.displayName()
+                    + (level > 1 ? " <gray>[<white>L" + level + "</white>]</gray>" : "");
+            meta.displayName(Msg.lore(name));
+            List<Component> lore = new ArrayList<>();
             lore.add(Msg.lore(business.tagline()));
             lore.add(Msg.lore("<dark_gray>―――――――――――"));
-            lore.add(Msg.lore("<gray>Income: <#f9d423>" + plugin.msg().money(business.hourlyValue(plugin.sell()))
-                    + "/hr</#f9d423>"));
+            lore.add(Msg.lore("<gray>Level: <#f9d423>L" + level + "</#f9d423>"));
+            lore.add(Msg.lore("<gray>Income: <#f9d423>"
+                    + plugin.msg().money(business.hourlyValueAtLevel(plugin.sell(), level)) + "/hr</#f9d423>"));
             lore.add(Msg.lore("<gray>Produces per hour:"));
             for (Business.Product p : business.products()) {
-                lore.add(Msg.lore("  <dark_gray>+</dark_gray> <white>"
-                        + com.apollosmp.util.Items.pretty(p.material()) + "</white> "
-                        + "<gray>(<green>" + business.perHour(p) + "/hr</green>)"));
+                lore.add(Msg.lore("  <dark_gray>+</dark_gray> <white>" + Items.pretty(p.material())
+                        + "</white> <gray>(<green>" + business.perHourAtLevel(p, level) + "/hr</green>)"));
             }
             lore.add(Msg.lore(""));
             lore.add(Msg.lore("<yellow>Place to start your business!"));
             meta.lore(lore);
             meta.setEnchantmentGlintOverride(true);
             meta.getPersistentDataContainer().set(idKey, PersistentDataType.STRING, business.id());
+            meta.getPersistentDataContainer().set(levelKey, PersistentDataType.INTEGER, level);
             item.setItemMeta(meta);
         }
         return item;
     }
 
-    /** Returns the business id stored on an item, or null if it isn't a business item. */
     public String readBusinessId(ItemStack item) {
         if (item == null || item.getType().isAir() || !item.hasItemMeta()) return null;
-        return item.getItemMeta().getPersistentDataContainer()
-                .get(idKey, PersistentDataType.STRING);
+        return item.getItemMeta().getPersistentDataContainer().get(idKey, PersistentDataType.STRING);
+    }
+
+    public int readBusinessLevel(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) return 1;
+        Integer level = item.getItemMeta().getPersistentDataContainer()
+                .get(levelKey, PersistentDataType.INTEGER);
+        return level == null ? 1 : Math.max(1, level);
     }
 
     // ---- placed blocks ----
@@ -86,10 +105,11 @@ public class BusinessManager {
         return blocks.containsKey(BusinessBlock.key(loc));
     }
 
-    public void register(Location loc, String businessId, UUID owner, String ownerName) {
+    public void register(Location loc, String businessId, int level, UUID owner, String ownerName) {
         BusinessBlock block = new BusinessBlock(loc.getWorld().getName(),
                 loc.getBlockX(), loc.getBlockY(), loc.getBlockZ(),
                 businessId, owner, ownerName, System.currentTimeMillis());
+        block.setLevel(level);
         blocks.put(block.key(), block);
         dirty = true;
         save();
@@ -101,7 +121,7 @@ public class BusinessManager {
         save();
     }
 
-    /** Advance production up to the current time (and cap at storage limits). */
+    /** Advance production up to the current time, scaled by the block's level. */
     public void updateProduction(BusinessBlock block) {
         Business def = Businesses.get(block.businessId());
         if (def == null) return;
@@ -112,16 +132,43 @@ public class BusinessManager {
         if (elapsed < interval) return;
 
         long intervals = elapsed / interval;
+        long producedThisRun = 0;
         for (Business.Product p : def.products()) {
-            int cap = def.capacityFor(p);
+            int perInterval = def.amountAtLevel(p, block.level());
+            int cap = def.capacityForAtLevel(p, block.level());
             int current = block.storage().getOrDefault(p.material(), 0);
             if (current >= cap) continue;
-            long add = (long) p.amountPerInterval() * intervals;
+            long add = (long) perInterval * intervals;
             int next = (int) Math.min(cap, current + add);
+            producedThisRun += (next - current);
             block.storage().put(p.material(), next);
         }
+        block.addProduced(producedThisRun);
         block.setLastGen(block.lastGen() + intervals * interval);
         dirty = true;
+    }
+
+    public boolean canUpgrade(BusinessBlock block) {
+        Business def = Businesses.get(block.businessId());
+        if (def == null || block.level() >= Business.MAX_LEVEL) return false;
+        return block.producedSinceUpgrade() >= def.unitsToUpgrade(block.level());
+    }
+
+    public UpgradeResult tryUpgrade(Player player, BusinessBlock block) {
+        Business def = Businesses.get(block.businessId());
+        if (def == null) return UpgradeResult.ERROR;
+        if (block.level() >= Business.MAX_LEVEL) return UpgradeResult.MAXED;
+        if (block.producedSinceUpgrade() < def.unitsToUpgrade(block.level())) {
+            return UpgradeResult.NOT_ENOUGH_PRODUCED;
+        }
+        double cost = def.upgradeCost(block.level());
+        if (!plugin.economy().has(player.getUniqueId(), cost)) return UpgradeResult.NO_FUNDS;
+        plugin.economy().withdraw(player.getUniqueId(), cost);
+        block.setLevel(block.level() + 1);
+        block.setProducedSinceUpgrade(0);
+        dirty = true;
+        save();
+        return UpgradeResult.SUCCESS;
     }
 
     public int countOwnedBy(UUID owner) {
@@ -134,7 +181,8 @@ public class BusinessManager {
         return blocks.values();
     }
 
-    /** Spawn ambient particles above every placed business block (called on a timer). */
+    // ---- ambient particles ----
+
     public void spawnParticles() {
         for (BusinessBlock b : blocks.values()) {
             World world = Bukkit.getWorld(b.worldName());
@@ -176,6 +224,8 @@ public class BusinessManager {
             cfg.set(base + ".owner", b.owner().toString());
             cfg.set(base + ".ownerName", b.ownerName());
             cfg.set(base + ".lastGen", b.lastGen());
+            cfg.set(base + ".level", b.level());
+            cfg.set(base + ".produced", b.producedSinceUpgrade());
             for (Map.Entry<Material, Integer> e : b.storage().entrySet()) {
                 if (e.getValue() > 0) cfg.set(base + ".storage." + e.getKey().name(), e.getValue());
             }
@@ -204,6 +254,8 @@ public class BusinessManager {
                         UUID.fromString(s.getString("owner")),
                         s.getString("ownerName", "Unknown"),
                         s.getLong("lastGen"));
+                block.setLevel(s.getInt("level", 1));
+                block.setProducedSinceUpgrade(s.getLong("produced", 0));
                 ConfigurationSection store = s.getConfigurationSection("storage");
                 if (store != null) {
                     for (String matName : store.getKeys(false)) {

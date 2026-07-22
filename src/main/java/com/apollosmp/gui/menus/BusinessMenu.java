@@ -4,6 +4,7 @@ import com.apollosmp.ApolloSMP;
 import com.apollosmp.gui.Gui;
 import com.apollosmp.invest.Business;
 import com.apollosmp.invest.BusinessBlock;
+import com.apollosmp.invest.BusinessManager;
 import com.apollosmp.invest.Businesses;
 import com.apollosmp.util.Items;
 import org.bukkit.Material;
@@ -16,25 +17,27 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Manage a placed business block: view, collect, or sell its product. */
+/** Manage a placed business: view, collect, sell, and upgrade its level. */
 public class BusinessMenu extends Gui {
 
     private static final int[] PRODUCT_SLOTS = {19, 20, 21, 22, 23, 24, 25};
-    private static final int COLLECT_ALL = 39;
-    private static final int SELL_ALL = 41;
+    private static final int COLLECT_ALL = 38;
+    private static final int SELL_ALL = 40;
+    private static final int UPGRADE = 42;
     private static final int CLOSE = 44;
 
     private final BusinessBlock block;
     private final Map<Integer, Material> slotToMaterial = new HashMap<>();
 
     public BusinessMenu(ApolloSMP plugin, Player viewer, BusinessBlock block) {
-        super(plugin, viewer, 5, businessTitle(block));
+        super(plugin, viewer, 5, title(block));
         this.block = block;
     }
 
-    private static String businessTitle(BusinessBlock block) {
+    private static String title(BusinessBlock block) {
         Business def = Businesses.get(block.businessId());
-        return def != null ? def.displayName() : "<#f9d423>Business";
+        String base = def != null ? def.displayName() : "<#f9d423>Business";
+        return base + " <gray>[L" + block.level() + "]</gray>";
     }
 
     @Override
@@ -45,7 +48,6 @@ public class BusinessMenu extends Gui {
 
         double totalValue = 0;
         int totalItems = 0;
-
         int i = 0;
         for (Map.Entry<Material, Integer> e : block.storage().entrySet()) {
             int amount = e.getValue();
@@ -59,48 +61,16 @@ public class BusinessMenu extends Gui {
                     .name("<white>" + Items.pretty(e.getKey()))
                     .lore("<gray>Stored: <white>" + amount + "</white>",
                             "<gray>Worth: <#f9d423>" + plugin.msg().money(value) + "</#f9d423>",
-                            "",
-                            "<yellow>Click to collect this")
+                            "", "<yellow>Click to collect this")
                     .hideAttributes().build());
         }
-
         if (totalItems == 0) {
             inventory.setItem(22, Items.of(Material.STRUCTURE_VOID)
                     .name("<gray>Empty")
-                    .lore("<gray>Come back later - your business",
-                            "<gray>is still producing.").build());
+                    .lore("<gray>Come back later - your business", "<gray>is still producing.").build());
         }
 
-        double hourly = def != null ? def.hourlyValue(plugin.sell()) : 0;
-        List<String> info = new ArrayList<>();
-        info.add("<gray>Owner: <white>" + block.ownerName() + "</white>");
-        info.add("<gray>Income: <green>" + plugin.msg().money(hourly) + "/hr</green>");
-        if (def != null) {
-            info.add("<dark_gray>―――――――――――");
-            info.add("<gray>Produces per hour:");
-            for (Business.Product p : def.products()) {
-                info.add("  <white>" + Items.pretty(p.material()) + "</white> <dark_gray>-</dark_gray> <green>"
-                        + def.perHour(p) + "/hr</green>");
-            }
-            info.add("<dark_gray>―――――――――――");
-            boolean full = true;
-            for (Business.Product p : def.products()) {
-                if (block.storage().getOrDefault(p.material(), 0) < def.capacityFor(p)) {
-                    full = false;
-                    break;
-                }
-            }
-            if (full) {
-                info.add("<red><bold>Storage full!</bold></red> <gray>Collect to resume");
-            } else {
-                long nextInMs = Math.max(0, def.intervalMillis() - (System.currentTimeMillis() - block.lastGen()));
-                info.add("<gray>Next batch in: <#f9d423>" + formatTime(nextInMs) + "</#f9d423>");
-            }
-        }
-        info.add("<gray>Stored value: <#f9d423>" + plugin.msg().money(totalValue) + "</#f9d423>");
-        inventory.setItem(4, Items.of(def != null ? def.block() : Material.CHEST)
-                .name(def != null ? def.displayName() : "<#f9d423>Business")
-                .lore(info).glow(true).hideAttributes().build());
+        inventory.setItem(4, buildInfo(def, totalValue));
 
         for (int s = 36; s < 45; s++) {
             inventory.setItem(s, Items.filler(Material.BLACK_STAINED_GLASS_PANE));
@@ -114,31 +84,105 @@ public class BusinessMenu extends Gui {
                 .lore("<gray>Sell everything for <#f9d423>" + plugin.msg().money(totalValue) + "</#f9d423>",
                         "", totalValue > 0 ? "<yellow>Click to sell" : "<dark_gray>Nothing to sell yet")
                 .glow(totalValue > 0).hideAttributes().build());
+        inventory.setItem(UPGRADE, buildUpgrade(def));
         inventory.setItem(CLOSE, Items.of(Material.BARRIER).name("<red>Close").build());
 
         fillEmpty(Items.filler(Material.GRAY_STAINED_GLASS_PANE));
     }
 
+    private ItemStack buildInfo(Business def, double totalValue) {
+        double hourly = def != null ? def.hourlyValueAtLevel(plugin.sell(), block.level()) : 0;
+        List<String> info = new ArrayList<>();
+        info.add("<gray>Owner: <white>" + block.ownerName() + "</white>");
+        info.add("<gray>Level: <#f9d423>L" + block.level() + "</#f9d423>");
+        info.add("<gray>Income: <green>" + plugin.msg().money(hourly) + "/hr</green>");
+        if (def != null) {
+            info.add("<dark_gray>―――――――――――");
+            info.add("<gray>Produces per hour:");
+            for (Business.Product p : def.products()) {
+                info.add("  <white>" + Items.pretty(p.material()) + "</white> <dark_gray>-</dark_gray> <green>"
+                        + def.perHourAtLevel(p, block.level()) + "/hr</green>");
+            }
+            info.add("<dark_gray>―――――――――――");
+            boolean full = true;
+            for (Business.Product p : def.products()) {
+                if (block.storage().getOrDefault(p.material(), 0) < def.capacityForAtLevel(p, block.level())) {
+                    full = false;
+                    break;
+                }
+            }
+            if (full) {
+                info.add("<red><bold>Storage full!</bold></red> <gray>Collect to resume");
+            } else {
+                long nextInMs = Math.max(0, def.intervalMillis() - (System.currentTimeMillis() - block.lastGen()));
+                info.add("<gray>Next batch in: <#f9d423>" + formatTime(nextInMs) + "</#f9d423>");
+            }
+        }
+        info.add("<gray>Stored value: <#f9d423>" + plugin.msg().money(totalValue) + "</#f9d423>");
+        return Items.of(def != null ? def.block() : Material.CHEST)
+                .name(def != null ? def.displayName() + " <gray>[L" + block.level() + "]</gray>" : "<#f9d423>Business")
+                .lore(info).glow(true).hideAttributes().build();
+    }
+
+    private ItemStack buildUpgrade(Business def) {
+        if (def == null) {
+            return Items.filler(Material.GRAY_STAINED_GLASS_PANE);
+        }
+        if (block.level() >= Business.MAX_LEVEL) {
+            return Items.of(Material.NETHER_STAR)
+                    .name("<#f9d423><bold>Max Level</bold>")
+                    .lore("<gray>This business is fully upgraded", "<gray>at <#f9d423>L" + Business.MAX_LEVEL + "</#f9d423>.")
+                    .glow(true).hideAttributes().build();
+        }
+        int next = block.level() + 1;
+        double cost = def.upgradeCost(block.level());
+        long required = def.unitsToUpgrade(block.level());
+        long progress = block.producedSinceUpgrade();
+        boolean ready = progress >= required;
+        boolean affordable = plugin.economy().has(viewer.getUniqueId(), cost);
+
+        List<String> lore = new ArrayList<>();
+        lore.add("<gray>Upgrade <#f9d423>L" + block.level() + "</#f9d423> <gray>-> <#f9d423>L" + next + "</#f9d423>");
+        lore.add("<gray>Boost: <green>+60% production</green>");
+        lore.add("<gray>Cost: <#f9d423>" + plugin.msg().money(cost) + "</#f9d423>");
+        lore.add("<gray>Progress: <white>" + Math.min(progress, required) + "</white><gray>/</gray><white>"
+                + required + "</white> <gray>units");
+        lore.add("");
+        if (!ready) {
+            lore.add("<red>Produce " + (required - progress) + " more units to unlock");
+        } else if (!affordable) {
+            lore.add("<red>You need " + plugin.msg().money(cost) + " to upgrade");
+        } else {
+            lore.add("<green><bold>Click to upgrade!</bold>");
+        }
+        return Items.of(ready && affordable ? Material.EXPERIENCE_BOTTLE : Material.BOOK)
+                .name("<#b7f542><bold>Upgrade Business</bold>")
+                .lore(lore).glow(ready && affordable).hideAttributes().build();
+    }
+
     @Override
     public void onClick(Player player, int slot, ItemStack clicked, ClickType click) {
-        if (slot == CLOSE) {
-            player.closeInventory();
-            return;
+        switch (slot) {
+            case CLOSE -> player.closeInventory();
+            case COLLECT_ALL -> { collectAll(player); redraw(); }
+            case SELL_ALL -> { sellAll(player); redraw(); }
+            case UPGRADE -> { doUpgrade(player); redraw(); }
+            default -> {
+                Material mat = slotToMaterial.get(slot);
+                if (mat != null) { collectOne(player, mat); redraw(); }
+            }
         }
-        if (slot == COLLECT_ALL) {
-            collectAll(player);
-            redraw();
-            return;
-        }
-        if (slot == SELL_ALL) {
-            sellAll(player);
-            redraw();
-            return;
-        }
-        Material mat = slotToMaterial.get(slot);
-        if (mat != null) {
-            collectOne(player, mat);
-            redraw();
+    }
+
+    private void doUpgrade(Player player) {
+        BusinessManager.UpgradeResult result = plugin.businesses().tryUpgrade(player, block);
+        switch (result) {
+            case SUCCESS -> plugin.msg().send(player, "<green>Upgraded to <#f9d423>L" + block.level()
+                    + "</#f9d423>! Production increased.");
+            case MAXED -> plugin.msg().send(player, "<gray>This business is already max level.");
+            case NOT_ENOUGH_PRODUCED -> plugin.msg().send(player, "<red>It hasn't produced enough yet.");
+            case NO_FUNDS -> plugin.msg().send(player, "<red>You can't afford the upgrade.");
+            case ERROR -> plugin.msg().send(player, "<red>Something went wrong.");
         }
     }
 
@@ -149,9 +193,7 @@ public class BusinessMenu extends Gui {
         if (leftover <= 0) block.storage().remove(mat);
         else block.storage().put(mat, leftover);
         plugin.businesses().save();
-        if (leftover >= amount) {
-            plugin.msg().send(player, "<red>Your inventory is full.");
-        }
+        if (leftover >= amount) plugin.msg().send(player, "<red>Your inventory is full.");
     }
 
     private void collectAll(Player player) {
@@ -194,18 +236,16 @@ public class BusinessMenu extends Gui {
         return seconds + "s";
     }
 
-    /** Give up to {@code amount} of a material; returns the leftover that didn't fit. */
     private int giveUpTo(Player player, Material mat, int amount) {
         int remaining = amount;
         int maxStack = mat.getMaxStackSize();
         while (remaining > 0) {
             int chunk = Math.min(maxStack, remaining);
-            ItemStack stack = new ItemStack(mat, chunk);
-            Map<Integer, ItemStack> overflow = player.getInventory().addItem(stack);
+            Map<Integer, ItemStack> overflow = player.getInventory().addItem(new ItemStack(mat, chunk));
             int notAdded = 0;
             for (ItemStack leftover : overflow.values()) notAdded += leftover.getAmount();
             remaining -= (chunk - notAdded);
-            if (notAdded > 0) break; // inventory full
+            if (notAdded > 0) break;
         }
         return remaining;
     }
