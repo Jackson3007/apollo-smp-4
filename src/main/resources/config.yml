@@ -1,0 +1,172 @@
+# =====================================================================
+#   █████╗ ██████╗  ██████╗ ██╗     ██╗      ██████╗     ███████╗███╗   ███╗██████╗
+#  ██╔══██╗██╔══██╗██╔═══██╗██║     ██║     ██╔═══██╗    ██╔════╝████╗ ████║██╔══██╗
+#  ███████║██████╔╝██║   ██║██║     ██║     ██║   ██║    ███████╗██╔████╔██║██████╔╝
+#  ██╔══██║██╔═══╝ ██║   ██║██║     ██║     ██║   ██║    ╚════██║██║╚██╔╝██║██╔═══╝
+#  ██║  ██║██║     ╚██████╔╝███████╗███████╗╚██████╔╝    ███████║██║ ╚═╝ ██║██║
+#  ╚═╝  ╚═╝╚═╝      ╚═════╝ ╚══════╝╚══════╝ ╚═════╝     ╚══════╝╚═╝     ╚═╝╚═╝
+#
+#  All text supports MiniMessage formatting: <gradient>, <color>, <bold>, etc.
+#  Docs: https://docs.advntr.dev/minimessage/format.html
+# =====================================================================
+
+branding:
+  # Shown in chat prefix, menus, and the sidebar title.
+  server-name: "Apollo SMP"
+  # A short tag used in the chat prefix.
+  prefix: "<gradient:#f9d423:#ff4e50><bold>Apollo</bold></gradient> <dark_gray>»</dark_gray> "
+  # Primary + accent colors reused across menus (MiniMessage color or hex).
+  primary: "#f9d423"
+  accent: "#ff4e50"
+  # Gradient used for big titles.
+  title-gradient-from: "#f9d423"
+  title-gradient-to: "#ff4e50"
+
+economy:
+  # Currency symbol shown before amounts, e.g. $1,250
+  symbol: "$"
+  # Singular / plural names, used in some messages.
+  name-singular: "Dollar"
+  name-plural: "Dollars"
+  # Starting balance for brand-new players.
+  starting-balance: 500.0
+  # Max number of decimal places to display (money is stored as a double).
+  decimals: 2
+  # If false, /pay is disabled.
+  allow-pay: true
+  # Percentage tax taken on /pay (0 = none). 5 = 5%.
+  pay-tax-percent: 0.0
+
+sell:
+  # Prices the SERVER pays you per item when using /sell.
+  # Material names: https://jd.papermc.io/paper/1.21/org/bukkit/Material.html
+  # Anything not listed here cannot be sold to the server.
+  prices:
+    # Ores / minerals
+    COAL: 2.0
+    RAW_IRON: 4.0
+    RAW_COPPER: 2.5
+    RAW_GOLD: 8.0
+    IRON_INGOT: 6.0
+    GOLD_INGOT: 12.0
+    COPPER_INGOT: 3.0
+    DIAMOND: 45.0
+    EMERALD: 30.0
+    LAPIS_LAZULI: 3.0
+    REDSTONE: 2.0
+    QUARTZ: 2.5
+    NETHERITE_SCRAP: 120.0
+    ANCIENT_DEBRIS: 150.0
+    # Farming
+    WHEAT: 1.0
+    CARROT: 1.0
+    POTATO: 1.0
+    BEETROOT: 1.0
+    SUGAR_CANE: 1.0
+    PUMPKIN: 2.0
+    MELON_SLICE: 0.5
+    NETHER_WART: 2.0
+    # Mob drops
+    ROTTEN_FLESH: 0.5
+    BONE: 1.0
+    STRING: 1.0
+    GUNPOWDER: 3.0
+    SPIDER_EYE: 1.5
+    ENDER_PEARL: 12.0
+    BLAZE_ROD: 10.0
+    GHAST_TEAR: 25.0
+    SLIME_BALL: 3.0
+    # Wood
+    OAK_LOG: 1.0
+    SPRUCE_LOG: 1.0
+    BIRCH_LOG: 1.0
+    JUNGLE_LOG: 1.0
+    ACACIA_LOG: 1.0
+    DARK_OAK_LOG: 1.0
+    CHERRY_LOG: 1.5
+    MANGROVE_LOG: 1.5
+
+auction-house:
+  # Max active listings a single player may have at once.
+  max-listings-per-player: 10
+  # How long (in hours) a listing stays up before expiring and being returned.
+  listing-duration-hours: 48
+  # Percentage fee charged to the SELLER when they list an item (of the sale price).
+  listing-tax-percent: 3.0
+  # Minimum / maximum price a listing may be set to.
+  min-price: 1.0
+  max-price: 100000000.0
+
+orders:
+  # Max active buy-orders a single player may have at once.
+  max-orders-per-player: 5
+  # Percentage fee charged to the BUYER when the order is fulfilled.
+  fulfil-tax-percent: 3.0
+  min-price: 1.0
+  max-price: 100000000.0
+
+homes:
+  # Home limits per permission rank. The plugin grants the HIGHEST matching value.
+  # Give a rank permission like apollo.homes.5 to allow 5 homes.
+  default-limit: 2
+  limits:
+    "apollo.homes.5": 5
+    "apollo.homes.10": 10
+    "apollo.homes.unlimited": 9999
+  # Seconds to wait before teleporting (movement cancels it). 0 = instant.
+  warmup-seconds: 3
+  # Cost to teleport home (0 = free).
+  teleport-cost: 0.0
+
+rtp:
+  # World players are sent to for /rtp and join spawns.
+  world: "world"
+  # Search radius (blocks from center). Kept inside the border automatically.
+  max-radius: 9000
+  min-radius: 250
+  # Blacklisted surface blocks (won't drop you into these).
+  avoid-blocks: [LAVA, WATER, FIRE, CACTUS, MAGMA_BLOCK, POWDER_SNOW]
+  # Cooldown between /rtp uses (seconds).
+  cooldown-seconds: 30
+  # Cost per /rtp (0 = free).
+  cost: 0.0
+  # Give every brand-new player a random spawn on first join.
+  random-spawn-on-first-join: true
+  # Teleport EVERY player to the wild each time they join (no fixed spawn).
+  # Set to false if you'd rather players log back in where they left off.
+  wild-on-join: true
+
+world-border:
+  enabled: true
+  # World -> border diameter in blocks (centered on 0,0). 20000 = 20k x 20k.
+  worlds:
+    world: 20000
+    world_nether: 2500
+    world_the_end: 20000
+  # Warning distance (blocks) for the red border effect.
+  warning-distance: 32
+
+scoreboard:
+  enabled: true
+  # Title shown at the top of the sidebar.
+  title: "<gradient:#f9d423:#ff4e50><bold>APOLLO SMP</bold></gradient>"
+  # Refresh rate in server ticks (20 = 1s).
+  refresh-ticks: 20
+  # Lines top-to-bottom. Placeholders:
+  #   %balance% %balance_raw% %player% %online% %world% %homes% %listings% %x% %y% %z%
+  lines:
+    - "<dark_gray>▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪</dark_gray>"
+    - "<gray>Player:</gray> <white>%player%</white>"
+    - ""
+    - "<#f9d423>Balance</#f9d423>"
+    - " <white>%balance%</white>"
+    - ""
+    - "<#f9d423>Stats</#f9d423>"
+    - " <gray>Homes:</gray> <white>%homes%</white>"
+    - " <gray>Listings:</gray> <white>%listings%</white>"
+    - " <gray>Online:</gray> <white>%online%</white>"
+    - "<dark_gray>▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪</dark_gray>"
+    - "<#ff4e50>play.apollosmp.net</#ff4e50>"
+
+# Data auto-saves on a timer as a safety net (minutes). Changes also save immediately.
+autosave-minutes: 5

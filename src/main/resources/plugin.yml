@@ -1,0 +1,74 @@
+name: ApolloSMP
+version: '${project.version}'
+main: com.apollosmp.ApolloSMP
+api-version: '26.2'
+author: Apollo SMP
+description: Branded economy core for Apollo SMP - money, /sell, auction house, buy orders, homes, RTP, world border and a branded sidebar.
+website: https://apollosmp.example
+
+commands:
+  balance:
+    description: Check your balance (opens the menu with no args)
+    aliases: [bal, money, wallet]
+    usage: /balance [player]
+  pay:
+    description: Pay another player
+    usage: /pay <player> <amount>
+  baltop:
+    description: View the richest players
+    aliases: [balancetop, rich]
+    usage: /baltop
+  eco:
+    description: Admin economy management
+    usage: /eco <give|take|set> <player> <amount>
+    permission: apollo.admin
+  sell:
+    description: Sell items to the server
+    aliases: [shop]
+    usage: /sell [hand|all]
+  ah:
+    description: Open the Apollo auction house
+    aliases: [auctionhouse, auction]
+    usage: /ah [sell <price>]
+  orders:
+    description: Open the buy-orders board
+    aliases: [order, buyorders]
+    usage: /orders [create <price> [amount]]
+  sethome:
+    description: Set a home at your location
+    usage: /sethome [name]
+  delhome:
+    description: Delete a home
+    usage: /delhome <name>
+  home:
+    description: Teleport to a home
+    usage: /home [name]
+  homes:
+    description: Open your homes menu
+    aliases: [homelist]
+    usage: /homes
+  rtp:
+    description: Random teleport within the world border
+    aliases: [wild, randomtp]
+    usage: /rtp
+  apollo:
+    description: Apollo SMP admin root command
+    aliases: [apollosmp]
+    usage: /apollo <reload|version>
+    permission: apollo.admin
+  menu:
+    description: Open the Apollo main menu
+    aliases: [apollomenu]
+    usage: /menu
+  invest:
+    description: Open the investments menu
+    aliases: [investments, business, businesses]
+    usage: /invest
+
+permissions:
+  apollo.admin:
+    description: Full administrative access to Apollo SMP
+    default: op
+  apollo.homes.max:
+    description: Base home permission (limit is configured per-rank in config.yml)
+    default: true
