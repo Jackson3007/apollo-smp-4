@@ -126,18 +126,22 @@ public class AuctionMenu extends Gui {
         if (!mine) {
             inventory.setItem(48, Items.of(Material.SPYGLASS)
                     .name("<#5ad1e8><bold>Search</bold>")
-                    .lore("<gray>Browse by category, sort by price,",
-                            "<gray>or search by name.",
+                    .lore(query == null
+                                    ? "<gray>Find an item by name."
+                                    : "<gray>Showing: <white>" + query + "</white>",
+                            "<dark_gray>Or use /ah <item>",
                             "",
-                            "<gray>Category: <white>" + (category == null ? "All" : pretty(category)) + "</white>",
-                            "<gray>Sort: <white>" + sortName(sort) + "</white>",
-                            query == null ? "" : "<gray>Name: <white>" + query + "</white>",
-                            "",
-                            "<yellow>Click to open search")
-                    .glow(filtered()).hideAttributes().build());
+                            "<yellow>Click, then type what you want")
+                    .glow(query != null).hideAttributes().build());
+
+            inventory.setItem(50, Items.of(Material.HOPPER)
+                    .name("<#f9d423><bold>Sort: " + sortName(sort) + "</bold>")
+                    .lore("<gray>Click to change the order.",
+                            "<dark_gray>Newest, cheapest, dearest, ending soon")
+                    .hideAttributes().build());
             if (filtered()) {
                 inventory.setItem(52, Items.of(Material.BARRIER)
-                        .name("<red>Clear Filters")
+                        .name("<red>Clear Search")
                         .lore("<gray>Show all listings again.").build());
             }
         }
@@ -181,7 +185,17 @@ public class AuctionMenu extends Gui {
             case 46 -> new MainMenu(plugin, player).open();
             case 47 -> new AuctionMenu(plugin, player, !mine, 0).open();
             case 48 -> {
-                if (!mine) new AuctionSearchMenu(plugin, player, category, sort, query).open();
+                if (mine) return;
+                player.closeInventory();
+                plugin.msg().send(player, "<#5ad1e8>Type the item you're looking for</#5ad1e8> "
+                        + "<gray>(or 'cancel').");
+                final String keepSort = sort;
+                plugin.prompts().await(player, typed ->
+                        new AuctionMenu(plugin, player, false, 0, typed, null, keepSort).open());
+            }
+            case 50 -> {
+                if (mine) return;
+                new AuctionMenu(plugin, player, false, 0, query, category, nextSort(sort)).open();
             }
             case 52 -> { if (filtered()) new AuctionMenu(plugin, player, false, 0).open(); }
             case 51 -> {
@@ -212,6 +226,15 @@ public class AuctionMenu extends Gui {
         }
     }
 
+    private String nextSort(String current) {
+        return switch (current == null ? "recent" : current) {
+            case "recent" -> "price_low";
+            case "price_low" -> "price_high";
+            case "price_high" -> "ending";
+            default -> "recent";
+        };
+    }
+
     private String sortName(String s) {
         return switch (s) {
             case "price_low" -> "Price (low)";
@@ -238,7 +261,7 @@ public class AuctionMenu extends Gui {
         };
     }
 
-    /** Category test shared with AuctionSearchMenu's category ids. */
+    /** Category filter, kept for /ah category queries. */
     private boolean inCategory(ItemStack it, String cat) {
         Material m = it.getType();
         String n = m.name();

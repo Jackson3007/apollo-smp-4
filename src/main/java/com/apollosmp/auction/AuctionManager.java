@@ -38,9 +38,11 @@ public class AuctionManager {
     private long durationMillis() {
         return plugin.getConfig().getLong("auction-house.listing-duration-hours", 48) * 3600_000L;
     }
-    private double listingTaxPercent() { return plugin.getConfig().getDouble("auction-house.listing-tax-percent", 3.0); }
-    private double minPrice() { return plugin.getConfig().getDouble("auction-house.min-price", 1.0); }
-    private double maxPrice() { return plugin.getConfig().getDouble("auction-house.max-price", 1.0E8); }
+    // New keys, so an older config can't reimpose the old limits.
+    private double minPrice() { return plugin.getConfig().getDouble("auction-house.min-listing-price", 1.0); }
+    private double maxPrice() {
+        return plugin.getConfig().getDouble("auction-house.max-listing-price", 1_000_000_000_000.0);
+    }
 
     // ---- queries ----
     public List<Listing> active() {
@@ -73,10 +75,7 @@ public class AuctionManager {
         if (price < minPrice()) return ListResult.PRICE_LOW;
         if (price > maxPrice()) return ListResult.PRICE_HIGH;
 
-        double tax = price * (listingTaxPercent() / 100.0);
-        if (tax > 0 && !plugin.economy().withdraw(seller.getUniqueId(), tax)) {
-            return ListResult.NO_FUNDS_FOR_TAX;
-        }
+        // Listing is free - no fee is taken.
 
         ItemStack listed = hand.clone();
         // Drop the inventory price tag so listings show only the asking price.

@@ -101,11 +101,10 @@ auction-house:
   # Listings are unlimited - there is no per-player cap.
   # How long (in hours) a listing stays up before expiring and being returned.
   listing-duration-hours: 48
-  # Percentage fee charged to the SELLER when they list an item (of the sale price).
-  listing-tax-percent: 3.0
-  # Minimum / maximum price a listing may be set to.
-  min-price: 1.0
-  max-price: 100000000.0
+  # Listing is free - no fee is charged to the seller.
+  # Price range a listing may be set to.
+  min-listing-price: 1.0
+  max-listing-price: 1000000000000.0
 
 orders:
   # Max active buy-orders a single player may have at once.
