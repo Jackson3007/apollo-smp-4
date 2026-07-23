@@ -55,40 +55,23 @@ public class PlayerListener implements Listener {
 
     private void sendWelcome(Player player) {
         var msg = plugin.msg();
-        msg.send(player, "<#f9d423>\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501</#f9d423>");
-        msg.send(player, "<gradient:#f9d423:#ff4e50><bold>  Welcome to Apollo SMP!</bold></gradient>");
-        msg.send(player, "<gray>  Server IP: <#5ad1e8>" + plugin.serverIp() + "</#5ad1e8>");
-        msg.send(player, "");
-        msg.send(player, "<#f9d423>Handy commands:</#f9d423>");
-        msg.send(player, "  <white>/menu</white> <dark_gray>-</dark_gray> <gray>the main hub</gray>");
-        msg.send(player, "  <white>/sell</white> <dark_gray>-</dark_gray> <gray>sell items for money</gray>");
-        msg.send(player, "  <white>/ah</white> <dark_gray>-</dark_gray> <gray>browse the auction house</gray>");
-        msg.send(player, "  <white>/invest</white> <dark_gray>-</dark_gray> <gray>buy & manage businesses</gray>");
-        msg.send(player, "  <white>/town</white> <dark_gray>-</dark_gray> <gray>create & manage a town</gray>");
-        msg.send(player, "  <white>/sethome</white> <dark_gray>&</dark_gray> <white>/home</white> <dark_gray>-</dark_gray> <gray>set & travel home</gray>");
-        msg.send(player, "  <white>/rtp</white> <dark_gray>-</dark_gray> <gray>teleport into the wild</gray>");
-        msg.send(player, "");
-
-        // Vote and Discord get their own clickable links.
-        double reward = plugin.voting().reward();
-        msg.send(player, "<#f9d423>Vote and earn "
-                + plugin.msg().money(reward) + " per site:</#f9d423>");
-        for (var site : plugin.voting().services()) {
-            msg.send(player, "  <click:open_url:'" + site.link() + "'>"
-                    + "<hover:show_text:'Click to open " + site.name() + "'>"
-                    + "<#5ad1e8><u>" + site.name() + "</u></#5ad1e8></hover></click>"
-                    + " <dark_gray>-</dark_gray> <gray>" + plugin.msg().money(reward) + "</gray>");
-        }
-
-        String invite = plugin.voting().discordInvite();
-        if (invite != null && !invite.isBlank()) {
-            msg.send(player, "");
-            msg.send(player, "<click:open_url:'" + invite + "'>"
-                    + "<hover:show_text:'Click to open Discord'>"
-                    + "<gradient:#5ad1e8:#e94fd0><bold>Join our Discord</bold></gradient>"
-                    + " <#5ad1e8><u>" + invite + "</u></#5ad1e8></hover></click>");
-        }
-        msg.send(player, "<#f9d423>\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501</#f9d423>");
+        // Only the first line carries the Apollo prefix; the rest are raw.
+        msg.send(player, "<gradient:#f9d423:#ff4e50><bold>Welcome to Apollo SMP!</bold></gradient>");
+        msg.sendRaw(player, "<#f9d423>\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501</#f9d423>");
+        msg.sendRaw(player, "<gray>  Server IP: <#5ad1e8>" + plugin.serverIp() + "</#5ad1e8>");
+        msg.sendRaw(player, "");
+        msg.sendRaw(player, "<#f9d423>Handy commands:</#f9d423>");
+        msg.sendRaw(player, "  <white>/menu</white> <dark_gray>-</dark_gray> <gray>the main hub</gray>");
+        msg.sendRaw(player, "  <white>/sell</white> <dark_gray>-</dark_gray> <gray>sell items for money</gray>");
+        msg.sendRaw(player, "  <white>/ah</white> <dark_gray>-</dark_gray> <gray>browse the auction house</gray>");
+        msg.sendRaw(player, "  <white>/invest</white> <dark_gray>-</dark_gray> <gray>buy & manage businesses</gray>");
+        msg.sendRaw(player, "  <white>/town</white> <dark_gray>-</dark_gray> <gray>create & manage a town</gray>");
+        msg.sendRaw(player, "  <white>/sethome</white> <dark_gray>&</dark_gray> <white>/home</white> <dark_gray>-</dark_gray> <gray>set & travel home</gray>");
+        msg.sendRaw(player, "  <white>/rtp</white> <dark_gray>-</dark_gray> <gray>teleport into the wild</gray>");
+        msg.sendRaw(player, "  <white>/vote</white> <dark_gray>-</dark_gray> <gray>earn <#f9d423>"
+                + plugin.msg().money(plugin.voting().reward()) + "</#f9d423> <gray>per site</gray>");
+        msg.sendRaw(player, "  <white>/discord</white> <dark_gray>-</dark_gray> <gray>join the community</gray>");
+        msg.sendRaw(player, "<#f9d423>\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501</#f9d423>");
     }
 
     @EventHandler

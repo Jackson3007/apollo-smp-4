@@ -199,7 +199,9 @@ public class WorthTags implements Listener {
     }
 
     public boolean showTotals() {
-        return plugin.getConfig().getBoolean("sell.chest-total", true);
+        // Off by default: Paper only allows retitling inventories the server
+        // created itself, so real chests reject it.
+        return plugin.getConfig().getBoolean("sell.chest-total", false);
     }
 
     /** The container's own title, remembered so the total isn't appended twice. */
@@ -260,7 +262,8 @@ public class WorthTags implements Listener {
             return true;
         } catch (Throwable ex) {
             titleUnavailable = true;
-            plugin.getLogger().info("Chest totals disabled: " + ex.getClass().getSimpleName());
+            plugin.getLogger().info("Chest totals unavailable on this server - "
+                    + "real containers can't be retitled. Per-item prices still work.");
             return false;
         }
     }

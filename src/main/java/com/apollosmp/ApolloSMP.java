@@ -226,6 +226,17 @@ public class ApolloSMP extends JavaPlugin {
         votifier.tryRegister();
         voting.setVotifierActive(votifier.isActive());
 
+        // Loud and unmistakable, so vote problems are easy to diagnose.
+        getLogger().info("======================================");
+        getLogger().info(" Vote rewards: " + (votifier.isActive()
+                ? "ACTIVE - " + msg().money(voting.reward()) + " per confirmed vote"
+                : "INACTIVE - NuVotifier not detected"));
+        getLogger().info(" Vote sites configured: " + voting.services().size());
+        for (com.apollosmp.vote.VoteManager.Service s : voting.services()) {
+            getLogger().info("   - " + s.name());
+        }
+        getLogger().info("======================================");
+
         long reminderTicks = (long) voting.reminderMinutes() * 60L * 20L;
         getServer().getScheduler().runTaskTimer(this, () -> voting.sendReminders(),
                 reminderTicks, reminderTicks);
