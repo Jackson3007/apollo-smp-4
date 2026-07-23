@@ -75,24 +75,26 @@ public class RtpManager {
     }
 
     private Location findSafe(World world) {
-        Set<Material> avoid = avoidBlocks();
-        Set<Material> unsafeGround = new HashSet<>(avoid);
+        Set<Material> unsafeGround = new HashSet<>(avoidBlocks());
 
         WorldBorder border = world.getWorldBorder();
         double borderRadius = border.getSize() / 2.0 - 16;
         double centerX = border.getCenter().getX();
         double centerZ = border.getCenter().getZ();
 
-        int max = (int) Math.max(minRadius() + 1, Math.min(maxRadius(), borderRadius));
-        int min = Math.min(minRadius(), max - 1);
+        // How far out we're allowed to go: the smaller of the config max and the border.
+        int span = (int) Math.max(64, Math.min(maxRadius(), borderRadius));
+        // Keep folks away from dead-center, but never let this eat the whole range.
+        int minDist = Math.min(minRadius(), Math.max(8, span / 3));
 
-        for (int attempt = 0; attempt < 32; attempt++) {
-            double angle = ThreadLocalRandom.current().nextDouble(0, Math.PI * 2);
-            double dist = ThreadLocalRandom.current().nextDouble(min, max);
-            int x = (int) (centerX + Math.cos(angle) * dist);
-            int z = (int) (centerZ + Math.sin(angle) * dist);
+        for (int attempt = 0; attempt < 48; attempt++) {
+            // Sample x and z independently across the whole square -> real scatter.
+            int x = (int) (centerX + ThreadLocalRandom.current().nextInt(-span, span + 1));
+            int z = (int) (centerZ + ThreadLocalRandom.current().nextInt(-span, span + 1));
 
-            // Loads the chunk synchronously.
+            if (Math.hypot(x - centerX, z - centerZ) < minDist) continue;
+
+            // Loads/generates the chunk synchronously.
             int y = world.getHighestBlockYAt(x, z);
             if (y <= world.getMinHeight() + 1) continue;
 

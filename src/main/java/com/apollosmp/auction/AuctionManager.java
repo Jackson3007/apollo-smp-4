@@ -25,6 +25,7 @@ public class AuctionManager {
     private final ApolloSMP plugin;
     private final File file;
     private final Map<UUID, Listing> listings = new ConcurrentHashMap<>();
+    private final Map<UUID, List<String>> pendingNotifs = new ConcurrentHashMap<>();
     private volatile boolean dirty = false;
 
     public AuctionManager(ApolloSMP plugin) {
@@ -72,7 +73,7 @@ public class AuctionManager {
         if (hand == null || hand.getType().isAir()) return ListResult.EMPTY_HAND;
         if (price < minPrice()) return ListResult.PRICE_LOW;
         if (price > maxPrice()) return ListResult.PRICE_HIGH;
-        if (countBySeller(seller.getUniqueId()) >= maxListings()) return ListResult.TOO_MANY;
+        if (maxListings() > 0 && countBySeller(seller.getUniqueId()) >= maxListings()) return ListResult.TOO_MANY;
 
         double tax = price * (listingTaxPercent() / 100.0);
         if (tax > 0 && !plugin.economy().withdraw(seller.getUniqueId(), tax)) {
@@ -103,8 +104,32 @@ public class AuctionManager {
         listings.remove(listingId);
         dirty = true;
         Items.give(buyer, listing.item());
+        notifySale(listing, buyer);
         save();
         return BuyResult.SUCCESS;
+    }
+
+    /** Tell the seller their item sold — right away if online, otherwise on their next join. */
+    private void notifySale(Listing listing, Player buyer) {
+        String item = listing.item().getAmount() + "x " + Items.pretty(listing.item().getType());
+        String message = "<green>Your <white>" + item + "</white> sold for <#f9d423>"
+                + plugin.msg().money(listing.price()) + "</#f9d423> to <white>" + buyer.getName() + "</white>!";
+        Player seller = plugin.getServer().getPlayer(listing.seller());
+        if (seller != null && seller.isOnline()) {
+            plugin.msg().send(seller, message);
+        } else {
+            pendingNotifs.computeIfAbsent(listing.seller(), k -> new ArrayList<>()).add(message);
+        }
+    }
+
+    /** Deliver any "your item sold" messages saved while the player was offline. */
+    public void flushNotifications(Player player) {
+        List<String> msgs = pendingNotifs.remove(player.getUniqueId());
+        if (msgs == null || msgs.isEmpty()) return;
+        plugin.msg().send(player, "<#f9d423>While you were away:</#f9d423>");
+        for (String m : msgs) plugin.msg().send(player, m);
+        dirty = true;
+        save();
     }
 
     /** Cancel your own listing; the item is returned to your mailbox. */
@@ -147,6 +172,9 @@ public class AuctionManager {
             cfg.set(p + ".createdAt", l.createdAt());
             cfg.set(p + ".expiresAt", l.expiresAt());
         }
+        for (Map.Entry<UUID, List<String>> e : pendingNotifs.entrySet()) {
+            cfg.set("notifications." + e.getKey(), e.getValue());
+        }
         try {
             cfg.save(file);
             dirty = false;
@@ -175,6 +203,16 @@ public class AuctionManager {
                     listings.put(id, listing);
                 } catch (Exception ex) {
                     plugin.getLogger().warning("Skipped bad auction entry: " + key);
+                }
+            }
+        }
+        ConfigurationSection ns = cfg.getConfigurationSection("notifications");
+        if (ns != null) {
+            for (String key : ns.getKeys(false)) {
+                try {
+                    pendingNotifs.put(UUID.fromString(key),
+                            new ArrayList<>(cfg.getStringList("notifications." + key)));
+                } catch (IllegalArgumentException ignored) {
                 }
             }
         }

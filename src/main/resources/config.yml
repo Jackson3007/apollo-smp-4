@@ -87,8 +87,8 @@ sell:
     MANGROVE_LOG: 1.5
 
 auction-house:
-  # Max active listings a single player may have at once.
-  max-listings-per-player: 10
+  # Max active listings a single player may have at once. 0 = unlimited.
+  max-listings-per-player: 0
   # How long (in hours) a listing stays up before expiring and being returned.
   listing-duration-hours: 48
   # Percentage fee charged to the SELLER when they list an item (of the sale price).
@@ -108,7 +108,7 @@ orders:
 homes:
   # Home limits per permission rank. The plugin grants the HIGHEST matching value.
   # Give a rank permission like apollo.homes.5 to allow 5 homes.
-  default-limit: 5
+  default-limit: 3
   limits:
     "apollo.homes.5": 5
     "apollo.homes.10": 10
@@ -164,10 +164,40 @@ scoreboard:
     - "<#f9d423>Stats</#f9d423>"
     - " <gray>Homes:</gray> <white>%homes%</white>"
     - " <gray>Businesses:</gray> <white>%businesses%</white>"
+    - " <gray>Sky Coins:</gray> <#5ad1e8>%skycoins%</#5ad1e8>"
     - " <gray>Listings:</gray> <white>%listings%</white>"
     - " <gray>Online:</gray> <white>%online%</white>"
     - "<dark_gray>▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪</dark_gray>"
-    - "<#ff4e50>play.apollosmp.net</#ff4e50>"
+    - "<#ff4e50>apollo.noob.club</#ff4e50>"
 
 # Data auto-saves on a timer as a safety net (minutes). Changes also save immediately.
 autosave-minutes: 5
+
+# ---- Voting rewards ----
+# Players earn Sky Coins (a second currency) for voting. Replace the links below
+# with your real vote-site URLs. Doing all 5 in one day pays the all-voted bonus.
+voting:
+  coins-per-vote: 1
+  all-voted-bonus: 5
+  give-key-per-vote: true
+  services:
+    - name: "PlanetMinecraft"
+      link: "https://www.planetminecraft.com/server/apollo-smp/vote/"
+    - name: "MinecraftServers"
+      link: "https://minecraftservers.org/vote/000000"
+    - name: "Minecraft-MP"
+      link: "https://minecraft-mp.com/server/000000/vote/"
+    - name: "TopG"
+      link: "https://topg.org/minecraft-servers/server-000000/vote"
+    - name: "ServerList101"
+      link: "https://serverlist101.com/server/000000/vote/"
+
+# ---- Towns ----
+# A Towny-style land system. Costs are money sinks paid by the player;
+# plot sales and taxes flow into the town bank.
+towns:
+  create-cost: 1000.0      # price to found a town (includes the first chunk)
+  claim-cost: 500.0        # price per additional chunk
+  claims-base: 6           # base chunks a town may hold
+  claims-per-member: 4     # extra chunks allowed per resident
+  tax-interval-hours: 24   # how often resident taxes are collected into the bank

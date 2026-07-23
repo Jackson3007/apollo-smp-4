@@ -64,6 +64,18 @@ commands:
     description: Open the investments menu
     aliases: [investments, business, businesses]
     usage: /invest
+  vote:
+    description: Vote for the server and earn Sky Coins
+    aliases: [voting]
+    usage: /vote
+  coinshop:
+    description: Spend Sky Coins on exclusive gear
+    aliases: [skyshop]
+    usage: /coinshop
+  town:
+    description: Create and manage your town
+    aliases: [t, towns]
+    usage: /town
   tpa:
     description: Request to teleport to a player
     usage: /tpa <player>

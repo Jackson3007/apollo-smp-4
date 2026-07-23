@@ -20,14 +20,20 @@ public class AuctionMenu extends Gui {
 
     private final boolean mine;
     private final int page;
+    private final String query;
     private List<Listing> pageItems = new ArrayList<>();
 
     public AuctionMenu(ApolloSMP plugin, Player viewer, boolean mine, int page) {
+        this(plugin, viewer, mine, page, null);
+    }
+
+    public AuctionMenu(ApolloSMP plugin, Player viewer, boolean mine, int page, String query) {
         super(plugin, viewer, 6, mine
                 ? "<#ff4e50><bold>My Listings</bold>"
                 : "<gradient:#f9d423:#ff4e50><bold>Auction House</bold></gradient>");
         this.mine = mine;
         this.page = Math.max(0, page);
+        this.query = (query == null || query.isBlank()) ? null : query;
     }
 
     @Override
@@ -35,6 +41,12 @@ public class AuctionMenu extends Gui {
         List<Listing> all = mine
                 ? plugin.auctions().bySeller(viewer.getUniqueId())
                 : plugin.auctions().active();
+
+        if (!mine && query != null) {
+            List<Listing> filtered = new ArrayList<>();
+            for (Listing l : all) if (matches(l, query)) filtered.add(l);
+            all = filtered;
+        }
 
         int from = page * PAGE_SIZE;
         int to = Math.min(all.size(), from + PAGE_SIZE);
@@ -82,9 +94,35 @@ public class AuctionMenu extends Gui {
                 .lore("<gray>Active listings: <white>"
                         + plugin.auctions().countBySeller(viewer.getUniqueId()) + "</white>")
                 .build());
-        inventory.setItem(49, Items.of(Material.PAPER)
-                .name("<#f9d423><bold>Page " + (page + 1) + "</bold>")
-                .lore("<gray>Sell an item with <white>/ah sell <price></white>").build());
+
+        if (!mine) {
+            inventory.setItem(48, Items.of(Material.SPYGLASS)
+                    .name("<#5ad1e8><bold>Search</bold>")
+                    .lore(query == null
+                                    ? "<gray>Click, then type in chat to"
+                                    : "<gray>Now showing: <white>" + query + "</white>",
+                            query == null
+                                    ? "<gray>find items by name."
+                                    : "<yellow>Click to search again.")
+                    .glow(query != null).hideAttributes().build());
+            if (query != null) {
+                inventory.setItem(52, Items.of(Material.BARRIER)
+                        .name("<red>Clear Search")
+                        .lore("<gray>Show all listings again.").build());
+            }
+        }
+
+        if (query != null) {
+            inventory.setItem(49, Items.of(Material.PAPER)
+                    .name("<#f9d423><bold>Page " + (page + 1) + "</bold>")
+                    .lore("<gray>Results for <white>" + query + "</white>: <#f9d423>" + all.size() + "</#f9d423>",
+                            "<gray>Sell with <white>/ah sell <price></white>").build());
+        } else {
+            inventory.setItem(49, Items.of(Material.PAPER)
+                    .name("<#f9d423><bold>Page " + (page + 1) + "</bold>")
+                    .lore("<gray>Sell an item with <white>/ah sell <price></white>").build());
+        }
+
         inventory.setItem(51, Items.of(Material.CHEST_MINECART)
                 .name("<#f9d423>Collection Box")
                 .lore("<gray>Waiting items: <white>"
@@ -109,16 +147,25 @@ public class AuctionMenu extends Gui {
             return;
         }
         switch (slot) {
-            case 45 -> { if (page > 0) new AuctionMenu(plugin, player, mine, page - 1).open(); }
+            case 45 -> { if (page > 0) new AuctionMenu(plugin, player, mine, page - 1, query).open(); }
             case 46 -> new MainMenu(plugin, player).open();
             case 47 -> new AuctionMenu(plugin, player, !mine, 0).open();
+            case 48 -> {
+                if (!mine) {
+                    player.closeInventory();
+                    plugin.msg().send(player,
+                            "<#5ad1e8>Type your search in chat</#5ad1e8> <gray>(or type 'cancel').");
+                    plugin.auctionSearch().await(player);
+                }
+            }
+            case 52 -> { if (query != null) new AuctionMenu(plugin, player, false, 0).open(); }
             case 51 -> {
                 int n = plugin.mailbox().collect(player);
                 plugin.msg().send(player, n == 0 ? "<gray>Your collection box is empty."
                         : "<green>Collected <white>" + n + "</white> item stack(s).");
                 redraw();
             }
-            case 53 -> new AuctionMenu(plugin, player, mine, page + 1).open();
+            case 53 -> new AuctionMenu(plugin, player, mine, page + 1, query).open();
             default -> { /* no-op */ }
         }
     }
@@ -138,6 +185,14 @@ public class AuctionMenu extends Gui {
             case OWN_LISTING -> plugin.msg().send(player, "<red>You can't buy your own listing.");
             case NO_FUNDS -> plugin.msg().send(player, "<red>You can't afford that.");
         }
+    }
+
+    private boolean matches(Listing listing, String q) {
+        String needle = q.toLowerCase();
+        ItemStack it = listing.item();
+        String name = Items.displayName(it).toLowerCase();
+        String type = it.getType().name().toLowerCase().replace('_', ' ');
+        return name.contains(needle) || type.contains(needle);
     }
 
     private String formatDuration(long millis) {

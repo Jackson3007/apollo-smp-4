@@ -11,6 +11,8 @@ import com.apollosmp.commands.MenuCommand;
 import com.apollosmp.commands.OrderCommand;
 import com.apollosmp.commands.RtpCommand;
 import com.apollosmp.commands.SellCommand;
+import com.apollosmp.commands.CoinShopCommand;
+import com.apollosmp.commands.VoteCommand;
 import com.apollosmp.commands.TpaCommand;
 import com.apollosmp.economy.EconomyManager;
 import com.apollosmp.gui.GuiListener;
@@ -50,6 +52,12 @@ public class ApolloSMP extends JavaPlugin {
     private RtpManager rtp;
     private Teleports teleports;
     private com.apollosmp.invest.BusinessManager businesses;
+    private com.apollosmp.coins.SkyCoinManager skyCoins;
+    private com.apollosmp.items.CustomItems customItems;
+    private com.apollosmp.vote.VoteManager voting;
+    private com.apollosmp.listeners.AuctionSearchListener auctionSearch;
+    private com.apollosmp.town.TownManager towns;
+    private com.apollosmp.town.ChatPromptManager prompts;
 
     @Override
     public void onEnable() {
@@ -66,6 +74,11 @@ public class ApolloSMP extends JavaPlugin {
         this.rtp = new RtpManager(this);
         this.teleports = new Teleports(this);
         this.businesses = new com.apollosmp.invest.BusinessManager(this);
+        this.skyCoins = new com.apollosmp.coins.SkyCoinManager(this);
+        this.customItems = new com.apollosmp.items.CustomItems(this);
+        this.voting = new com.apollosmp.vote.VoteManager(this);
+        this.towns = new com.apollosmp.town.TownManager(this);
+        this.prompts = new com.apollosmp.town.ChatPromptManager(this);
 
         registerCommands();
         registerListeners();
@@ -113,6 +126,9 @@ public class ApolloSMP extends JavaPlugin {
 
         reg("apollo", new AdminCommand(this));
         reg("invest", new InvestCommand(this));
+        reg("vote", new VoteCommand(this));
+        reg("coinshop", new CoinShopCommand(this));
+        reg("town", new com.apollosmp.commands.TownCommand(this));
 
         TpaCommand tpaCommand = new TpaCommand(this);
         reg("tpa", tpaCommand);
@@ -139,6 +155,18 @@ public class ApolloSMP extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
         getServer().getPluginManager().registerEvents(
                 new com.apollosmp.listeners.InvestListener(this), this);
+        getServer().getPluginManager().registerEvents(
+                new com.apollosmp.listeners.VoteFeatureListener(this), this);
+        this.auctionSearch = new com.apollosmp.listeners.AuctionSearchListener(this);
+        getServer().getPluginManager().registerEvents(auctionSearch, this);
+        getServer().getPluginManager().registerEvents(prompts, this);
+        getServer().getPluginManager().registerEvents(
+                new com.apollosmp.listeners.TownProtectionListener(this), this);
+        getServer().getPluginManager().registerEvents(
+                new com.apollosmp.listeners.TownChatListener(this), this);
+
+        long taxTicks = Math.max(1L, getConfig().getLong("towns.tax-interval-hours", 24)) * 3600L * 20L;
+        getServer().getScheduler().runTaskTimer(this, () -> towns.collectTaxes(), taxTicks, taxTicks);
     }
 
     // ---- world border ----
@@ -194,6 +222,9 @@ public class ApolloSMP extends JavaPlugin {
         orders.save();
         mailbox.save();
         businesses.save();
+        skyCoins.save();
+        voting.save();
+        towns.save();
     }
 
     public void reloadAll() {
@@ -220,4 +251,10 @@ public class ApolloSMP extends JavaPlugin {
     public RtpManager rtp() { return rtp; }
     public Teleports teleports() { return teleports; }
     public com.apollosmp.invest.BusinessManager businesses() { return businesses; }
+    public com.apollosmp.coins.SkyCoinManager skyCoins() { return skyCoins; }
+    public com.apollosmp.items.CustomItems customItems() { return customItems; }
+    public com.apollosmp.vote.VoteManager voting() { return voting; }
+    public com.apollosmp.listeners.AuctionSearchListener auctionSearch() { return auctionSearch; }
+    public com.apollosmp.town.TownManager towns() { return towns; }
+    public com.apollosmp.town.ChatPromptManager prompts() { return prompts; }
 }

@@ -92,6 +92,10 @@ public class InvestListener implements Listener {
         BusinessBlock block = plugin.businesses().getAt(clicked.getLocation());
         if (block == null) return;
 
+        // If they're holding a vote key, let the key handler open the crate instead.
+        ItemStack hand = event.getPlayer().getInventory().getItemInMainHand();
+        if ("votekey".equals(plugin.customItems().readId(hand))) return;
+
         // Anyone can open a business panel (they're not locked to one person).
         event.setCancelled(true);
         Player player = event.getPlayer();

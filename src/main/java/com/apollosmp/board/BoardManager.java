@@ -115,6 +115,7 @@ public class BoardManager {
                 .replace("%homes%", String.valueOf(plugin.homes().count(id)))
                 .replace("%listings%", String.valueOf(plugin.auctions().countBySeller(id)))
                 .replace("%businesses%", String.valueOf(plugin.businesses().countOwnedBy(id)))
+                .replace("%skycoins%", String.valueOf(plugin.skyCoins().get(id)))
                 .replace("%x%", String.valueOf(loc.getBlockX()))
                 .replace("%y%", String.valueOf(loc.getBlockY()))
                 .replace("%z%", String.valueOf(loc.getBlockZ()));
