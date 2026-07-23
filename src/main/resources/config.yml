@@ -200,7 +200,7 @@ voting:
   reward: 500.0
   announce: true          # tell the server when someone votes
   reminder-enabled: true
-  reminder-minutes: 60
+  reminder-minutes: 50
   # Up to 4 sites are shown in /vote. Leave the blank ones as they are
   # until you have the real links, and they'll show as "not set".
   services:
@@ -208,8 +208,8 @@ voting:
       link: "http://topg.org/minecraft-servers/server-684435#vote"
     - name: "PlanetMinecraft"
       link: "https://www.planetminecraft.com/server/apollo-smp-apollo-noob-club/vote/"
-    - name: "Site 3"
-      link: ""
+    - name: "Minecraft-MP"
+      link: "https://minecraft-mp.com/server/361247/vote/"
     - name: "Site 4"
       link: ""
 

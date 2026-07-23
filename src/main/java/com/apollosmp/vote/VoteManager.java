@@ -28,7 +28,8 @@ public class VoteManager {
     private static final List<Service> DEFAULT_SITES = List.of(
             new Service("TopG", "http://topg.org/minecraft-servers/server-684435#vote"),
             new Service("PlanetMinecraft",
-                    "https://www.planetminecraft.com/server/apollo-smp-apollo-noob-club/vote/"));
+                    "https://www.planetminecraft.com/server/apollo-smp-apollo-noob-club/vote/"),
+            new Service("Minecraft-MP", "https://minecraft-mp.com/server/361247/vote/"));
 
     private final ApolloSMP plugin;
     private final File file;
@@ -65,13 +66,15 @@ public class VoteManager {
 
     /** Called on the main thread when a vote site confirms a vote. */
     public void handleVerifiedVote(String username, String service) {
+        plugin.getLogger().info("[Vote] Received a confirmed vote from " + username
+                + " via " + (service == null || service.isBlank() ? "unknown site" : service) + ".");
         rollDay();
         String key = username.toLowerCase();
         String site = service == null || service.isBlank() ? "unknown" : service.toLowerCase();
 
         Set<String> already = paidToday.computeIfAbsent(key, k -> new LinkedHashSet<>());
         if (!already.add(site)) {
-            plugin.getLogger().info("[Vote] Ignored a repeat vote from " + username + " on " + site + ".");
+            plugin.getLogger().info("[Vote] " + username + " was already paid for " + site + " today.");
             return;
         }
 
@@ -79,6 +82,7 @@ public class VoteManager {
         Player online = plugin.getServer().getPlayerExact(username);
         if (online != null) {
             plugin.economy().deposit(online.getUniqueId(), amount);
+            plugin.getLogger().info("[Vote] Paid " + amount + " to " + online.getName() + ".");
             plugin.msg().send(online, "");
             plugin.msg().send(online, "<gradient:#f9d423:#ff4e50><bold>Thanks for voting!</bold></gradient>");
             plugin.msg().send(online, "<gray>Your vote was confirmed - here's <#f9d423>"
@@ -149,7 +153,7 @@ public class VoteManager {
     }
 
     public int reminderMinutes() {
-        return Math.max(1, plugin.getConfig().getInt("voting.reminder-minutes", 60));
+        return Math.max(1, plugin.getConfig().getInt("voting.reminder-minutes", 50));
     }
 
     /** Configured vote sites, skipping any that still hold placeholder links. */
@@ -197,11 +201,16 @@ public class VoteManager {
         String bar = "<dark_gray>\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa";
         for (Player player : plugin.getServer().getOnlinePlayers()) {
             plugin.msg().send(player, bar);
-            plugin.msg().send(player, "<gradient:#f9d423:#ff4e50><bold>\u2600 Vote for Apollo!</bold></gradient>");
-            plugin.msg().send(player, "<gray>Each vote pays you <#f9d423>"
-                    + plugin.msg().money(reward()) + "</#f9d423> and helps more players find us.");
+            int sites = services().size();
+            plugin.msg().send(player, "<gradient:#f9d423:#ff4e50><bold>\u2600 Vote and get "
+                    + plugin.msg().money(reward()) + "!</bold></gradient>");
+            plugin.msg().send(player, "<gray>That's <#f9d423>" + plugin.msg().money(reward())
+                    + "</#f9d423> <gray>per site" + (sites > 1
+                            ? ", so <#f9d423>" + plugin.msg().money(reward() * sites)
+                                    + "</#f9d423> <gray>a day across all " + sites + "."
+                            : "."));
             plugin.msg().send(player, "<click:run_command:'/vote'><hover:show_text:'Click to open the vote menu'>"
-                    + "<#5ad1e8><u>Click here for the vote links</u></#5ad1e8></hover></click>");
+                    + "<#5ad1e8><u>Click here to vote</u></#5ad1e8></hover></click>");
             plugin.msg().send(player, bar);
         }
     }

@@ -45,6 +45,7 @@ public class AdminPanelCommand implements CommandExecutor, TabCompleter {
         switch (args[0].toLowerCase()) {
             case "merchant" -> merchant(player, args);
             case "auction" -> auction(player, args);
+            case "vote" -> vote(player, args);
             case "help" -> help(player);
             default -> help(player);
         }
@@ -224,6 +225,34 @@ public class AdminPanelCommand implements CommandExecutor, TabCompleter {
         }
     }
 
+    // ------------------------------------------------ voting
+    private void vote(Player player, String[] args) {
+        String sub = args.length > 1 ? args[1].toLowerCase() : "status";
+        switch (sub) {
+            case "status" -> {
+                boolean hooked = plugin.voting().votifierActive();
+                plugin.msg().sendRaw(player, "<#f9d423><bold>Vote status</bold>");
+                plugin.msg().sendRaw(player, " <gray>Votifier hooked: "
+                        + (hooked ? "<green>yes</green>" : "<red>no - install NuVotifier</red>"));
+                plugin.msg().sendRaw(player, " <gray>Reward per vote: <white>"
+                        + plugin.msg().money(plugin.voting().reward()) + "</white>");
+                plugin.msg().sendRaw(player, " <gray>Sites configured: <white>"
+                        + plugin.voting().services().size() + "</white>");
+                for (var s : plugin.voting().services()) {
+                    plugin.msg().sendRaw(player, "   <dark_gray>- " + s.name() + "</dark_gray>");
+                }
+            }
+            case "test" -> {
+                String target = args.length > 2 ? args[2] : player.getName();
+                plugin.msg().send(player, "<gray>Simulating a confirmed vote for <white>"
+                        + target + "</white>...");
+                plugin.voting().handleVerifiedVote(target, "admin-test");
+            }
+            default -> plugin.msg().send(player,
+                    "<gray>Usage: <white>/admin vote <status|test [player]></white>");
+        }
+    }
+
     // ------------------------------------------------ help
     private void help(Player player) {
         var msg = plugin.msg();
@@ -243,18 +272,24 @@ public class AdminPanelCommand implements CommandExecutor, TabCompleter {
         msg.sendRaw(player, " <white>/admin auction reroll</white> <gray>- settle & start fresh</gray>");
         msg.sendRaw(player, " <white>/admin auction give</white> <gray>- copy of the lot</gray>");
         msg.sendRaw(player, " <white>/admin auction fill</white> <gray>- fast-forward a day</gray>");
+        msg.sendRaw(player, "<#5ad1e8>Voting</#5ad1e8>");
+        msg.sendRaw(player, " <white>/admin vote status</white> <gray>- is Votifier hooked?</gray>");
+        msg.sendRaw(player, " <white>/admin vote test</white> <gray>- fake a confirmed vote</gray>");
     }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (!sender.hasPermission("apollo.admin")) return List.of();
-        if (args.length == 1) return List.of("merchant", "auction", "help");
+        if (args.length == 1) return List.of("merchant", "auction", "vote", "help");
         if (args.length == 2) {
             if (args[0].equalsIgnoreCase("merchant")) {
                 return List.of("peek", "reroll", "reset", "give", "expire");
             }
             if (args[0].equalsIgnoreCase("auction")) {
                 return List.of("info", "reroll", "end", "time", "bid", "give", "fill");
+            }
+            if (args[0].equalsIgnoreCase("vote")) {
+                return List.of("status", "test");
             }
         }
         if (args.length == 3) {

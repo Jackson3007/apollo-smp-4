@@ -65,11 +65,29 @@ public class PlayerListener implements Listener {
         msg.send(player, "  <white>/ah</white> <dark_gray>-</dark_gray> <gray>browse the auction house</gray>");
         msg.send(player, "  <white>/invest</white> <dark_gray>-</dark_gray> <gray>buy & manage businesses</gray>");
         msg.send(player, "  <white>/town</white> <dark_gray>-</dark_gray> <gray>create & manage a town</gray>");
-        msg.send(player, "  <white>/vote</white> <dark_gray>-</dark_gray> <gray>support the server</gray>");
-        msg.send(player, "  <white>/discord</white> <dark_gray>-</dark_gray> <gray>join the community</gray>");
         msg.send(player, "  <white>/sethome</white> <dark_gray>&</dark_gray> <white>/home</white> <dark_gray>-</dark_gray> <gray>set & travel home</gray>");
         msg.send(player, "  <white>/rtp</white> <dark_gray>-</dark_gray> <gray>teleport into the wild</gray>");
-        msg.send(player, "  <white>/tpa</white> <dark_gray>-</dark_gray> <gray>teleport to a friend</gray>");
+        msg.send(player, "");
+
+        // Vote and Discord get their own clickable links.
+        double reward = plugin.voting().reward();
+        msg.send(player, "<#f9d423>Vote and earn "
+                + plugin.msg().money(reward) + " per site:</#f9d423>");
+        for (var site : plugin.voting().services()) {
+            msg.send(player, "  <click:open_url:'" + site.link() + "'>"
+                    + "<hover:show_text:'Click to open " + site.name() + "'>"
+                    + "<#5ad1e8><u>" + site.name() + "</u></#5ad1e8></hover></click>"
+                    + " <dark_gray>-</dark_gray> <gray>" + plugin.msg().money(reward) + "</gray>");
+        }
+
+        String invite = plugin.voting().discordInvite();
+        if (invite != null && !invite.isBlank()) {
+            msg.send(player, "");
+            msg.send(player, "<click:open_url:'" + invite + "'>"
+                    + "<hover:show_text:'Click to open Discord'>"
+                    + "<gradient:#5ad1e8:#e94fd0><bold>Join our Discord</bold></gradient>"
+                    + " <#5ad1e8><u>" + invite + "</u></#5ad1e8></hover></click>");
+        }
         msg.send(player, "<#f9d423>\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501</#f9d423>");
     }
 
