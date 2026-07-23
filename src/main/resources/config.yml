@@ -41,6 +41,8 @@ sell:
   # Show each item's sell price on its tooltip while it's in your inventory.
   # The line is removed again as soon as the item leaves.
   worth-lore: true
+  # Running total of an open chest, shown above your hotbar.
+  chest-total: true
   # Anything without an explicit price below still sells for this much, so
   # almost everything is worth something. Set to 0 to only allow listed items.
   default-price: 0.25

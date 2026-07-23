@@ -38,14 +38,38 @@ import java.util.List;
  */
 public class WorthTags implements Listener {
 
+    /** Bumped whenever the lore layout changes, so old tags get rebuilt once. */
+    private static final int VERSION = 2;
+
     private final ApolloSMP plugin;
     private final NamespacedKey valueKey;
     private final NamespacedKey linesKey;
+    private final NamespacedKey versionKey;
 
     public WorthTags(ApolloSMP plugin) {
         this.plugin = plugin;
         this.valueKey = new NamespacedKey(plugin, "apollo_worth");
         this.linesKey = new NamespacedKey(plugin, "apollo_worth_lines");
+        this.versionKey = new NamespacedKey(plugin, "apollo_worth_v");
+    }
+
+    /**
+     * How many trailing lore lines look like ones we wrote. Used to clean up
+     * tags from older builds where the stored line count can't be trusted.
+     */
+    private int trailingMoneyLines(List<Component> lore, int max) {
+        if (lore == null || lore.isEmpty()) return 0;
+        String symbol = java.util.regex.Pattern.quote(plugin.msg().symbol());
+        java.util.regex.Pattern pattern =
+                java.util.regex.Pattern.compile("^" + symbol + "[0-9,]+(\\.[0-9]+)?( each)?$");
+        int count = 0;
+        for (int i = lore.size() - 1; i >= 0 && count < max; i--) {
+            String plain = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
+                    .plainText().serialize(lore.get(i)).trim();
+            if (!pattern.matcher(plain).matches()) break;
+            count++;
+        }
+        return count;
     }
 
     public boolean enabled() {
@@ -68,11 +92,22 @@ public class WorthTags implements Listener {
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
 
         Double written = pdc.get(valueKey, PersistentDataType.DOUBLE);
-        if (written != null && Math.abs(written - total) < 0.0001) return false;
+        int version = pdc.getOrDefault(versionKey, PersistentDataType.INTEGER, 1);
+        boolean current = version == VERSION;
+        if (current && written != null && Math.abs(written - total) < 0.0001) return false;
 
         List<Component> lore = meta.lore();
         lore = lore == null ? new ArrayList<>() : new ArrayList<>(lore);
-        int previous = pdc.getOrDefault(linesKey, PersistentDataType.INTEGER, 0);
+
+        int previous;
+        if (written == null) {
+            previous = 0;
+        } else if (current) {
+            previous = pdc.getOrDefault(linesKey, PersistentDataType.INTEGER, 1);
+        } else {
+            // Tagged by an older build - work out how many lines to drop by looking.
+            previous = trailingMoneyLines(lore, 3);
+        }
         for (int i = 0; i < previous && !lore.isEmpty(); i++) lore.remove(lore.size() - 1);
 
         int added;
@@ -88,6 +123,7 @@ public class WorthTags implements Listener {
         meta.lore(lore);
         pdc.set(valueKey, PersistentDataType.DOUBLE, total);
         pdc.set(linesKey, PersistentDataType.INTEGER, added);
+        pdc.set(versionKey, PersistentDataType.INTEGER, VERSION);
         stack.setItemMeta(meta);
         return true;
     }
@@ -100,8 +136,11 @@ public class WorthTags implements Listener {
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
         if (!pdc.has(valueKey, PersistentDataType.DOUBLE)) return false;
 
-        int lines = pdc.getOrDefault(linesKey, PersistentDataType.INTEGER, 1);
         List<Component> lore = meta.lore();
+        int version = pdc.getOrDefault(versionKey, PersistentDataType.INTEGER, 1);
+        int lines = version == VERSION
+                ? pdc.getOrDefault(linesKey, PersistentDataType.INTEGER, 1)
+                : trailingMoneyLines(lore, 3);
         if (lore != null && !lore.isEmpty()) {
             List<Component> trimmed = new ArrayList<>(lore);
             for (int i = 0; i < lines && !trimmed.isEmpty(); i++) trimmed.remove(trimmed.size() - 1);
@@ -109,6 +148,7 @@ public class WorthTags implements Listener {
         }
         pdc.remove(valueKey);
         pdc.remove(linesKey);
+        pdc.remove(versionKey);
         stack.setItemMeta(meta);
         return true;
     }
@@ -154,7 +194,44 @@ public class WorthTags implements Listener {
         for (Player player : plugin.getServer().getOnlinePlayers()) {
             if (enabled()) markAll(player.getInventory());
             else stripAll(player.getInventory());
+            showContainerTotal(player);
         }
+    }
+
+    public boolean showTotals() {
+        return plugin.getConfig().getBoolean("sell.chest-total", true);
+    }
+
+    /** Keep a running total of the open container on the action bar. */
+    public void showContainerTotal(Player player) {
+        if (!showTotals()) return;
+        InventoryView view = player.getOpenInventory();
+        Inventory top = view.getTopInventory();
+        if (top == null || top instanceof PlayerInventory || isOurMenu(top)) return;
+        if (top.getSize() <= 0) return;
+
+        double total = 0;
+        int items = 0;
+        int unsellable = 0;
+        for (ItemStack stack : top.getContents()) {
+            if (stack == null || stack.getType().isAir()) continue;
+            if (plugin.sell().isSellable(stack)) {
+                total += plugin.sell().valueOf(stack);
+                items += stack.getAmount();
+            } else {
+                unsellable += stack.getAmount();
+            }
+        }
+
+        if (items == 0 && unsellable == 0) {
+            player.sendActionBar(Msg.mm("<dark_gray>Empty</dark_gray>"));
+            return;
+        }
+        String text = "<gray>Contents:</gray> <#f9d423>" + plugin.msg().money(total)
+                + "</#f9d423> <dark_gray>(" + items + " item" + (items == 1 ? "" : "s");
+        if (unsellable > 0) text += ", " + unsellable + " unsellable";
+        text += ")</dark_gray>";
+        player.sendActionBar(Msg.mm(text));
     }
 
     // ------------------------------------------------ events
@@ -187,7 +264,10 @@ public class WorthTags implements Listener {
         if (!enabled()) return;
         Inventory top = event.getInventory();
         if (top instanceof PlayerInventory || isOurMenu(top)) return;
-        plugin.getServer().getScheduler().runTask(plugin, () -> markAll(top));
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            markAll(top);
+            if (event.getPlayer() instanceof Player p) showContainerTotal(p);
+        });
     }
 
     /** ...and go back to normal when you close them. */
@@ -227,7 +307,10 @@ public class WorthTags implements Listener {
             markAll(view.getBottomInventory());
             Inventory top = view.getTopInventory();
             if (!(top instanceof PlayerInventory) && !isOurMenu(top)) markAll(top);
-            if (view.getPlayer() instanceof Player p) p.updateInventory();
+            if (view.getPlayer() instanceof Player p) {
+                p.updateInventory();
+                showContainerTotal(p);
+            }
         });
     }
 }
