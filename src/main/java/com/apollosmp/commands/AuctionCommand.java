@@ -57,7 +57,17 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
             new AuctionMenu(plugin, player, true, 0).open();
             return true;
         }
-        plugin.msg().send(player, "<red>Usage: /ah [sell <price>|mine]");
+        if (args[0].equalsIgnoreCase("search") || args[0].equalsIgnoreCase("find")) {
+            if (args.length < 2) {
+                plugin.msg().send(player, "<red>Usage: /ah search <item>");
+                return true;
+            }
+            StringBuilder query = new StringBuilder(args[1]);
+            for (int i = 2; i < args.length; i++) query.append(" ").append(args[i]);
+            new AuctionMenu(plugin, player, false, 0, query.toString()).open();
+            return true;
+        }
+        plugin.msg().send(player, "<red>Usage: /ah [sell <price>|mine|search <item>]");
         return true;
     }
 
@@ -65,7 +75,7 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
         List<String> out = new ArrayList<>();
         if (args.length == 1) {
-            for (String s : List.of("sell", "mine")) {
+            for (String s : List.of("sell", "mine", "search")) {
                 if (s.startsWith(args[0].toLowerCase())) out.add(s);
             }
         }

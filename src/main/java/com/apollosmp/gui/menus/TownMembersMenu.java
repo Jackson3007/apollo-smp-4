@@ -33,8 +33,8 @@ public class TownMembersMenu extends Gui {
 
         inventory.setItem(4, Items.of(Material.WRITABLE_BOOK)
                 .name("<green><bold>Invite a Player</bold>")
-                .lore("<gray>Click, then type their name in chat.",
-                        "<gray>They must be online.").build());
+                .lore("<gray>Pick from the online players",
+                        "<gray>who aren't in a town yet.").build());
 
         int slot = 9;
         for (Map.Entry<UUID, TownRank> e : town.members().entrySet()) {
@@ -74,9 +74,7 @@ public class TownMembersMenu extends Gui {
     public void onClick(Player clicker, int slot, ItemStack clicked, ClickType click) {
         if (slot == 49) { new TownMenu(plugin, clicker).open(); return; }
         if (slot == 4) {
-            clicker.closeInventory();
-            plugin.msg().send(clicker, "<#f9d423>Type the player's name to invite</#f9d423> <gray>(or 'cancel').");
-            plugin.prompts().await(clicker, name -> plugin.towns().invite(clicker, name));
+            new TownInviteMenu(plugin, clicker, 0).open();
             return;
         }
         int index = slot - 9;

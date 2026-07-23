@@ -106,7 +106,11 @@ public class BoardManager {
         Location loc = player.getLocation();
         UUID id = player.getUniqueId();
         double bal = plugin.economy().getBalance(id);
+        String ip = plugin.serverIp();
         return line
+                // Older configs had the placeholder IP hard-coded into the line.
+                .replace("play.apollosmp.net", ip)
+                .replace("%ip%", ip)
                 .replace("%player%", player.getName())
                 .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size()))
                 .replace("%world%", player.getWorld().getName())

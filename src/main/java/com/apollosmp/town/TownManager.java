@@ -330,6 +330,48 @@ public class TownManager {
         return true;
     }
 
+    /** Let the town decide whether outsiders may teleport to its spawn. */
+    public boolean setPublicSpawn(Player actor, boolean allow) {
+        Town town = getTownOf(actor.getUniqueId());
+        if (town == null) { plugin.msg().send(actor, "<red>You're not in a town."); return false; }
+        if (!town.hasPerm(actor.getUniqueId(), TownPerm.SET_SPAWN)) {
+            plugin.msg().send(actor, "<red>You don't have permission to change this."); return false;
+        }
+        town.setPublicSpawn(allow);
+        touch();
+        plugin.msg().send(actor, allow
+                ? "<green>Visitors can now teleport to your town spawn."
+                : "<yellow>Only residents can teleport to your town spawn now.");
+        return true;
+    }
+
+    /** Teleport to any town's spawn by name. */
+    public boolean teleportToTown(Player player, String townName) {
+        Town town = townByName(townName);
+        if (town == null) {
+            plugin.msg().send(player, "<red>There's no town called <white>" + townName + "</white>.");
+            return false;
+        }
+        if (town.spawn() == null) {
+            plugin.msg().send(player, "<red>That town hasn't set a spawn yet.");
+            return false;
+        }
+        if (!town.isMember(player.getUniqueId())) {
+            if (!plugin.getConfig().getBoolean("towns.public-spawn-teleport", true)) {
+                plugin.msg().send(player, "<red>Teleporting to towns is disabled on this server.");
+                return false;
+            }
+            if (!town.publicSpawn()) {
+                plugin.msg().send(player, "<red><white>" + town.name()
+                        + "</white> doesn't allow visitors to teleport in.");
+                return false;
+            }
+        }
+        player.teleport(town.spawn());
+        plugin.msg().send(player, "<green>Teleported to <#f9d423>" + town.name() + "</#f9d423>.");
+        return true;
+    }
+
     public boolean teleportSpawn(Player player) {
         Town town = getTownOf(player.getUniqueId());
         if (town == null) { plugin.msg().send(player, "<red>You're not in a town."); return false; }
@@ -422,6 +464,7 @@ public class TownManager {
             cfg.set(base + ".founded", town.founded());
             cfg.set(base + ".bank", town.bank());
             cfg.set(base + ".tax", town.tax());
+            cfg.set(base + ".public-spawn", town.publicSpawn());
             if (town.spawn() != null) cfg.set(base + ".spawn", serLoc(town.spawn()));
             for (Map.Entry<UUID, TownRank> e : town.members().entrySet()) {
                 cfg.set(base + ".members." + e.getKey(), e.getValue().name());
@@ -460,6 +503,7 @@ public class TownManager {
                 Town town = new Town(name, mayor, founded);
                 town.setBank(cfg.getDouble(base + ".bank"));
                 town.setTax(cfg.getDouble(base + ".tax"));
+                town.setPublicSpawn(cfg.getBoolean(base + ".public-spawn", true));
                 String spawn = cfg.getString(base + ".spawn");
                 if (spawn != null) town.setSpawn(deserLoc(spawn));
 

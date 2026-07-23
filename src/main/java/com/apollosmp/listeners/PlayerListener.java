@@ -53,7 +53,7 @@ public class PlayerListener implements Listener {
         var msg = plugin.msg();
         msg.send(player, "<#f9d423>\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501</#f9d423>");
         msg.send(player, "<gradient:#f9d423:#ff4e50><bold>  Welcome to Apollo SMP!</bold></gradient>");
-        msg.send(player, "<gray>  Server IP: <#5ad1e8>apollo.noob.club</#5ad1e8>");
+        msg.send(player, "<gray>  Server IP: <#5ad1e8>" + plugin.serverIp() + "</#5ad1e8>");
         msg.send(player, "");
         msg.send(player, "<#f9d423>Handy commands:</#f9d423>");
         msg.send(player, "  <white>/menu</white> <dark_gray>-</dark_gray> <gray>the main hub</gray>");

@@ -20,6 +20,8 @@ public class Town {
     private double bank;
     private double tax;
     private Location spawn;
+    /** Whether players outside the town may teleport to its spawn. */
+    private boolean publicSpawn = true;
 
     private final Map<UUID, TownRank> members = new LinkedHashMap<>();
     private final Set<String> claims = new LinkedHashSet<>();
@@ -53,6 +55,8 @@ public class Town {
     public void setTax(double tax) { this.tax = Math.max(0, tax); }
     public Location spawn() { return spawn; }
     public void setSpawn(Location spawn) { this.spawn = spawn; }
+    public boolean publicSpawn() { return publicSpawn; }
+    public void setPublicSpawn(boolean publicSpawn) { this.publicSpawn = publicSpawn; }
 
     // ---- members ----
     public Map<UUID, TownRank> members() { return members; }

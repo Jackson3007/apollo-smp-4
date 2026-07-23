@@ -164,9 +164,15 @@ public class ApolloSMP extends JavaPlugin {
                 new com.apollosmp.listeners.TownProtectionListener(this), this);
         getServer().getPluginManager().registerEvents(
                 new com.apollosmp.listeners.TownChatListener(this), this);
+        getServer().getPluginManager().registerEvents(
+                new com.apollosmp.listeners.TownBorderListener(this), this);
 
         long taxTicks = Math.max(1L, getConfig().getLong("towns.tax-interval-hours", 24)) * 3600L * 20L;
         getServer().getScheduler().runTaskTimer(this, () -> towns.collectTaxes(), taxTicks, taxTicks);
+
+        long reminderTicks = (long) voting.reminderMinutes() * 60L * 20L;
+        getServer().getScheduler().runTaskTimer(this, () -> voting.sendReminders(),
+                reminderTicks, reminderTicks);
     }
 
     // ---- world border ----
@@ -223,7 +229,6 @@ public class ApolloSMP extends JavaPlugin {
         mailbox.save();
         businesses.save();
         skyCoins.save();
-        voting.save();
         towns.save();
     }
 
@@ -257,4 +262,9 @@ public class ApolloSMP extends JavaPlugin {
     public com.apollosmp.listeners.AuctionSearchListener auctionSearch() { return auctionSearch; }
     public com.apollosmp.town.TownManager towns() { return towns; }
     public com.apollosmp.town.ChatPromptManager prompts() { return prompts; }
+
+    /** The server address shown on the sidebar and in the welcome message. */
+    public String serverIp() {
+        return getConfig().getString("server-ip", "apollo.noob.club");
+    }
 }

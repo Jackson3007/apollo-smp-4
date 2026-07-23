@@ -36,13 +36,13 @@ public class CrateMenu extends Gui {
     }
 
     private void buildPool() {
-        add(new Prize(Kind.COINS, 3, Material.NETHER_STAR, "<#5ad1e8>3 Sky Coins"), 5);
-        add(new Prize(Kind.COINS, 5, Material.NETHER_STAR, "<#5ad1e8>5 Sky Coins"), 4);
-        add(new Prize(Kind.COINS, 10, Material.NETHER_STAR, "<#5ad1e8>10 Sky Coins"), 2);
-        add(new Prize(Kind.MONEY, 1000, Material.GOLD_INGOT, "<#f9d423>$1,000"), 4);
-        add(new Prize(Kind.MONEY, 5000, Material.GOLD_BLOCK, "<#f9d423>$5,000"), 1);
-        add(new Prize(Kind.ITEM, 16, Material.DIAMOND, "<aqua>16 Diamonds"), 2);
-        add(new Prize(Kind.ITEM, 32, Material.IRON_INGOT, "<white>32 Iron"), 3);
+        add(new Prize(Kind.COINS, 1, Material.NETHER_STAR, "<#5ad1e8>1 Sky Coin"), 10);
+        add(new Prize(Kind.COINS, 2, Material.NETHER_STAR, "<#5ad1e8>2 Sky Coins"), 7);
+        add(new Prize(Kind.COINS, 5, Material.NETHER_STAR, "<#5ad1e8>5 Sky Coins"), 3);
+        add(new Prize(Kind.MONEY, 250, Material.GOLD_INGOT, "<#f9d423>$250"), 8);
+        add(new Prize(Kind.MONEY, 1000, Material.GOLD_BLOCK, "<#f9d423>$1,000"), 3);
+        add(new Prize(Kind.ITEM, 4, Material.DIAMOND, "<aqua>4 Diamonds"), 4);
+        add(new Prize(Kind.ITEM, 16, Material.IRON_INGOT, "<white>16 Iron"), 6);
         add(new Prize(Kind.KEY, 1, Material.TRIPWIRE_HOOK, "<#f9d423>A Vote Key"), 2);
         add(new Prize(Kind.SPAWNER, 1, Material.SPAWNER, "<#e94fd0>A Spawner"), 1);
     }

@@ -146,6 +146,10 @@ world-border:
   # Warning distance (blocks) for the red border effect.
   warning-distance: 32
 
+# The address players connect to. Used by the sidebar %ip%
+# placeholder and the welcome message.
+server-ip: "apollo.noob.club"
+
 scoreboard:
   enabled: true
   # Title shown at the top of the sidebar.
@@ -154,6 +158,7 @@ scoreboard:
   refresh-ticks: 20
   # Lines top-to-bottom. Placeholders:
   #   %balance% %balance_raw% %player% %online% %world% %homes% %listings% %x% %y% %z%
+  #   %skycoins% %businesses% %ip%
   lines:
     - "<dark_gray>▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪</dark_gray>"
     - "<gray>Player:</gray> <white>%player%</white>"
@@ -168,7 +173,7 @@ scoreboard:
     - " <gray>Listings:</gray> <white>%listings%</white>"
     - " <gray>Online:</gray> <white>%online%</white>"
     - "<dark_gray>▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪</dark_gray>"
-    - "<#ff4e50>apollo.noob.club</#ff4e50>"
+    - "<#ff4e50>%ip%</#ff4e50>"
 
 # Data auto-saves on a timer as a safety net (minutes). Changes also save immediately.
 autosave-minutes: 5
@@ -177,20 +182,21 @@ autosave-minutes: 5
 # Players earn Sky Coins (a second currency) for voting. Replace the links below
 # with your real vote-site URLs. Doing all 5 in one day pays the all-voted bonus.
 voting:
-  coins-per-vote: 1
-  all-voted-bonus: 5
-  give-key-per-vote: true
+  # Voting is informational only right now - no coins, keys or rewards.
+  # Players get a reminder in chat and can grab the links from /vote.
+  reminder-enabled: true
+  reminder-minutes: 60
+  # Up to 4 sites are shown in /vote. Leave the blank ones as they are
+  # until you have the real links, and they'll show as "not set".
   services:
-    - name: "PlanetMinecraft"
-      link: "https://www.planetminecraft.com/server/apollo-smp/vote/"
-    - name: "MinecraftServers"
-      link: "https://minecraftservers.org/vote/000000"
-    - name: "Minecraft-MP"
-      link: "https://minecraft-mp.com/server/000000/vote/"
     - name: "TopG"
-      link: "https://topg.org/minecraft-servers/server-000000/vote"
-    - name: "ServerList101"
-      link: "https://serverlist101.com/server/000000/vote/"
+      link: "https://topg.org/minecraft-servers/server-684435"
+    - name: "Site 2"
+      link: ""
+    - name: "Site 3"
+      link: ""
+    - name: "Site 4"
+      link: ""
 
 # ---- Towns ----
 # A Towny-style land system. Costs are money sinks paid by the player;
@@ -201,3 +207,6 @@ towns:
   claims-base: 6           # base chunks a town may hold
   claims-per-member: 4     # extra chunks allowed per resident
   tax-interval-hours: 24   # how often resident taxes are collected into the bank
+  # Master switch for /town tp. Each town can also block visitors itself
+  # from the town menu, so leave this on unless you want to disable it server-wide.
+  public-spawn-teleport: true
