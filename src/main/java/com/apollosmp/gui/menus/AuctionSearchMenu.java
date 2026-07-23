@@ -36,7 +36,8 @@ public class AuctionSearchMenu extends Gui {
     };
     private static final int[] SORT_SLOTS = {38, 39, 41, 42};
 
-    private static final int KEYBOARD = 45;
+    private static final int CHAT_SEARCH = 45;
+    private static final int KEYBOARD = 46;
     private static final int VIEW = 49;
     private static final int BACK = 53;
 
@@ -79,11 +80,16 @@ public class AuctionSearchMenu extends Gui {
                     .glow(active).hideAttributes().build());
         }
 
-        inventory.setItem(KEYBOARD, Items.of(Material.NAME_TAG)
+        inventory.setItem(CHAT_SEARCH, Items.of(Material.NAME_TAG)
                 .name("<#5ad1e8>Search by Name")
-                .lore("<gray>Type an item name on an",
-                        "<gray>on-screen keyboard.",
+                .lore("<gray>Click, then type an item name in chat.",
+                        "<gray>Or use <white>/ah search <item></white>.",
                         query == null ? "" : "<gray>Current: <white>" + query + "</white>")
+                .build());
+
+        inventory.setItem(KEYBOARD, Items.of(Material.OAK_SIGN)
+                .name("<#5ad1e8>On-screen Keyboard")
+                .lore("<gray>Type without using chat.")
                 .build());
 
         inventory.setItem(VIEW, Items.of(Material.LIME_DYE)
@@ -111,6 +117,14 @@ public class AuctionSearchMenu extends Gui {
             }
         }
         switch (slot) {
+            case CHAT_SEARCH -> {
+                final String cat = category;
+                final String srt = sort;
+                player.closeInventory();
+                plugin.msg().send(player, "<#5ad1e8>Type what you're looking for</#5ad1e8> <gray>(or 'cancel').");
+                plugin.prompts().await(player, typed ->
+                        new AuctionMenu(plugin, player, false, 0, typed, cat, srt).open());
+            }
             case KEYBOARD -> new TextEntryMenu(plugin, player,
                     "<#5ad1e8><bold>Search by Name</bold>",
                     "Item name to search for",

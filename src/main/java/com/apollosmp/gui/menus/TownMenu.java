@@ -47,7 +47,7 @@ public class TownMenu extends Gui {
 
         inventory.setItem(20, Items.of(Material.EMERALD)
                 .name("<green><bold>Create Town</bold>")
-                .lore("<gray>Pick a name on the on-screen keyboard.",
+                .lore("<gray>Click, then type a name in chat.",
                         "<gray>3-16 letters/numbers.")
                 .build());
 
@@ -99,7 +99,7 @@ public class TownMenu extends Gui {
                 .name("<#5ad1e8>Rank Permissions").lore("<gray>Choose what each rank can do.").build());
         inventory.setItem(24, Items.of(Material.EMERALD)
                 .name("<#f9d423>Set Daily Tax").lore("<gray>Per-resident tax into the bank.",
-                        "<gray>Click to enter an amount.").build());
+                        "<gray>Click, then type an amount.").build());
 
         boolean openToVisitors = town.publicSpawn();
         inventory.setItem(27, Items.of(openToVisitors ? Material.LIME_DYE : Material.RED_DYE)
@@ -118,7 +118,7 @@ public class TownMenu extends Gui {
                 .name("<#f9d423>Sell This Plot")
                 .lore("<gray>Put the chunk you're standing in",
                         "<gray>up for sale to a resident.",
-                        "<gray>Click to enter a price.").build());
+                        "<gray>Click, then type a price.").build());
         inventory.setItem(31, Items.of(Material.LIME_DYE)
                 .name("<green>Buy This Plot")
                 .lore("<gray>Buy the plot you're standing in,",
@@ -141,16 +141,12 @@ public class TownMenu extends Gui {
 
         if (town == null) {
             if (slot == 20) {
-                new TextEntryMenu(plugin, player,
-                        "<green><bold>Name Your Town</bold>",
-                        "3-16 letters, numbers or _",
-                        null, 16,
-                        name -> {
-                            if (plugin.towns().createTown(player, name)) new TownMenu(plugin, player).open();
-                            else new TownMenu(plugin, player).open();
-                        },
-                        () -> new TownMenu(plugin, player).open()
-                ).open();
+                player.closeInventory();
+                plugin.msg().send(player, "<#f9d423>Type a name for your town</#f9d423> <gray>(or 'cancel').");
+                plugin.msg().send(player, "<dark_gray>Or use <white>/town create <name></white>.");
+                plugin.prompts().await(player, name -> {
+                    if (plugin.towns().createTown(player, name)) new TownMenu(plugin, player).open();
+                });
                 return;
             }
             if (slot >= 23 && slot <= 25) {
@@ -174,30 +170,31 @@ public class TownMenu extends Gui {
                     plugin.msg().send(player, "<red>Only ranks with Manage Permissions can edit this.");
                 }
             }
-            case 24 -> new NumberPadMenu(plugin, player,
-                    "<#f9d423><bold>Set Daily Tax</bold>",
-                    "Tax charged per resident each day",
-                    amount -> {
-                        plugin.towns().setTax(player, amount);
-                        new TownMenu(plugin, player).open();
-                    },
-                    () -> new TownMenu(plugin, player).open()
-            ).open();
+            case 24 -> {
+                player.closeInventory();
+                plugin.msg().send(player, "<#f9d423>Type the daily tax amount</#f9d423> <gray>(or 'cancel').");
+                plugin.msg().send(player, "<dark_gray>Or use <white>/town tax <amount></white>.");
+                plugin.prompts().await(player, s -> {
+                    try { plugin.towns().setTax(player, Double.parseDouble(s)); }
+                    catch (NumberFormatException e) { plugin.msg().send(player, "<red>That's not a number."); }
+                    new TownMenu(plugin, player).open();
+                });
+            }
             case 27 -> {
                 plugin.towns().setPublicSpawn(player, !town.publicSpawn());
                 redraw();
             }
             case 28 -> { plugin.towns().setSpawnHere(player); redraw(); }
             case 29 -> { plugin.towns().teleportSpawn(player); player.closeInventory(); }
-            case 30 -> new NumberPadMenu(plugin, player,
-                    "<#f9d423><bold>Sell This Plot</bold>",
-                    "Price a resident pays for this chunk",
-                    price -> {
-                        plugin.towns().sellPlotHere(player, price);
-                        new TownMenu(plugin, player).open();
-                    },
-                    () -> new TownMenu(plugin, player).open()
-            ).open();
+            case 30 -> {
+                player.closeInventory();
+                plugin.msg().send(player, "<#f9d423>Type the plot price</#f9d423> <gray>(or 'cancel').");
+                plugin.msg().send(player, "<dark_gray>Or use <white>/town sellplot <price></white>.");
+                plugin.prompts().await(player, s -> {
+                    try { plugin.towns().sellPlotHere(player, Double.parseDouble(s)); }
+                    catch (NumberFormatException e) { plugin.msg().send(player, "<red>That's not a number."); }
+                });
+            }
             case 31 -> { plugin.towns().buyPlotHere(player); redraw(); }
             case 33 -> {
                 if (town.mayor().equals(player.getUniqueId())) {

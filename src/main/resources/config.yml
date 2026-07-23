@@ -198,6 +198,18 @@ voting:
     - name: "Site 4"
       link: ""
 
+# ---- Discord ----
+# A reminder is posted halfway between each vote reminder.
+discord:
+  enabled: true
+  invite: "https://discord.gg/ztg4bkvdpN"
+
+# ---- Sleep ----
+# What share of players must be in bed to skip the night.
+sleep:
+  percentage: 25   # 25 = a quarter of everyone online
+  announce: true   # tell the world how many more are needed
+
 # ---- Towns ----
 # A Towny-style land system. Costs are money sinks paid by the player;
 # plot sales and taxes flow into the town bank.

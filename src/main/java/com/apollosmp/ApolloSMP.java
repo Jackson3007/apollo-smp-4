@@ -129,6 +129,7 @@ public class ApolloSMP extends JavaPlugin {
         reg("vote", new VoteCommand(this));
         reg("coinshop", new CoinShopCommand(this));
         reg("town", new com.apollosmp.commands.TownCommand(this));
+        reg("discord", new com.apollosmp.commands.DiscordCommand(this));
 
         TpaCommand tpaCommand = new TpaCommand(this);
         reg("tpa", tpaCommand);
@@ -166,6 +167,8 @@ public class ApolloSMP extends JavaPlugin {
                 new com.apollosmp.listeners.TownChatListener(this), this);
         getServer().getPluginManager().registerEvents(
                 new com.apollosmp.listeners.TownBorderListener(this), this);
+        getServer().getPluginManager().registerEvents(
+                new com.apollosmp.listeners.SleepListener(this), this);
 
         long taxTicks = Math.max(1L, getConfig().getLong("towns.tax-interval-hours", 24)) * 3600L * 20L;
         getServer().getScheduler().runTaskTimer(this, () -> towns.collectTaxes(), taxTicks, taxTicks);
@@ -173,6 +176,11 @@ public class ApolloSMP extends JavaPlugin {
         long reminderTicks = (long) voting.reminderMinutes() * 60L * 20L;
         getServer().getScheduler().runTaskTimer(this, () -> voting.sendReminders(),
                 reminderTicks, reminderTicks);
+        // Discord reminder sits halfway between the vote reminders.
+        getServer().getScheduler().runTaskTimer(this, () -> voting.sendDiscordReminder(),
+                Math.max(1L, reminderTicks / 2L), reminderTicks);
+
+        applySleepRule();
     }
 
     // ---- world border ----
@@ -237,6 +245,7 @@ public class ApolloSMP extends JavaPlugin {
         this.msg = new Msg(getConfig());
         sell.reload();
         setupWorldBorders();
+        applySleepRule();
         for (Player player : getServer().getOnlinePlayers()) {
             board.remove(player);
             board.create(player);
@@ -262,6 +271,20 @@ public class ApolloSMP extends JavaPlugin {
     public com.apollosmp.listeners.AuctionSearchListener auctionSearch() { return auctionSearch; }
     public com.apollosmp.town.TownManager towns() { return towns; }
     public com.apollosmp.town.ChatPromptManager prompts() { return prompts; }
+
+    /** Apply the "how many players must sleep" rule to every overworld. */
+    public void applySleepRule() {
+        int percentage = Math.max(1, Math.min(100, getConfig().getInt("sleep.percentage", 25)));
+        for (org.bukkit.World world : getServer().getWorlds()) {
+            if (world.getEnvironment() != org.bukkit.World.Environment.NORMAL) continue;
+            try {
+                world.setGameRule(org.bukkit.GameRule.PLAYERS_SLEEPING_PERCENTAGE, percentage);
+            } catch (Exception ex) {
+                getLogger().warning("Couldn't set the sleeping percentage for " + world.getName()
+                        + ": " + ex.getMessage());
+            }
+        }
+    }
 
     /** The server address shown on the sidebar and in the welcome message. */
     public String serverIp() {

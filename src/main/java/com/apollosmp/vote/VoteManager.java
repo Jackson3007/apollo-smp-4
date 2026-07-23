@@ -49,6 +49,27 @@ public class VoteManager {
         return out;
     }
 
+    /** Nudge everyone online to join the Discord. Alternates with the vote reminder. */
+    public void sendDiscordReminder() {
+        if (!plugin.getConfig().getBoolean("discord.enabled", true)) return;
+        String invite = discordInvite();
+        if (invite == null || invite.isBlank()) return;
+
+        String bar = "<dark_gray>\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa";
+        for (Player player : plugin.getServer().getOnlinePlayers()) {
+            plugin.msg().send(player, bar);
+            plugin.msg().send(player, "<gradient:#5ad1e8:#e94fd0><bold>Join our Discord!</bold></gradient>");
+            plugin.msg().send(player, "<gray>Updates, giveaways and a place to chat.");
+            plugin.msg().send(player, "<click:open_url:'" + invite + "'><hover:show_text:'Click to open Discord'>"
+                    + "<#5ad1e8><u>" + invite + "</u></#5ad1e8></hover></click>");
+            plugin.msg().send(player, bar);
+        }
+    }
+
+    public String discordInvite() {
+        return plugin.getConfig().getString("discord.invite", "https://discord.gg/ztg4bkvdpN");
+    }
+
     /** Nudge everyone online to vote. */
     public void sendReminders() {
         if (!reminderEnabled()) return;

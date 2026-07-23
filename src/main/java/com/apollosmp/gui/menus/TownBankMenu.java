@@ -38,9 +38,9 @@ public class TownBankMenu extends Gui {
                     .name("<yellow>Withdraw " + plugin.msg().money(AMOUNTS[i])).build());
         }
         inventory.setItem(DEPOSIT_CUSTOM, Items.of(Material.EMERALD_BLOCK)
-                .name("<green>Deposit Custom").lore("<gray>Click to enter an amount.").build());
+                .name("<green>Deposit Custom").lore("<gray>Click, then type an amount.").build());
         inventory.setItem(WITHDRAW_CUSTOM, Items.of(Material.REDSTONE_BLOCK)
-                .name("<yellow>Withdraw Custom").lore("<gray>Click to enter an amount.").build());
+                .name("<yellow>Withdraw Custom").lore("<gray>Click, then type an amount.").build());
 
         inventory.setItem(31, Items.of(Material.ARROW).name("<gray>Back").build());
         fillEmpty(Items.filler(Material.GRAY_STAINED_GLASS_PANE));
@@ -55,25 +55,23 @@ public class TownBankMenu extends Gui {
             if (slot == WITHDRAW_SLOTS[i]) { plugin.towns().withdraw(player, AMOUNTS[i]); redraw(); return; }
         }
         if (slot == DEPOSIT_CUSTOM) {
-            new NumberPadMenu(plugin, player,
-                    "<green><bold>Deposit</bold>",
-                    "Amount to put into the town bank",
-                    amount -> {
-                        plugin.towns().deposit(player, amount);
-                        new TownBankMenu(plugin, player).open();
-                    },
-                    () -> new TownBankMenu(plugin, player).open()
-            ).open();
+            player.closeInventory();
+            plugin.msg().send(player, "<#f9d423>Type the amount to deposit</#f9d423> <gray>(or 'cancel').");
+            plugin.msg().send(player, "<dark_gray>Or use <white>/town deposit <amount></white>.");
+            plugin.prompts().await(player, s -> {
+                try { plugin.towns().deposit(player, Double.parseDouble(s)); }
+                catch (NumberFormatException e) { plugin.msg().send(player, "<red>That's not a number."); }
+                new TownBankMenu(plugin, player).open();
+            });
         } else if (slot == WITHDRAW_CUSTOM) {
-            new NumberPadMenu(plugin, player,
-                    "<yellow><bold>Withdraw</bold>",
-                    "Amount to take from the town bank",
-                    amount -> {
-                        plugin.towns().withdraw(player, amount);
-                        new TownBankMenu(plugin, player).open();
-                    },
-                    () -> new TownBankMenu(plugin, player).open()
-            ).open();
+            player.closeInventory();
+            plugin.msg().send(player, "<#f9d423>Type the amount to withdraw</#f9d423> <gray>(or 'cancel').");
+            plugin.msg().send(player, "<dark_gray>Or use <white>/town withdraw <amount></white>.");
+            plugin.prompts().await(player, s -> {
+                try { plugin.towns().withdraw(player, Double.parseDouble(s)); }
+                catch (NumberFormatException e) { plugin.msg().send(player, "<red>That's not a number."); }
+                new TownBankMenu(plugin, player).open();
+            });
         }
     }
 }

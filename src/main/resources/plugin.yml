@@ -76,6 +76,9 @@ commands:
     description: Create and manage your town
     aliases: [t, towns]
     usage: /town
+  discord:
+    description: Get the Discord invite link
+    usage: /discord
   tpa:
     description: Request to teleport to a player
     usage: /tpa <player>

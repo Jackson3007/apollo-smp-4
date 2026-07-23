@@ -31,10 +31,14 @@ public class TownMembersMenu extends Gui {
         slotMembers.clear();
         if (town == null) { player().closeInventory(); return; }
 
-        inventory.setItem(4, Items.of(Material.WRITABLE_BOOK)
-                .name("<green><bold>Invite a Player</bold>")
-                .lore("<gray>Pick from the online players",
-                        "<gray>who aren't in a town yet.").build());
+        inventory.setItem(3, Items.of(Material.WRITABLE_BOOK)
+                .name("<green><bold>Invite by Name</bold>")
+                .lore("<gray>Click, then type their name in chat.",
+                        "<gray>Or use <white>/town invite <player></white>.").build());
+        inventory.setItem(5, Items.of(Material.PLAYER_HEAD)
+                .name("<#5ad1e8><bold>Pick from Online</bold>")
+                .lore("<gray>Choose from players who",
+                        "<gray>aren't in a town yet.").build());
 
         int slot = 9;
         for (Map.Entry<UUID, TownRank> e : town.members().entrySet()) {
@@ -73,7 +77,14 @@ public class TownMembersMenu extends Gui {
     @Override
     public void onClick(Player clicker, int slot, ItemStack clicked, ClickType click) {
         if (slot == 49) { new TownMenu(plugin, clicker).open(); return; }
-        if (slot == 4) {
+        if (slot == 3) {
+            clicker.closeInventory();
+            plugin.msg().send(clicker, "<#f9d423>Type the player's name to invite</#f9d423> <gray>(or 'cancel').");
+            plugin.msg().send(clicker, "<dark_gray>Or use <white>/town invite <player></white>.");
+            plugin.prompts().await(clicker, name -> plugin.towns().invite(clicker, name));
+            return;
+        }
+        if (slot == 5) {
             new TownInviteMenu(plugin, clicker, 0).open();
             return;
         }
