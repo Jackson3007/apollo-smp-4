@@ -84,6 +84,26 @@ public class BusinessHolograms {
             label.text(specialText(sb));
         }
 
+        // Logistics blocks get a simpler label in the same style.
+        for (com.apollosmp.logistics.LogisticsManager.Node n :
+                plugin.logistics().allNodes()) {
+            World world = plugin.getServer().getWorld(n.world);
+            if (world == null) continue;
+            if (!world.isChunkLoaded(n.x >> 4, n.z >> 4)) continue;
+            Location loc = new Location(world, n.x + 0.5, n.y + 1.3, n.z + 0.5);
+            if (!anyoneNear(loc)) continue;
+
+            String key = "logi:" + n.key();
+            wanted.add(key);
+            TextDisplay label = labels.get(key);
+            if (label == null || !label.isValid()) {
+                label = spawn(loc);
+                if (label == null) continue;
+                labels.put(key, label);
+            }
+            label.text(logisticsText(n));
+        }
+
         for (Map.Entry<String, TextDisplay> e : new ArrayList<>(labels.entrySet())) {
             if (wanted.contains(e.getKey())) continue;
             TextDisplay label = e.getValue();
@@ -110,6 +130,7 @@ public class BusinessHolograms {
                 display.setViewRange(0.6f);
                 display.setAlignment(TextDisplay.TextAlignment.CENTER);
                 display.setLineWidth(400);
+                applyScale(display);
                 display.getPersistentDataContainer().set(tagKey, PersistentDataType.BYTE, (byte) 1);
             });
         } catch (Exception ex) {
@@ -125,6 +146,21 @@ public class BusinessHolograms {
             out = out.append(Msg.mm(miniLines[i]));
         }
         return out;
+    }
+
+    /** Shrink the floating text so it doesn't tower over the block. */
+    private void applyScale(TextDisplay display) {
+        float scale = (float) plugin.getConfig().getDouble("invest.hologram-scale", 0.6);
+        if (scale <= 0) scale = 0.6f;
+        try {
+            display.setTransformation(new org.bukkit.util.Transformation(
+                    new org.joml.Vector3f(0f, 0f, 0f),
+                    new org.joml.Quaternionf(),
+                    new org.joml.Vector3f(scale, scale, scale),
+                    new org.joml.Quaternionf()));
+        } catch (Throwable ignored) {
+            // if the server build lacks transformations, the default size is fine
+        }
     }
 
     private Component buildText(BusinessBlock block) {
@@ -240,23 +276,103 @@ public class BusinessHolograms {
     }
 
     private Component specialText(com.apollosmp.special.SpecialBusiness b) {
-        String title = "<gradient:#f9d423:#ff4e50><bold>" + b.name()
-                + "</bold></gradient> <#e94fd0>" + b.rarity() + "</#e94fd0>";
+        String header = specialIcon(b.industry()) + " <gradient:#f9d423:#ff4e50><bold>"
+                + b.name().toUpperCase() + "</bold></gradient> " + rarityStars(b.rarity());
+
+        String owner = "<gray>Owner:</gray> <white>"
+                + (b.ownerName() == null ? "Unknown" : b.ownerName()) + "</white>";
+        String rarity = "<gray>Rarity:</gray> <#e94fd0>" + b.rarity() + "</#e94fd0>";
         String income = "<gray>Income:</gray> <green>"
                 + plugin.msg().money(b.exactProfit()) + "/day</green>";
 
-        String status;
-        int stored = plugin.specialBusinesses().stored(b);
-        if (stored >= b.effectiveStorage()) {
-            status = "<red>Storage full - collect it!</red>";
-        } else {
-            long seconds = plugin.specialBusinesses().secondsUntilNext(b);
-            if (seconds <= 0) status = "<green>Producing now...</green>";
-            else if (seconds >= 60) status = "<gray>Next batch in</gray> <white>"
-                    + (seconds / 60) + "m " + (seconds % 60) + "s</white>";
-            else status = "<gray>Next batch in</gray> <white>" + seconds + "s</white>";
+        // Same idea as normal businesses: show whichever product is closest to full.
+        int cap = b.effectiveStorage();
+        int knownHave = b.storage().getOrDefault(b.knownItem(), 0);
+        int hiddenHave = b.storage().getOrDefault(b.hiddenItem(), 0);
+        boolean useKnown = knownHave >= hiddenHave;
+        int have = useKnown ? knownHave : hiddenHave;
+        org.bukkit.Material shown = useKnown ? b.knownItem() : b.hiddenItem();
+
+        String bar = progressBar(cap <= 0 ? 0 : (double) have / cap);
+        String counts = "<white>" + have + "</white> <dark_gray>/</dark_gray> <white>" + cap
+                + "</white> <gray>" + Items.pretty(shown) + "</gray>";
+
+        return lines(header, "", owner, rarity, income, "",
+                "<gray>Storage</gray>", bar, counts, "", specialStatus(b));
+    }
+
+    /** Short two-line label for a distribution or wholesale block. */
+    private Component logisticsText(com.apollosmp.logistics.LogisticsManager.Node n) {
+        var logistics = plugin.logistics();
+        boolean distributor = logistics.isDistributorNode(n);
+
+        if (distributor) {
+            int count = logistics.linkedBusinesses(n).size() + logistics.linkedSpecials(n).size();
+            boolean attached = logistics.wholesalerFor(n) != null;
+            String header = "<#5ad1e8>\u25c6</#5ad1e8> <gradient:#5ad1e8:#e94fd0><bold>DISTRIBUTION</bold></gradient>";
+            String body = "<gray>" + count + " business" + (count == 1 ? "" : "es") + " linked</gray>";
+            String status = attached
+                    ? "<green>\u23f3 Feeding a wholesaler</green>"
+                    : "<red>\u26a0 Not attached</red>";
+            return lines(header, body, status);
         }
-        return lines(title, income, status);
+
+        int sources = logistics.linkedDistributors(n).size();
+        int stored = logistics.stored(n);
+        int cap = logistics.storageCap();
+        String header = "<#f9d423>\u2726</#f9d423> <gradient:#f9d423:#ff4e50><bold>WHOLESALE</bold></gradient>";
+        String body = "<gray>" + stored + " / " + cap + " stored</gray>";
+        String status;
+        if (sources == 0) status = "<red>\u26a0 Nothing attached</red>";
+        else if (stored >= cap) status = "<red>\u26a0 Full - collect it!</red>";
+        else if (!n.autoSell) status = "<gray>\u23f3 " + plugin.msg().money(logistics.storedValue(n))
+                + " held</gray>";
+        else status = "<gray>\u23f3 Selling in "
+                + formatShort(logistics.secondsUntilSale(n)) + "</gray>";
+        return lines(header, body, status);
+    }
+
+    private String formatShort(long seconds) {
+        if (seconds >= 60) return (seconds / 60) + "m " + (seconds % 60) + "s";
+        return seconds + "s";
+    }
+
+    private String specialIcon(String industry) {
+        return switch (industry == null ? "" : industry) {
+            case "Mining" -> "<#f9d423>\u26cf</#f9d423>";
+            case "Farming" -> "<green>\u273f</green>";
+            case "Forestry" -> "<#c8873c>\u2663</#c8873c>";
+            case "Fishing" -> "<#5ad1e8>\u2248</#5ad1e8>";
+            case "Alchemy" -> "<#e94fd0>\u25c6</#e94fd0>";
+            default -> "<#ff4e50>\u2726</#ff4e50>";
+        };
+    }
+
+    /** Specials have no levels, so the stars show rarity instead. */
+    private String rarityStars(String rarity) {
+        int filled = switch (rarity == null ? "" : rarity) {
+            case "Legendary" -> 5;
+            case "Epic" -> 4;
+            case "Rare" -> 3;
+            default -> 2;
+        };
+        StringBuilder sb = new StringBuilder("<#e94fd0>");
+        for (int i = 0; i < filled; i++) sb.append("\u2605");
+        sb.append("</#e94fd0><dark_gray>");
+        for (int i = filled; i < 5; i++) sb.append("\u2606");
+        sb.append("</dark_gray>");
+        return sb.toString();
+    }
+
+    private String specialStatus(com.apollosmp.special.SpecialBusiness b) {
+        int stored = plugin.specialBusinesses().stored(b);
+        if (stored >= b.effectiveStorage()) return "<red>\u26a0 Storage full - collect it!</red>";
+
+        String main = Items.pretty(b.knownItem());
+        long seconds = plugin.specialBusinesses().secondsUntilNext(b);
+        if (seconds <= 0) return "<green>\u23f3 Producing " + main + "</green>";
+        String time = seconds >= 60 ? (seconds / 60) + "m " + (seconds % 60) + "s" : seconds + "s";
+        return "<gray>\u23f3 Next " + main + " in <white>" + time + "</white></gray>";
     }
 
     private double townBoost(BusinessBlock block) {

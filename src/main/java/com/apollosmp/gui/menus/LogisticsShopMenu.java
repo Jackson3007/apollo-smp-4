@@ -29,9 +29,9 @@ public class LogisticsShopMenu extends Gui {
                 .name("<#f9d423><bold>Your Balance</bold>")
                 .lore("<gray>You have <white>" + plugin.msg().money(balance) + "</white>",
                         "",
-                        "<gray>Place a Distribution Block near your",
-                        "<gray>businesses, then a Wholesale Block",
-                        "<gray>nearby. That's the whole setup.")
+                        "<gray>Put a Distribution Block near your",
+                        "<gray>businesses, then attach a Wholesale",
+                        "<gray>Block right against it.")
                 .glow(true).hideAttributes().build());
 
         double dPrice = logistics.distributionPrice();
@@ -39,7 +39,8 @@ public class LogisticsShopMenu extends Gui {
                 .name("<#5ad1e8><bold>Distribution Block</bold>")
                 .lore("<gray>Gathers from every business you own",
                         "<gray>within <white>" + logistics.businessRadius() + "</white> blocks.",
-                        "<gray>Chain several to cover a big base.",
+                        "<gray>Must touch a Wholesale Block, or",
+                        "<gray>another Distribution Block that does.",
                         "",
                         "<gray>Price: <#f9d423>" + plugin.msg().money(dPrice) + "</#f9d423>",
                         balance >= dPrice ? "<yellow>Click to buy" : "<red>You can't afford this")
@@ -51,7 +52,7 @@ public class LogisticsShopMenu extends Gui {
                 .lore("<gray>Sells everything your distribution",
                         "<gray>blocks reach, every <white>"
                                 + logistics.intervalMinutes() + "</white> minutes.",
-                        "<gray>Range: <white>" + logistics.hubRadius() + "</white> blocks.",
+                        "<gray>Must touch a Distribution Block.",
                         "<gray>Fee: <white>" + (int) logistics.feePercent() + "%</white> of each sale.",
                         "",
                         "<gray>Price: <#f9d423>" + plugin.msg().money(wPrice) + "</#f9d423>",

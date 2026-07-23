@@ -270,6 +270,7 @@ public class ApolloSMP extends JavaPlugin {
         // Ambient particles above business blocks.
         getServer().getScheduler().runTaskTimer(this, () -> businesses.spawnParticles(), 40L, 15L);
         getServer().getScheduler().runTaskTimer(this, () -> specialBusinesses.spawnParticles(), 45L, 15L);
+        getServer().getScheduler().runTaskTimer(this, () -> logistics.spawnParticles(), 50L, 15L);
         // Live-refresh any open business panel (ticks the countdown + updates stored goods).
         getServer().getScheduler().runTaskTimer(this, this::refreshBusinessMenus, 20L, 20L);
     }

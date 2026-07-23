@@ -218,6 +218,17 @@ public class SpawnerManager {
                 display.setViewRange(0.6f);
                 display.setAlignment(TextDisplay.TextAlignment.CENTER);
                 display.setLineWidth(400);
+                float scale = (float) plugin.getConfig().getDouble("invest.hologram-scale", 0.6);
+                if (scale <= 0) scale = 0.6f;
+                try {
+                    display.setTransformation(new org.bukkit.util.Transformation(
+                            new org.joml.Vector3f(0f, 0f, 0f),
+                            new org.joml.Quaternionf(),
+                            new org.joml.Vector3f(scale, scale, scale),
+                            new org.joml.Quaternionf()));
+                } catch (Throwable ignored) {
+                    // default size is fine if transformations aren't available
+                }
                 display.getPersistentDataContainer().set(labelKey, PersistentDataType.BYTE, (byte) 1);
             });
         } catch (Exception ex) {

@@ -233,15 +233,19 @@ merchant:
 logistics:
   distribution-price: 25000.0
   wholesale-price: 60000.0
-  business-radius: 8          # how far a distribution block reaches
-  hub-radius: 16              # how far a wholesale block reaches distribution blocks
+  business-radius: 8          # how far a distribution block reaches for businesses
+  # Distribution blocks must physically touch the wholesale block, or touch
+  # another distribution block that chains back to one.
   sell-interval-minutes: 5
+  storage-cap: 4096           # how much a wholesale block holds before it stops pulling
   fee-percent: 8.0            # cut taken off each automated sale
 
 # ---- Businesses ----
 invest:
   # Floating text above business blocks showing income and the next payout.
   holograms: true
+  # Size of that floating text. 1.0 is vanilla size, lower is smaller.
+  hologram-scale: 0.6
 
 # ---- Spawners ----
 spawners:
