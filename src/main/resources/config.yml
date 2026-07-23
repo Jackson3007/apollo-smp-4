@@ -206,8 +206,8 @@ voting:
   services:
     - name: "TopG"
       link: "http://topg.org/minecraft-servers/server-684435#vote"
-    - name: "Site 2"
-      link: ""
+    - name: "PlanetMinecraft"
+      link: "https://www.planetminecraft.com/server/apollo-smp-apollo-noob-club/vote/"
     - name: "Site 3"
       link: ""
     - name: "Site 4"

@@ -25,8 +25,10 @@ public class VoteManager {
     public record Service(String name, String link) {}
 
     /** Used when config.yml has no properly configured sites yet. */
-    private static final Service DEFAULT_SITE =
-            new Service("TopG", "http://topg.org/minecraft-servers/server-684435#vote");
+    private static final List<Service> DEFAULT_SITES = List.of(
+            new Service("TopG", "http://topg.org/minecraft-servers/server-684435#vote"),
+            new Service("PlanetMinecraft",
+                    "https://www.planetminecraft.com/server/apollo-smp-apollo-noob-club/vote/"));
 
     private final ApolloSMP plugin;
     private final File file;
@@ -162,7 +164,7 @@ public class VoteManager {
             if (url.isEmpty() || url.contains("000000")) continue;
             out.add(new Service(name.toString(), url));
         }
-        if (out.isEmpty()) out.add(DEFAULT_SITE);
+        if (out.isEmpty()) out.addAll(DEFAULT_SITES);
         return out;
     }
 

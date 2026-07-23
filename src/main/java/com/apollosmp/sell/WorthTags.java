@@ -240,28 +240,71 @@ public class WorthTags implements Listener {
     private java.lang.reflect.Method getTitleMethod;
     private boolean titleUnavailable;
 
+    /** True when the resolved method wants a Component rather than a String. */
+    private boolean titleTakesComponent;
+
     private boolean setTitle(InventoryView view, String title) {
         if (titleUnavailable) return false;
         try {
+            if (setTitleMethod == null) resolveTitleMethod(view);
             if (setTitleMethod == null) {
-                setTitleMethod = view.getClass().getMethod("setTitle", String.class);
+                titleUnavailable = true;
+                plugin.getLogger().info("Chest totals disabled: this server build can't retitle inventories.");
+                return false;
             }
-            setTitleMethod.invoke(view, title);
+            if (titleTakesComponent) {
+                setTitleMethod.invoke(view, Msg.mm(title.replace("\u00a76", "<#f9d423>")));
+            } else {
+                setTitleMethod.invoke(view, title);
+            }
             return true;
         } catch (Throwable ex) {
             titleUnavailable = true;
-            plugin.getLogger().info("Chest totals disabled: this server build can't retitle inventories.");
+            plugin.getLogger().info("Chest totals disabled: " + ex.getClass().getSimpleName());
             return false;
+        }
+    }
+
+    /** Different server builds name this differently, so try the known shapes. */
+    private void resolveTitleMethod(InventoryView view) {
+        Class<?> component = net.kyori.adventure.text.Component.class;
+        String[][] candidates = {
+                {"title", "component"},
+                {"setTitle", "component"},
+                {"setTitle", "string"}
+        };
+        for (String[] candidate : candidates) {
+            try {
+                if (candidate[1].equals("component")) {
+                    setTitleMethod = view.getClass().getMethod(candidate[0], component);
+                    titleTakesComponent = true;
+                } else {
+                    setTitleMethod = view.getClass().getMethod(candidate[0], String.class);
+                    titleTakesComponent = false;
+                }
+                return;
+            } catch (NoSuchMethodException ignored) {
+                // try the next shape
+            }
         }
     }
 
     private String getTitle(InventoryView view) {
         try {
             if (getTitleMethod == null) {
-                getTitleMethod = view.getClass().getMethod("getTitle");
+                try {
+                    getTitleMethod = view.getClass().getMethod("getTitle");
+                } catch (NoSuchMethodException ex) {
+                    getTitleMethod = view.getClass().getMethod("title");
+                }
             }
             Object result = getTitleMethod.invoke(view);
-            return result instanceof String s ? s : null;
+            if (result instanceof String s) return s;
+            if (result instanceof net.kyori.adventure.text.Component c) {
+                return net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
+                        .plainText().serialize(c);
+            }
+            return null;
         } catch (Throwable ex) {
             return null;
         }
