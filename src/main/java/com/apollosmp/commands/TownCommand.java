@@ -114,6 +114,35 @@ public class TownCommand implements CommandExecutor, TabCompleter {
                     plugin.msg().send(player, "<red>Use <white>on</white> or <white>off</white>.");
                 }
             }
+            case "border", "borders" -> {
+                boolean on = plugin.borders().toggle(player);
+                plugin.msg().send(player, on
+                        ? "<green>Claim borders shown. <gray>Run it again to hide them."
+                        : "<yellow>Claim borders hidden.");
+            }
+            case "map" -> plugin.borders().sendMap(player);
+            case "plot", "plotinfo" -> {
+                Town here = plugin.towns().getTownAtLoc(player.getLocation());
+                if (here == null) {
+                    plugin.msg().send(player, "<gray>You're standing in <white>unclaimed wilderness</white>.");
+                } else {
+                    String key = com.apollosmp.town.TownManager.chunkKey(player.getLocation());
+                    UUID owner = here.plotOwner(key);
+                    plugin.msg().send(player, "<gray>Town: <#f9d423>" + here.name() + "</#f9d423>");
+                    if (owner == null) {
+                        plugin.msg().send(player, "<gray>This chunk is <white>town-owned</white> (no plot owner).");
+                    } else {
+                        String on = plugin.getServer().getOfflinePlayer(owner).getName();
+                        plugin.msg().send(player, "<gray>Plot owner: <#e94fd0>"
+                                + (on == null ? "Unknown" : on) + "</#e94fd0>");
+                    }
+                    Double askPrice = here.plotPrice(key);
+                    if (askPrice != null) {
+                        plugin.msg().send(player, "<gray>For sale: <#f9d423>"
+                                + plugin.msg().money(askPrice) + "</#f9d423> - use <white>/town buyplot</white>.");
+                    }
+                }
+            }
             case "help" -> sendHelp(player);
             default -> new TownMenu(plugin, player).open();
         }
@@ -133,6 +162,9 @@ public class TownCommand implements CommandExecutor, TabCompleter {
         plugin.msg().send(player, "<gray>/town list <white>- browse every town");
         plugin.msg().send(player, "<gray>/town tp <town> <white>- teleport to a town");
         plugin.msg().send(player, "<gray>/town visitors <on|off> <white>- allow outside teleports");
+        plugin.msg().send(player, "<gray>/town border <white>- outline claims with particles");
+        plugin.msg().send(player, "<gray>/town map <white>- text map of nearby land");
+        plugin.msg().send(player, "<gray>/town plot <white>- who owns the chunk you're on");
         plugin.msg().send(player, "<gray>/town leave <white>| <gray>/town disband");
     }
 
@@ -169,7 +201,8 @@ public class TownCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             return List.of("create", "claim", "unclaim", "invite", "join", "kick", "rank",
                     "deposit", "withdraw", "tax", "sellplot", "buyplot",
-                    "spawn", "setspawn", "list", "tp", "visitors", "leave", "disband", "help");
+                    "spawn", "setspawn", "list", "tp", "visitors", "border", "map", "plot",
+                    "leave", "disband", "help");
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("kick") || args[0].equalsIgnoreCase("rank"))
                 && sender instanceof Player p) {

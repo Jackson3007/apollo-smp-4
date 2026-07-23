@@ -13,6 +13,7 @@ import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -52,6 +53,59 @@ public class BoardManager {
         return plugin.getConfig().getBoolean("scoreboard.enabled", true);
     }
 
+    /** Minecraft only renders 15 sidebar rows. */
+    private static final int MAX_LINES = 15;
+
+    /**
+     * The sidebar lines to actually draw. If the config predates the town lines,
+     * they get slotted in automatically so existing setups don't miss out.
+     */
+    private List<String> effectiveLines() {
+        List<String> lines = new ArrayList<>(plugin.getConfig().getStringList("scoreboard.lines"));
+        if (lines.isEmpty()) return lines;
+
+        boolean hasOwn = false;
+        boolean hasHere = false;
+        for (String line : lines) {
+            if (line.contains("%town_here%")) hasHere = true;
+            else if (line.contains("%town%")) hasOwn = true;
+        }
+
+        if (!hasOwn && !hasHere) {
+            int at = -1;
+            for (int i = 0; i < lines.size(); i++) {
+                if (lines.get(i).contains("Stats")) { at = i + 1; break; }
+            }
+            if (at < 0) at = Math.max(0, lines.size() - 2);
+            at = Math.min(at, lines.size());
+            lines.add(at, " <gray>Standing in:</gray> <white>%town_here%</white>");
+            lines.add(at, " <gray>Bank:</gray> <#f9d423>%town_bank%</#f9d423>");
+            lines.add(at, " <gray>Town:</gray> <white>%town%</white> <gray>(<white>%town_rank%</white>)</gray>");
+        }
+
+        // Over the limit? Drop blank spacers first, never the header or footer.
+        while (lines.size() > MAX_LINES) {
+            int blank = -1;
+            for (int i = lines.size() - 2; i > 0; i--) {
+                if (lines.get(i).isBlank()) { blank = i; break; }
+            }
+            if (blank < 0) break;
+            lines.remove(blank);
+        }
+        // Still too long: drop indented stat rows from the bottom up.
+        while (lines.size() > MAX_LINES) {
+            int row = -1;
+            for (int i = lines.size() - 2; i > 0; i--) {
+                if (lines.get(i).startsWith(" ")) { row = i; break; }
+            }
+            if (row < 0) break;
+            lines.remove(row);
+        }
+        // Last resort, keeping the footer line intact.
+        while (lines.size() > MAX_LINES) lines.remove(lines.size() - 2);
+        return lines;
+    }
+
     /** Build and assign a fresh sidebar for the player. */
     public void create(Player player) {
         if (!enabled()) return;
@@ -64,7 +118,7 @@ public class BoardManager {
         // Hide the red score numbers on the right for a clean sidebar.
         obj.numberFormat(io.papermc.paper.scoreboard.numbers.NumberFormat.blank());
 
-        List<String> lines = plugin.getConfig().getStringList("scoreboard.lines");
+        List<String> lines = effectiveLines();
         int total = Math.min(lines.size(), ENTRY_KEYS.length);
         for (int i = 0; i < total; i++) {
             String entry = ENTRY_KEYS[i];
@@ -88,7 +142,7 @@ public class BoardManager {
         Scoreboard board = boards.get(player.getUniqueId());
         if (board == null) return;
 
-        List<String> lines = plugin.getConfig().getStringList("scoreboard.lines");
+        List<String> lines = effectiveLines();
         int total = Math.min(lines.size(), ENTRY_KEYS.length);
         for (int i = 0; i < total; i++) {
             Team team = board.getTeam("line_" + i);
@@ -114,6 +168,10 @@ public class BoardManager {
                 .replace("play.apollosmp.net", ip)
                 .replace("%ip%", ip)
                 .replace("%town_here%", hereTown == null ? "Wilderness" : hereTown.name())
+                .replace("%town_rank%", ownTown == null || ownTown.rankOf(id) == null
+                        ? "-" : ownTown.rankOf(id).display())
+                .replace("%town_bank%", ownTown == null
+                        ? "-" : plugin.msg().money(ownTown.bank()))
                 .replace("%town%", ownTown == null ? "None" : ownTown.name())
                 .replace("%player%", player.getName())
                 .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size()))

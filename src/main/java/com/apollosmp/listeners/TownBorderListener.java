@@ -43,6 +43,7 @@ public class TownBorderListener implements Listener {
         }
 
         Player player = event.getPlayer();
+        showPlotOwner(player, to);
         Town town = plugin.towns().getTownAtLoc(to);
         String now = town == null ? "" : town.name();
         String previous = lastTown.get(player.getUniqueId());
@@ -53,6 +54,9 @@ public class TownBorderListener implements Listener {
         if (previous == null && now.isEmpty()) return;
 
         if (town != null) {
+            if (plugin.getConfig().getBoolean("towns.border-flash-on-enter", true)) {
+                plugin.borders().flash(player, 4000L);
+            }
             String mayor = plugin.getServer().getOfflinePlayer(town.mayor()).getName();
             if (mayor == null) mayor = "Unknown";
             player.showTitle(Title.title(
@@ -68,8 +72,30 @@ public class TownBorderListener implements Listener {
         }
     }
 
+    /** Action-bar note about who owns the chunk you just walked onto. */
+    private void showPlotOwner(Player player, Location to) {
+        Town town = plugin.towns().getTownAtLoc(to);
+        if (town == null) return;
+        String key = com.apollosmp.town.TownManager.chunkKey(to);
+        java.util.UUID owner = town.plotOwner(key);
+        if (owner == null) {
+            player.sendActionBar(Msg.mm("<gray>" + town.name() + " <dark_gray>|</dark_gray> town land"));
+            return;
+        }
+        String name = plugin.getServer().getOfflinePlayer(owner).getName();
+        if (name == null) name = "Unknown";
+        if (owner.equals(player.getUniqueId())) {
+            player.sendActionBar(Msg.mm("<gray>" + town.name()
+                    + " <dark_gray>|</dark_gray> <green>your plot</green>"));
+        } else {
+            player.sendActionBar(Msg.mm("<gray>" + town.name()
+                    + " <dark_gray>|</dark_gray> <#e94fd0>" + name + "'s plot</#e94fd0>"));
+        }
+    }
+
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         lastTown.remove(event.getPlayer().getUniqueId());
+        plugin.borders().forget(event.getPlayer());
     }
 }

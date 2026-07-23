@@ -159,7 +159,8 @@ scoreboard:
   # Lines top-to-bottom. Placeholders:
   #   %balance% %balance_raw% %player% %online% %world% %homes% %listings% %x% %y% %z%
   #   %skycoins% %businesses% %ip%
-  #   %town% (the town you belong to)  %town_here% (land you're standing on)
+  #   %town% (your town)  %town_rank% (your role)  %town_bank%
+  #   %town_here% (the land you're standing on)
   lines:
     - "<dark_gray>▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪</dark_gray>"
     - "<gray>Player:</gray> <white>%player%</white>"
@@ -167,13 +168,13 @@ scoreboard:
     - "<#f9d423>Balance</#f9d423>"
     - " <white>%balance%</white>"
     - ""
-    - "<#f9d423>Stats</#f9d423>"
-    - " <gray>Town:</gray> <white>%town%</white>"
-    - " <gray>Homes:</gray> <white>%homes%</white>"
-    - " <gray>Businesses:</gray> <white>%businesses%</white>"
-    - " <gray>Sky Coins:</gray> <#5ad1e8>%skycoins%</#5ad1e8>"
-    - " <gray>Listings:</gray> <white>%listings%</white>"
-    - " <gray>Online:</gray> <white>%online%</white>"
+    - "<#f9d423>Town</#f9d423>"
+    - " <white>%town%</white>"
+    - " <gray>Role:</gray> <#5ad1e8>%town_rank%</#5ad1e8>"
+    - " <gray>Bank:</gray> <#f9d423>%town_bank%</#f9d423>"
+    - " <gray>Standing in:</gray> <white>%town_here%</white>"
+    - ""
+    - " <gray>Homes:</gray> <white>%homes%</white>  <gray>AH:</gray> <white>%listings%</white>"
     - "<dark_gray>▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪</dark_gray>"
     - "<#ff4e50>%ip%</#ff4e50>"
 
@@ -199,6 +200,13 @@ voting:
       link: ""
     - name: "Site 4"
       link: ""
+
+# ---- Menu compass ----
+# A compass that opens /menu, handed out on join so new players
+# always have an obvious way into every feature.
+menu-compass:
+  enabled: true
+  slot: 8      # hotbar slot 0-8
 
 # ---- Spawners ----
 spawners:
@@ -229,3 +237,4 @@ towns:
   # from the town menu, so leave this on unless you want to disable it server-wide.
   public-spawn-teleport: true
   name-tag: true           # show [Town] above heads and in the tab list
+  border-flash-on-enter: true  # briefly outline the claim when you walk into a town

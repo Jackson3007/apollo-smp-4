@@ -23,6 +23,7 @@ public class PlayerListener implements Listener {
         plugin.economy().ensureAccount(player.getUniqueId(), player.getName());
         plugin.board().create(player);
         plugin.nameTags().invalidate();
+        plugin.menuItem().give(player);
         sendWelcome(player);
         plugin.auctions().flushNotifications(player);
 
@@ -61,11 +62,14 @@ public class PlayerListener implements Listener {
         msg.send(player, "  <white>/sell</white> <dark_gray>-</dark_gray> <gray>sell items for money</gray>");
         msg.send(player, "  <white>/ah</white> <dark_gray>-</dark_gray> <gray>browse the auction house</gray>");
         msg.send(player, "  <white>/invest</white> <dark_gray>-</dark_gray> <gray>buy & manage businesses</gray>");
-        msg.send(player, "  <white>/vote</white> <dark_gray>-</dark_gray> <gray>vote & earn Sky Coins</gray>");
-        msg.send(player, "  <white>/coinshop</white> <dark_gray>-</dark_gray> <gray>spend Sky Coins on gear</gray>");
+        msg.send(player, "  <white>/town</white> <dark_gray>-</dark_gray> <gray>create & manage a town</gray>");
+        msg.send(player, "  <white>/vote</white> <dark_gray>-</dark_gray> <gray>support the server</gray>");
+        msg.send(player, "  <white>/discord</white> <dark_gray>-</dark_gray> <gray>join the community</gray>");
         msg.send(player, "  <white>/sethome</white> <dark_gray>&</dark_gray> <white>/home</white> <dark_gray>-</dark_gray> <gray>set & travel home</gray>");
         msg.send(player, "  <white>/rtp</white> <dark_gray>-</dark_gray> <gray>teleport into the wild</gray>");
         msg.send(player, "  <white>/tpa</white> <dark_gray>-</dark_gray> <gray>teleport to a friend</gray>");
+        msg.send(player, "");
+        msg.send(player, "<gray>Tip: right-click the <#f9d423>Apollo Menu</#f9d423> compass any time.");
         msg.send(player, "<#f9d423>\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501</#f9d423>");
     }
 

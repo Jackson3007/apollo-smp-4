@@ -58,7 +58,7 @@ commands:
     permission: apollo.admin
   menu:
     description: Open the Apollo main menu
-    aliases: [apollomenu]
+    aliases: [apollomenu, hub, server, features]
     usage: /menu
   invest:
     description: Open the investments menu
@@ -68,10 +68,6 @@ commands:
     description: Vote for the server and earn Sky Coins
     aliases: [voting]
     usage: /vote
-  coinshop:
-    description: Spend Sky Coins on exclusive gear
-    aliases: [skyshop]
-    usage: /coinshop
   town:
     description: Create and manage your town
     aliases: [t, towns]

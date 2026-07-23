@@ -124,6 +124,49 @@ public class TownMenu extends Gui {
                 .lore("<gray>Buy the plot you're standing in,",
                         "<gray>if it's for sale.").build());
 
+        String hereKey = com.apollosmp.town.TownManager.chunkKey(viewer.getLocation());
+        Town hereTown = plugin.towns().getTownAtLoc(viewer.getLocation());
+        java.util.List<String> plotLore = new java.util.ArrayList<>();
+        if (hereTown == null) {
+            plotLore.add("<gray>Land: <white>Wilderness</white>");
+            plotLore.add("<gray>Nobody owns this chunk.");
+        } else {
+            plotLore.add("<gray>Land: <#f9d423>" + hereTown.name() + "</#f9d423>");
+            java.util.UUID plotOwner = hereTown.plotOwner(hereKey);
+            if (plotOwner == null) {
+                plotLore.add("<gray>Owner: <white>Town-owned</white>");
+                plotLore.add("<dark_gray>Not sold to a resident yet.");
+            } else {
+                String on = plugin.getServer().getOfflinePlayer(plotOwner).getName();
+                plotLore.add("<gray>Owner: <#e94fd0>" + (on == null ? "Unknown" : on) + "</#e94fd0>");
+                if (plotOwner.equals(viewer.getUniqueId())) plotLore.add("<green>This plot is yours.");
+            }
+            Double askPrice = hereTown.plotPrice(hereKey);
+            if (askPrice != null) {
+                plotLore.add("<gray>For sale: <#f9d423>" + plugin.msg().money(askPrice) + "</#f9d423>");
+            }
+        }
+        inventory.setItem(25, Items.of(Material.MAP)
+                .name("<#e94fd0><bold>This Plot</bold>")
+                .lore(plotLore.toArray(new String[0]))
+                .hideAttributes().build());
+
+        inventory.setItem(34, Items.of(Material.FILLED_MAP)
+                .name("<#e94fd0><bold>All Plots</bold>")
+                .lore("<gray>See every plot in your town",
+                        "<gray>and who owns it.").build());
+
+        boolean bordersOn = plugin.borders().isOn(viewer);
+        inventory.setItem(32, Items.of(bordersOn ? Material.GLOWSTONE_DUST : Material.REDSTONE)
+                .name(bordersOn ? "<green><bold>Borders: On</bold>" : "<#5ad1e8><bold>Show Borders</bold>")
+                .lore("<gray>Outline claimed chunks with particles.",
+                        "<gray><#5ad1e8>Cyan</#5ad1e8> = your town,",
+                        "<gray><#ff4e50>Red</#ff4e50> = other towns,",
+                        "<gray><#e94fd0>Purple</#e94fd0> = owned plots.",
+                        "",
+                        "<yellow>Click to toggle")
+                .glow(bordersOn).hideAttributes().build());
+
         if (town.mayor().equals(viewer.getUniqueId())) {
             inventory.setItem(33, Items.of(Material.TNT)
                     .name("<red><bold>Disband Town</bold>").lore("<gray>Deletes the town for everyone.").build());
@@ -182,6 +225,15 @@ public class TownMenu extends Gui {
             }
             case 27 -> {
                 plugin.towns().setPublicSpawn(player, !town.publicSpawn());
+                redraw();
+            }
+            case 25 -> redraw();
+            case 34 -> new TownPlotsMenu(plugin, player, 0).open();
+            case 32 -> {
+                boolean on = plugin.borders().toggle(player);
+                plugin.msg().send(player, on
+                        ? "<green>Claim borders shown."
+                        : "<yellow>Claim borders hidden.");
                 redraw();
             }
             case 28 -> { plugin.towns().setSpawnHere(player); redraw(); }

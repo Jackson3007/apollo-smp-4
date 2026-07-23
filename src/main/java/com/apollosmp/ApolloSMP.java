@@ -11,7 +11,6 @@ import com.apollosmp.commands.MenuCommand;
 import com.apollosmp.commands.OrderCommand;
 import com.apollosmp.commands.RtpCommand;
 import com.apollosmp.commands.SellCommand;
-import com.apollosmp.commands.CoinShopCommand;
 import com.apollosmp.commands.VoteCommand;
 import com.apollosmp.commands.TpaCommand;
 import com.apollosmp.economy.EconomyManager;
@@ -59,6 +58,8 @@ public class ApolloSMP extends JavaPlugin {
     private com.apollosmp.town.TownManager towns;
     private com.apollosmp.town.ChatPromptManager prompts;
     private com.apollosmp.board.NameTagManager nameTags;
+    private com.apollosmp.town.BorderVisualizer borders;
+    private com.apollosmp.listeners.MenuItemListener menuItem;
 
     @Override
     public void onEnable() {
@@ -81,6 +82,7 @@ public class ApolloSMP extends JavaPlugin {
         this.towns = new com.apollosmp.town.TownManager(this);
         this.prompts = new com.apollosmp.town.ChatPromptManager(this);
         this.nameTags = new com.apollosmp.board.NameTagManager(this);
+        this.borders = new com.apollosmp.town.BorderVisualizer(this);
 
         registerCommands();
         registerListeners();
@@ -129,7 +131,6 @@ public class ApolloSMP extends JavaPlugin {
         reg("apollo", new AdminCommand(this));
         reg("invest", new InvestCommand(this));
         reg("vote", new VoteCommand(this));
-        reg("coinshop", new CoinShopCommand(this));
         reg("town", new com.apollosmp.commands.TownCommand(this));
         reg("discord", new com.apollosmp.commands.DiscordCommand(this));
 
@@ -173,6 +174,8 @@ public class ApolloSMP extends JavaPlugin {
                 new com.apollosmp.listeners.SleepListener(this), this);
         getServer().getPluginManager().registerEvents(
                 new com.apollosmp.listeners.SpawnerListener(this), this);
+        this.menuItem = new com.apollosmp.listeners.MenuItemListener(this);
+        getServer().getPluginManager().registerEvents(menuItem, this);
 
         long taxTicks = Math.max(1L, getConfig().getLong("towns.tax-interval-hours", 24)) * 3600L * 20L;
         getServer().getScheduler().runTaskTimer(this, () -> towns.collectTaxes(), taxTicks, taxTicks);
@@ -187,6 +190,7 @@ public class ApolloSMP extends JavaPlugin {
         applySleepRule();
 
         getServer().getScheduler().runTaskTimer(this, () -> nameTags.updateAll(), 40L, 40L);
+        getServer().getScheduler().runTaskTimer(this, () -> borders.tick(), 10L, 10L);
     }
 
     // ---- world border ----
@@ -279,6 +283,8 @@ public class ApolloSMP extends JavaPlugin {
     public com.apollosmp.town.TownManager towns() { return towns; }
     public com.apollosmp.town.ChatPromptManager prompts() { return prompts; }
     public com.apollosmp.board.NameTagManager nameTags() { return nameTags; }
+    public com.apollosmp.town.BorderVisualizer borders() { return borders; }
+    public com.apollosmp.listeners.MenuItemListener menuItem() { return menuItem; }
 
     /** Apply the "how many players must sleep" rule to every overworld. */
     public void applySleepRule() {
