@@ -22,6 +22,7 @@ public class PlayerListener implements Listener {
 
         plugin.economy().ensureAccount(player.getUniqueId(), player.getName());
         plugin.board().create(player);
+        plugin.nameTags().invalidate();
         sendWelcome(player);
         plugin.auctions().flushNotifications(player);
 
@@ -71,5 +72,6 @@ public class PlayerListener implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         plugin.board().remove(event.getPlayer());
+        plugin.nameTags().remove(event.getPlayer());
     }
 }

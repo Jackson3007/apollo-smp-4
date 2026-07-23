@@ -88,7 +88,7 @@ sell:
 
 auction-house:
   # Max active listings a single player may have at once. 0 = unlimited.
-  max-listings-per-player: 0
+  # Listings are unlimited - there is no per-player cap.
   # How long (in hours) a listing stays up before expiring and being returned.
   listing-duration-hours: 48
   # Percentage fee charged to the SELLER when they list an item (of the sale price).
@@ -159,6 +159,7 @@ scoreboard:
   # Lines top-to-bottom. Placeholders:
   #   %balance% %balance_raw% %player% %online% %world% %homes% %listings% %x% %y% %z%
   #   %skycoins% %businesses% %ip%
+  #   %town% (the town you belong to)  %town_here% (land you're standing on)
   lines:
     - "<dark_gray>▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪</dark_gray>"
     - "<gray>Player:</gray> <white>%player%</white>"
@@ -167,6 +168,7 @@ scoreboard:
     - " <white>%balance%</white>"
     - ""
     - "<#f9d423>Stats</#f9d423>"
+    - " <gray>Town:</gray> <white>%town%</white>"
     - " <gray>Homes:</gray> <white>%homes%</white>"
     - " <gray>Businesses:</gray> <white>%businesses%</white>"
     - " <gray>Sky Coins:</gray> <#5ad1e8>%skycoins%</#5ad1e8>"
@@ -198,6 +200,10 @@ voting:
     - name: "Site 4"
       link: ""
 
+# ---- Spawners ----
+spawners:
+  silk-touch-pickup: true   # mine spawners with Silk Touch and keep the mob type
+
 # ---- Discord ----
 # A reminder is posted halfway between each vote reminder.
 discord:
@@ -222,3 +228,4 @@ towns:
   # Master switch for /town tp. Each town can also block visitors itself
   # from the town menu, so leave this on unless you want to disable it server-wide.
   public-spawn-teleport: true
+  name-tag: true           # show [Town] above heads and in the tab list

@@ -35,7 +35,6 @@ public class AuctionManager {
     }
 
     // ---- config helpers ----
-    private int maxListings() { return plugin.getConfig().getInt("auction-house.max-listings-per-player", 10); }
     private long durationMillis() {
         return plugin.getConfig().getLong("auction-house.listing-duration-hours", 48) * 3600_000L;
     }
@@ -73,7 +72,6 @@ public class AuctionManager {
         if (hand == null || hand.getType().isAir()) return ListResult.EMPTY_HAND;
         if (price < minPrice()) return ListResult.PRICE_LOW;
         if (price > maxPrice()) return ListResult.PRICE_HIGH;
-        if (maxListings() > 0 && countBySeller(seller.getUniqueId()) >= maxListings()) return ListResult.TOO_MANY;
 
         double tax = price * (listingTaxPercent() / 100.0);
         if (tax > 0 && !plugin.economy().withdraw(seller.getUniqueId(), tax)) {

@@ -58,6 +58,7 @@ public class ApolloSMP extends JavaPlugin {
     private com.apollosmp.listeners.AuctionSearchListener auctionSearch;
     private com.apollosmp.town.TownManager towns;
     private com.apollosmp.town.ChatPromptManager prompts;
+    private com.apollosmp.board.NameTagManager nameTags;
 
     @Override
     public void onEnable() {
@@ -79,6 +80,7 @@ public class ApolloSMP extends JavaPlugin {
         this.voting = new com.apollosmp.vote.VoteManager(this);
         this.towns = new com.apollosmp.town.TownManager(this);
         this.prompts = new com.apollosmp.town.ChatPromptManager(this);
+        this.nameTags = new com.apollosmp.board.NameTagManager(this);
 
         registerCommands();
         registerListeners();
@@ -169,6 +171,8 @@ public class ApolloSMP extends JavaPlugin {
                 new com.apollosmp.listeners.TownBorderListener(this), this);
         getServer().getPluginManager().registerEvents(
                 new com.apollosmp.listeners.SleepListener(this), this);
+        getServer().getPluginManager().registerEvents(
+                new com.apollosmp.listeners.SpawnerListener(this), this);
 
         long taxTicks = Math.max(1L, getConfig().getLong("towns.tax-interval-hours", 24)) * 3600L * 20L;
         getServer().getScheduler().runTaskTimer(this, () -> towns.collectTaxes(), taxTicks, taxTicks);
@@ -181,6 +185,8 @@ public class ApolloSMP extends JavaPlugin {
                 Math.max(1L, reminderTicks / 2L), reminderTicks);
 
         applySleepRule();
+
+        getServer().getScheduler().runTaskTimer(this, () -> nameTags.updateAll(), 40L, 40L);
     }
 
     // ---- world border ----
@@ -246,6 +252,7 @@ public class ApolloSMP extends JavaPlugin {
         sell.reload();
         setupWorldBorders();
         applySleepRule();
+        nameTags.invalidate();
         for (Player player : getServer().getOnlinePlayers()) {
             board.remove(player);
             board.create(player);
@@ -271,6 +278,7 @@ public class ApolloSMP extends JavaPlugin {
     public com.apollosmp.listeners.AuctionSearchListener auctionSearch() { return auctionSearch; }
     public com.apollosmp.town.TownManager towns() { return towns; }
     public com.apollosmp.town.ChatPromptManager prompts() { return prompts; }
+    public com.apollosmp.board.NameTagManager nameTags() { return nameTags; }
 
     /** Apply the "how many players must sleep" rule to every overworld. */
     public void applySleepRule() {

@@ -48,6 +48,27 @@ public class MainMenu extends Gui {
                 .lore("<gray>Teleport to your homes", "", "<yellow>Click to open")
                 .hideAttributes().build());
 
+        com.apollosmp.town.Town town = plugin.towns().getTownOf(viewer.getUniqueId());
+        if (town == null) {
+            inventory.setItem(18, Items.of(Material.OAK_SAPLING)
+                    .name("<#5ad1e8><bold>Towns</bold>")
+                    .lore("<gray>You're not in a town yet.",
+                            "<gray>Found one or join a friend's.", "",
+                            "<yellow>Click to open")
+                    .hideAttributes().build());
+        } else {
+            String rank = town.rankOf(viewer.getUniqueId()) == null
+                    ? "Resident" : town.rankOf(viewer.getUniqueId()).display();
+            inventory.setItem(18, Items.of(Material.WHITE_BANNER)
+                    .name("<#5ad1e8><bold>" + town.name() + "</bold>")
+                    .lore("<gray>Your rank: <white>" + rank + "</white>",
+                            "<gray>Residents: <white>" + town.memberCount() + "</white>",
+                            "<gray>Land: <white>" + town.claims().size() + "</white> chunks",
+                            "<gray>Bank: <#f9d423>" + plugin.msg().money(town.bank()) + "</#f9d423>", "",
+                            "<yellow>Click to manage")
+                    .glow(true).hideAttributes().build());
+        }
+
         inventory.setItem(20, Items.of(Material.ENDER_PEARL)
                 .name("<#f9d423><bold>Random Teleport</bold>")
                 .lore("<gray>Warp to the wilderness", "", "<yellow>Click to teleport")
@@ -71,6 +92,7 @@ public class MainMenu extends Gui {
     @Override
     public void onClick(Player player, int slot, ItemStack clicked, ClickType click) {
         switch (slot) {
+            case 18 -> new TownMenu(plugin, player).open();
             case 10 -> new SellMenu(plugin, player).open();
             case 12 -> new AuctionMenu(plugin, player, false, 0).open();
             case 14 -> new OrdersMenu(plugin, player, false, 0).open();

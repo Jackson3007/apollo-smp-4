@@ -107,10 +107,14 @@ public class BoardManager {
         UUID id = player.getUniqueId();
         double bal = plugin.economy().getBalance(id);
         String ip = plugin.serverIp();
+        com.apollosmp.town.Town ownTown = plugin.towns().getTownOf(id);
+        com.apollosmp.town.Town hereTown = plugin.towns().getTownAtLoc(loc);
         return line
                 // Older configs had the placeholder IP hard-coded into the line.
                 .replace("play.apollosmp.net", ip)
                 .replace("%ip%", ip)
+                .replace("%town_here%", hereTown == null ? "Wilderness" : hereTown.name())
+                .replace("%town%", ownTown == null ? "None" : ownTown.name())
                 .replace("%player%", player.getName())
                 .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size()))
                 .replace("%world%", player.getWorld().getName())
