@@ -194,6 +194,36 @@ public class SpecialBusinessManager {
         return given;
     }
 
+    /** Ambient particles above each placed special business, matching the normal ones. */
+    public void spawnParticles() {
+        for (SpecialBusiness b : placed.values()) {
+            org.bukkit.World world = plugin.getServer().getWorld(b.worldName());
+            if (world == null) continue;
+            if (!world.isChunkLoaded(b.x() >> 4, b.z() >> 4)) continue;
+            org.bukkit.Particle particle = particleFor(b.rarity());
+            if (particle == null) continue;
+            Location loc = new Location(world, b.x() + 0.5, b.y() + 1.15, b.z() + 0.5);
+            world.spawnParticle(particle, loc, 8, 0.28, 0.25, 0.28, 0.01);
+        }
+    }
+
+    private org.bukkit.Particle particleFor(String rarity) {
+        String name = switch (rarity == null ? "" : rarity) {
+            case "Legendary" -> "FLAME";
+            case "Epic" -> "WITCH";
+            case "Rare" -> "ENCHANT";
+            default -> "HAPPY_VILLAGER";
+        };
+        for (String candidate : new String[]{name, "ENCHANTMENT_TABLE", "HAPPY_VILLAGER"}) {
+            try {
+                return org.bukkit.Particle.valueOf(candidate);
+            } catch (IllegalArgumentException ignored) {
+                // try the next name
+            }
+        }
+        return null;
+    }
+
     /** Seconds until the next batch lands. */
     public long secondsUntilNext(SpecialBusiness b) {
         long interval = b.effectiveInterval() * 1000L;

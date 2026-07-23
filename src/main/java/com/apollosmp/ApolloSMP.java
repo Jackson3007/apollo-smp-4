@@ -63,6 +63,8 @@ public class ApolloSMP extends JavaPlugin {
     private com.apollosmp.merchant.MerchantManager merchant;
     private com.apollosmp.special.SpecialAuctionManager specialAuction;
     private com.apollosmp.special.SpecialBusinessManager specialBusinesses;
+    private com.apollosmp.spawner.SpawnerManager spawners;
+    private com.apollosmp.vault.VaultManager vaults;
     private com.apollosmp.merchant.ToolExpiryTask toolExpiry;
 
     @Override
@@ -90,6 +92,9 @@ public class ApolloSMP extends JavaPlugin {
         this.merchant = new com.apollosmp.merchant.MerchantManager(this);
         this.specialAuction = new com.apollosmp.special.SpecialAuctionManager(this);
         this.specialBusinesses = new com.apollosmp.special.SpecialBusinessManager(this);
+        this.spawners = new com.apollosmp.spawner.SpawnerManager(this);
+        this.vaults = new com.apollosmp.vault.VaultManager(this);
+        this.spawners.cleanupOrphans();
         this.toolExpiry = new com.apollosmp.merchant.ToolExpiryTask(this);
         this.holograms = new com.apollosmp.invest.BusinessHolograms(this);
         this.holograms.cleanupOrphans();
@@ -111,6 +116,7 @@ public class ApolloSMP extends JavaPlugin {
     @Override
     public void onDisable() {
         if (holograms != null) holograms.removeAll();
+        if (spawners != null) spawners.removeAllLabels();
         getServer().getScheduler().cancelTasks(this);
         saveAll();
         getLogger().info("Apollo SMP disabled. Data saved.");
@@ -148,6 +154,8 @@ public class ApolloSMP extends JavaPlugin {
         reg("announce", new com.apollosmp.commands.AnnounceCommand(this));
         reg("merchant", new com.apollosmp.commands.MerchantCommand(this));
         reg("specialauction", new com.apollosmp.commands.SpecialAuctionCommand(this));
+        reg("pv", new com.apollosmp.commands.VaultCommand(this));
+        reg("items", new com.apollosmp.commands.ItemsCommand(this));
 
         TpaCommand tpaCommand = new TpaCommand(this);
         reg("tpa", tpaCommand);
@@ -193,6 +201,10 @@ public class ApolloSMP extends JavaPlugin {
                 new com.apollosmp.listeners.MerchantToolListener(this), this);
         getServer().getPluginManager().registerEvents(
                 new com.apollosmp.listeners.SpecialBusinessListener(this), this);
+        getServer().getPluginManager().registerEvents(
+                new com.apollosmp.listeners.MobStackListener(this), this);
+        getServer().getPluginManager().registerEvents(
+                new com.apollosmp.listeners.VaultListener(this), this);
 
         long taxTicks = Math.max(1L, getConfig().getLong("towns.tax-interval-hours", 24)) * 3600L * 20L;
         getServer().getScheduler().runTaskTimer(this, () -> towns.collectTaxes(), taxTicks, taxTicks);
@@ -213,6 +225,7 @@ public class ApolloSMP extends JavaPlugin {
         getServer().getScheduler().runTaskTimer(this, () -> toolExpiry.tick(), 200L, 600L);
         getServer().getScheduler().runTaskTimer(this, () -> merchant.refreshIfNeeded(), 1200L, 1200L);
         getServer().getScheduler().runTaskTimer(this, () -> specialAuction.tick(), 100L, 20L);
+        getServer().getScheduler().runTaskTimer(this, () -> spawners.tick(), 60L, 20L);
     }
 
     // ---- world border ----
@@ -248,6 +261,7 @@ public class ApolloSMP extends JavaPlugin {
 
         // Ambient particles above business blocks.
         getServer().getScheduler().runTaskTimer(this, () -> businesses.spawnParticles(), 40L, 15L);
+        getServer().getScheduler().runTaskTimer(this, () -> specialBusinesses.spawnParticles(), 45L, 15L);
         // Live-refresh any open business panel (ticks the countdown + updates stored goods).
         getServer().getScheduler().runTaskTimer(this, this::refreshBusinessMenus, 20L, 20L);
     }
@@ -273,6 +287,8 @@ public class ApolloSMP extends JavaPlugin {
         borders.save();
         specialAuction.save();
         specialBusinesses.save();
+        spawners.save();
+        vaults.save();
     }
 
     public void reloadAll() {
@@ -313,6 +329,8 @@ public class ApolloSMP extends JavaPlugin {
     public com.apollosmp.merchant.MerchantManager merchant() { return merchant; }
     public com.apollosmp.special.SpecialAuctionManager specialAuction() { return specialAuction; }
     public com.apollosmp.special.SpecialBusinessManager specialBusinesses() { return specialBusinesses; }
+    public com.apollosmp.spawner.SpawnerManager spawners() { return spawners; }
+    public com.apollosmp.vault.VaultManager vaults() { return vaults; }
 
     /** Apply the "how many players must sleep" rule to every overworld. */
     public void applySleepRule() {

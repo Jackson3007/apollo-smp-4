@@ -83,6 +83,16 @@ commands:
     description: Visit the travelling merchant
     aliases: [trader, wares]
     usage: /merchant
+  pv:
+    description: Open a personal storage vault
+    aliases: [vault, pvault]
+    usage: /pv [number]
+    permission: apollo.admin
+  items:
+    description: Free catalogue of every unique item
+    aliases: [itemlist, allitems]
+    usage: /items
+    permission: apollo.admin
   announce:
     description: Broadcast a server announcement
     aliases: [broadcast, bc]

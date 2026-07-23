@@ -203,6 +203,12 @@ voting:
     - name: "Site 4"
       link: ""
 
+# ---- Storage vaults ----
+# /pv gives staff persistent storage. Contents save on close.
+vaults:
+  count: 3   # how many vaults each player gets (1-9)
+  rows: 6    # rows per vault (1-6)
+
 # ---- Special business auction ----
 # One mystery business goes under the hammer each cycle, ending at the
 # configured hour. Bids are held in escrow and refunded when outbid.
@@ -229,7 +235,18 @@ invest:
 
 # ---- Spawners ----
 spawners:
-  silk-touch-pickup: true   # mine spawners with Silk Touch and keep the mob type
+  # Natural spawners still need Silk Touch. Player-placed ones always drop.
+  silk-touch-pickup: true
+  holograms: true    # floating label showing the mob and stack size
+  max-stack: 64      # how many spawners can sit on one block
+
+# ---- Mob stacking ----
+# Spawner mobs merge together so spawner rooms stay cheap to run.
+# Killing a stacked mob removes one from the stack.
+mob-stacking:
+  enabled: true
+  max-stack: 50
+  merge-radius: 6.0
 
 # ---- Discord ----
 # A reminder is posted halfway between each vote reminder.

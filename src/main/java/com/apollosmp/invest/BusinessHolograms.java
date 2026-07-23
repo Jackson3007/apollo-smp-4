@@ -63,6 +63,26 @@ public class BusinessHolograms {
             label.text(buildText(block));
         }
 
+        // Special businesses get the same treatment.
+        for (com.apollosmp.special.SpecialBusiness sb :
+                new ArrayList<>(plugin.specialBusinesses().all())) {
+            World world = plugin.getServer().getWorld(sb.worldName());
+            if (world == null) continue;
+            if (!world.isChunkLoaded(sb.x() >> 4, sb.z() >> 4)) continue;
+            Location loc = new Location(world, sb.x() + 0.5, sb.y() + 1.35, sb.z() + 0.5);
+            if (!anyoneNear(loc)) continue;
+
+            String key = "special:" + sb.locationKey();
+            wanted.add(key);
+            TextDisplay label = labels.get(key);
+            if (label == null || !label.isValid()) {
+                label = spawn(loc);
+                if (label == null) continue;
+                labels.put(key, label);
+            }
+            label.text(specialText(sb));
+        }
+
         for (Map.Entry<String, TextDisplay> e : new ArrayList<>(labels.entrySet())) {
             if (wanted.contains(e.getKey())) continue;
             TextDisplay label = e.getValue();
@@ -110,6 +130,26 @@ public class BusinessHolograms {
         }
 
         sb.append("\n").append(nextLine(block, def));
+        return Msg.mm(sb.toString());
+    }
+
+    private Component specialText(com.apollosmp.special.SpecialBusiness b) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<gradient:#f9d423:#ff4e50><bold>").append(b.name())
+                .append("</bold></gradient> <#e94fd0>").append(b.rarity()).append("</#e94fd0>");
+        sb.append("\n<gray>Income:</gray> <green>")
+                .append(plugin.msg().money(b.exactProfit())).append("/day</green>");
+
+        int stored = plugin.specialBusinesses().stored(b);
+        if (stored >= b.effectiveStorage()) {
+            sb.append("\n<red>Storage full - collect it!</red>");
+        } else {
+            long seconds = plugin.specialBusinesses().secondsUntilNext(b);
+            if (seconds <= 0) sb.append("\n<green>Producing now...</green>");
+            else if (seconds >= 60) sb.append("\n<gray>Next batch in</gray> <white>")
+                    .append(seconds / 60).append("m ").append(seconds % 60).append("s</white>");
+            else sb.append("\n<gray>Next batch in</gray> <white>").append(seconds).append("s</white>");
+        }
         return Msg.mm(sb.toString());
     }
 
