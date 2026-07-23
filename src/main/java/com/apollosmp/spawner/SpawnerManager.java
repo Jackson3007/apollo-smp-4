@@ -192,9 +192,12 @@ public class SpawnerManager {
     }
 
     private Component labelText(Placed p) {
-        String text = "<#e94fd0><bold>" + pretty(p.type) + " Spawner</bold></#e94fd0>";
-        if (p.stack > 1) text += "\n<#f9d423>x" + p.stack + "</#f9d423>";
-        return Msg.mm(text);
+        Component text = Msg.mm("<#e94fd0><bold>" + pretty(p.type) + " Spawner</bold></#e94fd0>");
+        if (p.stack > 1) {
+            text = text.append(Component.newline())
+                    .append(Msg.mm("<#f9d423>x" + p.stack + "</#f9d423>"));
+        }
+        return text;
     }
 
     private boolean anyoneNear(Location loc) {
@@ -213,6 +216,8 @@ public class SpawnerManager {
                 display.setShadowed(true);
                 display.setPersistent(false);
                 display.setViewRange(0.6f);
+                display.setAlignment(TextDisplay.TextAlignment.CENTER);
+                display.setLineWidth(400);
                 display.getPersistentDataContainer().set(labelKey, PersistentDataType.BYTE, (byte) 1);
             });
         } catch (Exception ex) {

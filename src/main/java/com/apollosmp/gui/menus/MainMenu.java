@@ -126,8 +126,10 @@ public class MainMenu extends Gui {
                 .hideAttributes().build());
 
         inventory.setItem(41, Items.of(Material.BOOK)
-                .name("<#f9d423><bold>Help</bold>")
-                .lore("<gray>A quick list of every command.", "", "<yellow>Click to view")
+                .name("<#f9d423><bold>Getting Started</bold>")
+                .lore("<gray>New here? A short guide to how",
+                        "<gray>the server works and what to do first.",
+                        "", "<yellow>Click to read")
                 .hideAttributes().build());
 
         fillEmpty(Items.filler(Material.GRAY_STAINED_GLASS_PANE));
@@ -180,18 +182,66 @@ public class MainMenu extends Gui {
     }
 
     private void showHelp(Player player) {
-        plugin.msg().sendRaw(player, "<gradient:#f9d423:#ff4e50><bold>Apollo SMP Commands</bold></gradient>");
-        plugin.msg().sendRaw(player, " <#f9d423>/menu</#f9d423> <gray>- this menu</gray>");
-        plugin.msg().sendRaw(player, " <#f9d423>/sell</#f9d423> <gray>- sell loot to the server</gray>");
-        plugin.msg().sendRaw(player, " <#f9d423>/ah</#f9d423> <gray>- auction house</gray>");
-        plugin.msg().sendRaw(player, " <#f9d423>/orders</#f9d423> <gray>- buy orders</gray>");
-        plugin.msg().sendRaw(player, " <#f9d423>/invest</#f9d423> <gray>- businesses</gray>");
-        plugin.msg().sendRaw(player, " <#f9d423>/town</#f9d423> <gray>- create & manage a town</gray>");
-        plugin.msg().sendRaw(player, " <#f9d423>/sethome /home</#f9d423> <gray>- your homes</gray>");
-        plugin.msg().sendRaw(player, " <#f9d423>/rtp</#f9d423> <gray>- random teleport</gray>");
-        plugin.msg().sendRaw(player, " <#f9d423>/tpa</#f9d423> <gray>- teleport to a player</gray>");
-        plugin.msg().sendRaw(player, " <#f9d423>/pay /bal /baltop</#f9d423> <gray>- money</gray>");
-        plugin.msg().sendRaw(player, " <#f9d423>/vote /discord</#f9d423> <gray>- support & community</gray>");
+        var msg = plugin.msg();
+        boolean hasTown = plugin.towns().getTownOf(player.getUniqueId()) != null;
+
+        msg.sendRaw(player, "<#f9d423>\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501</#f9d423>");
+        msg.sendRaw(player, "<gradient:#f9d423:#ff4e50><bold>  Welcome to Apollo SMP</bold></gradient>");
+        msg.sendRaw(player, "");
+        msg.sendRaw(player, "<gray>Apollo is survival with a real economy. You earn");
+        msg.sendRaw(player, "<gray>money from what you gather, grow it into businesses");
+        msg.sendRaw(player, "<gray>that pay you even offline, and build towns with");
+        msg.sendRaw(player, "<gray>other players on land nobody can grief.");
+        msg.sendRaw(player, "");
+
+        msg.sendRaw(player, "<#f9d423><bold>Your first hour</bold>");
+        msg.sendRaw(player, " <white>1.</white> <gray>Head somewhere wild with</gray> "
+                + clickable("/rtp", "and start a base"));
+        msg.sendRaw(player, " <white>2.</white> <gray>Save it with</gray> "
+                + clickable("/sethome", "you get three homes"));
+        msg.sendRaw(player, " <white>3.</white> <gray>Gather anything, then</gray> "
+                + clickable("/sell", "turn it into cash"));
+        msg.sendRaw(player, " <white>4.</white> <gray>Spend your first savings in</gray> "
+                + clickable("/invest", "businesses earn while you're away"));
+        msg.sendRaw(player, " <white>5.</white> <gray>Team up and</gray> "
+                + clickable("/town", hasTown ? "manage your town" : "found a town"));
+        msg.sendRaw(player, "");
+
+        msg.sendRaw(player, "<#f9d423><bold>Making money</bold>");
+        msg.sendRaw(player, " <gray>Selling to the server is instant but pays least.");
+        msg.sendRaw(player, " <gray>The <white>auction house</white> gets you far more from");
+        msg.sendRaw(player, " <gray>other players, and <white>businesses</white> pay you hourly");
+        msg.sendRaw(player, " <gray>whether you're online or not.");
+        msg.sendRaw(player, "");
+
+        msg.sendRaw(player, "<#5ad1e8><bold>Towns</bold>");
+        msg.sendRaw(player, " <gray>Founding a town claims the chunk you're stood in");
+        msg.sendRaw(player, " <gray>and protects it. Claim more land, invite friends,");
+        msg.sendRaw(player, " <gray>give them ranks, and buy upgrades from the town");
+        msg.sendRaw(player, " <gray>bank like haste, speed and faster businesses.");
+        msg.sendRaw(player, " <gray>Mayors can sell or rent plots to residents.");
+        msg.sendRaw(player, "");
+
+        msg.sendRaw(player, "<#e94fd0><bold>Worth knowing</bold>");
+        msg.sendRaw(player, " <gray>A <white>travelling merchant</white> brings three rare goods");
+        msg.sendRaw(player, " <gray>a day - sometimes treasure, sometimes junk.");
+        msg.sendRaw(player, " <gray>Every day a <white>mystery business</white> goes to auction,");
+        msg.sendRaw(player, " <gray>and you only learn what it really does after");
+        msg.sendRaw(player, " <gray>you've won it.");
+        msg.sendRaw(player, "");
+
+        msg.sendRaw(player, "<gray>Everything has a button in "
+                + clickable("/menu", "your hub") + "<gray>, so you never");
+        msg.sendRaw(player, "<gray>need to memorise commands. Stuck? Ask in chat or");
+        msg.sendRaw(player, "<gray>on " + clickable("/discord", "our Discord") + "<gray>.");
+        msg.sendRaw(player, "<#f9d423>\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501</#f9d423>");
+    }
+
+    /** A command the player can just click instead of typing. */
+    private String clickable(String command, String note) {
+        return "<click:run_command:'" + command + "'><hover:show_text:'Click to run "
+                + command + "'><#5ad1e8><u>" + command + "</u></#5ad1e8></hover></click>"
+                + " <dark_gray>- " + note + "</dark_gray>";
     }
 
     private void showBaltop(Player player) {

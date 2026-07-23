@@ -228,6 +228,16 @@ merchant:
   tool-hours: 48          # how long the drill and feller last
   seed: 7                 # change this to reroll the whole schedule
 
+# ---- Logistics ----
+# Distribution blocks gather from nearby businesses; wholesale blocks sell it.
+logistics:
+  distribution-price: 25000.0
+  wholesale-price: 60000.0
+  business-radius: 8          # how far a distribution block reaches
+  hub-radius: 16              # how far a wholesale block reaches distribution blocks
+  sell-interval-minutes: 5
+  fee-percent: 8.0            # cut taken off each automated sale
+
 # ---- Businesses ----
 invest:
   # Floating text above business blocks showing income and the next payout.
@@ -273,6 +283,7 @@ towns:
   # from the town menu, so leave this on unless you want to disable it server-wide.
   public-spawn-teleport: true
   move-cost: 0.0           # price for a mayor to relocate the whole town
+  rent-period-hours: 24    # how often plot rent is charged
   upgrade-cost-multiplier: 1.0  # scale every town upgrade price at once
   name-tag: true           # show [Town] above heads and in the tab list
   border-flash-on-enter: true  # briefly outline the claim when you walk into a town

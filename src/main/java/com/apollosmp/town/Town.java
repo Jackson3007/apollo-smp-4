@@ -27,6 +27,8 @@ public class Town {
     private final Set<String> claims = new LinkedHashSet<>();
     private final Map<String, UUID> plotOwners = new HashMap<>();   // chunkKey -> owner
     private final Map<String, Double> plotSale = new HashMap<>();   // chunkKey -> asking price
+    private final Map<String, Double> plotRent = new HashMap<>();   // chunkKey -> rent per period
+    private final Map<String, Long> rentDue = new HashMap<>();      // chunkKey -> next payment time
     private final Map<TownRank, EnumSet<TownPerm>> rankPerms = new EnumMap<>(TownRank.class);
     private final Map<TownUpgrade, Integer> upgrades = new EnumMap<>(TownUpgrade.class);
 
@@ -67,7 +69,12 @@ public class Town {
     public void removeMember(UUID id) {
         members.remove(id);
         // Release any plots owned by the departing member back to the town.
-        plotOwners.entrySet().removeIf(e -> e.getValue().equals(id));
+        for (Map.Entry<String, UUID> e : new HashMap<>(plotOwners).entrySet()) {
+            if (e.getValue().equals(id)) {
+                plotOwners.remove(e.getKey());
+                rentDue.remove(e.getKey());
+            }
+        }
     }
     public void setRank(UUID id, TownRank rank) { if (members.containsKey(id)) members.put(id, rank); }
     public int memberCount() { return members.size(); }
@@ -80,6 +87,8 @@ public class Town {
         claims.remove(chunkKey);
         plotOwners.remove(chunkKey);
         plotSale.remove(chunkKey);
+        plotRent.remove(chunkKey);
+        rentDue.remove(chunkKey);
     }
     public Map<String, UUID> plotOwners() { return plotOwners; }
     public Map<String, Double> plotSale() { return plotSale; }
@@ -89,8 +98,36 @@ public class Town {
         else plotOwners.put(chunkKey, owner);
     }
     public Double plotPrice(String chunkKey) { return plotSale.get(chunkKey); }
-    public void setForSale(String chunkKey, double price) { plotSale.put(chunkKey, price); }
+    public void setForSale(String chunkKey, double price) {
+        plotSale.put(chunkKey, price);
+        plotRent.remove(chunkKey);
+    }
     public void clearSale(String chunkKey) { plotSale.remove(chunkKey); }
+
+    // ---- rentals ----
+    public Map<String, Double> plotRent() { return plotRent; }
+    public Map<String, Long> rentDue() { return rentDue; }
+    public Double rentPrice(String chunkKey) { return plotRent.get(chunkKey); }
+    public void setForRent(String chunkKey, double price) {
+        plotRent.put(chunkKey, price);
+        plotSale.remove(chunkKey);
+    }
+    public void clearRent(String chunkKey) {
+        plotRent.remove(chunkKey);
+        rentDue.remove(chunkKey);
+    }
+    public Long rentDueAt(String chunkKey) { return rentDue.get(chunkKey); }
+    public void setRentDue(String chunkKey, long when) { rentDue.put(chunkKey, when); }
+
+    /** Any listing at all - sale or rent. */
+    public boolean isListed(String chunkKey) {
+        return plotSale.containsKey(chunkKey) || plotRent.containsKey(chunkKey);
+    }
+
+    public void clearListing(String chunkKey) {
+        plotSale.remove(chunkKey);
+        plotRent.remove(chunkKey);
+    }
 
     // ---- upgrades ----
     public Map<TownUpgrade, Integer> upgrades() { return upgrades; }

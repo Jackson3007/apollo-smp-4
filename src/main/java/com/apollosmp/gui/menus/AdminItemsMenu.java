@@ -85,6 +85,12 @@ public class AdminItemsMenu extends Gui {
         addMerchant(30, MerchantOffer.Kind.GOD_APPLE, null);
         addMerchant(31, MerchantOffer.Kind.TOTEM, null);
 
+        // ---- logistics ----
+        inventory.setItem(32, plugin.logistics().createDistribution());
+        actions.put(32, () -> give(plugin.logistics().createDistribution()));
+        inventory.setItem(33, plugin.logistics().createWholesale());
+        actions.put(33, () -> give(plugin.logistics().createWholesale()));
+
         // ---- spawners ----
         label(36, Material.LIGHT_BLUE_STAINED_GLASS_PANE, "<#5ad1e8><bold>SPAWNERS</bold>");
         slot = 37;

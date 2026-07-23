@@ -65,6 +65,8 @@ public class ApolloSMP extends JavaPlugin {
     private com.apollosmp.special.SpecialBusinessManager specialBusinesses;
     private com.apollosmp.spawner.SpawnerManager spawners;
     private com.apollosmp.vault.VaultManager vaults;
+    private com.apollosmp.admin.InventorySnapshots snapshots;
+    private com.apollosmp.logistics.LogisticsManager logistics;
     private com.apollosmp.merchant.ToolExpiryTask toolExpiry;
 
     @Override
@@ -94,6 +96,8 @@ public class ApolloSMP extends JavaPlugin {
         this.specialBusinesses = new com.apollosmp.special.SpecialBusinessManager(this);
         this.spawners = new com.apollosmp.spawner.SpawnerManager(this);
         this.vaults = new com.apollosmp.vault.VaultManager(this);
+        this.snapshots = new com.apollosmp.admin.InventorySnapshots(this);
+        this.logistics = new com.apollosmp.logistics.LogisticsManager(this);
         this.spawners.cleanupOrphans();
         this.toolExpiry = new com.apollosmp.merchant.ToolExpiryTask(this);
         this.holograms = new com.apollosmp.invest.BusinessHolograms(this);
@@ -205,6 +209,8 @@ public class ApolloSMP extends JavaPlugin {
                 new com.apollosmp.listeners.MobStackListener(this), this);
         getServer().getPluginManager().registerEvents(
                 new com.apollosmp.listeners.VaultListener(this), this);
+        getServer().getPluginManager().registerEvents(
+                new com.apollosmp.listeners.LogisticsListener(this), this);
 
         long taxTicks = Math.max(1L, getConfig().getLong("towns.tax-interval-hours", 24)) * 3600L * 20L;
         getServer().getScheduler().runTaskTimer(this, () -> towns.collectTaxes(), taxTicks, taxTicks);
@@ -221,11 +227,13 @@ public class ApolloSMP extends JavaPlugin {
         getServer().getScheduler().runTaskTimer(this, () -> nameTags.updateAll(), 40L, 40L);
         getServer().getScheduler().runTaskTimer(this, () -> borders.tick(), 8L, 8L);
         getServer().getScheduler().runTaskTimer(this, () -> towns.applyUpgradeEffects(), 60L, 60L);
+        getServer().getScheduler().runTaskTimer(this, () -> towns.collectRent(), 1200L, 6000L);
         getServer().getScheduler().runTaskTimer(this, () -> holograms.tick(), 40L, 20L);
         getServer().getScheduler().runTaskTimer(this, () -> toolExpiry.tick(), 200L, 600L);
         getServer().getScheduler().runTaskTimer(this, () -> merchant.refreshIfNeeded(), 1200L, 1200L);
         getServer().getScheduler().runTaskTimer(this, () -> specialAuction.tick(), 100L, 20L);
         getServer().getScheduler().runTaskTimer(this, () -> spawners.tick(), 60L, 20L);
+        getServer().getScheduler().runTaskTimer(this, () -> logistics.tick(), 600L, 600L);
     }
 
     // ---- world border ----
@@ -289,6 +297,9 @@ public class ApolloSMP extends JavaPlugin {
         specialBusinesses.save();
         spawners.save();
         vaults.save();
+        snapshots.captureAll();
+        snapshots.save();
+        logistics.save();
     }
 
     public void reloadAll() {
@@ -331,6 +342,8 @@ public class ApolloSMP extends JavaPlugin {
     public com.apollosmp.special.SpecialBusinessManager specialBusinesses() { return specialBusinesses; }
     public com.apollosmp.spawner.SpawnerManager spawners() { return spawners; }
     public com.apollosmp.vault.VaultManager vaults() { return vaults; }
+    public com.apollosmp.admin.InventorySnapshots snapshots() { return snapshots; }
+    public com.apollosmp.logistics.LogisticsManager logistics() { return logistics; }
 
     /** Apply the "how many players must sleep" rule to every overworld. */
     public void applySleepRule() {

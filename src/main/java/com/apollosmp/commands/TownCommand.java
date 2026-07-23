@@ -77,6 +77,9 @@ public class TownCommand implements CommandExecutor, TabCompleter {
                 }
             }
             case "buyplot" -> plugin.towns().buyPlotHere(player);
+            case "rentplot" -> plugin.towns().rentPlotHere(player);
+            case "endrent" -> plugin.towns().endRentHere(player);
+            case "unlistplot" -> plugin.towns().unlistPlotHere(player);
 
             case "create" -> {
                 if (args.length < 2) plugin.msg().send(player, "<gray>Usage: <white>/town create <name></white>");
@@ -125,6 +128,10 @@ public class TownCommand implements CommandExecutor, TabCompleter {
             case "sellplot" -> {
                 Double amount = parse(player, args, "/town sellplot <price>");
                 if (amount != null) plugin.towns().sellPlotHere(player, amount);
+            }
+            case "rentoutplot", "listrent" -> {
+                Double amount = parse(player, args, "/town rentoutplot <price>");
+                if (amount != null) plugin.towns().rentOutPlotHere(player, amount);
             }
 
             case "tp", "teleport", "visit" -> {
@@ -191,6 +198,8 @@ public class TownCommand implements CommandExecutor, TabCompleter {
         plugin.msg().send(player, "<gray>/town kick <player> <white>| <gray>/town rank <player> <rank>");
         plugin.msg().send(player, "<gray>/town deposit <amt> <white>| <gray>/town withdraw <amt>");
         plugin.msg().send(player, "<gray>/town tax <amt> <white>| <gray>/town sellplot <price>");
+        plugin.msg().send(player, "<gray>/town rentoutplot <price> <white>- list a plot for rent");
+        plugin.msg().send(player, "<gray>/town rentplot <white>| <gray>/town endrent <white>| <gray>/town unlistplot");
         plugin.msg().send(player, "<gray>/town buyplot <white>| <gray>/town home <white>| <gray>/town setspawn");
         plugin.msg().send(player, "<gray>/town list <white>- browse every town");
         plugin.msg().send(player, "<gray>/town tp <town> <white>- teleport to a town");
@@ -235,7 +244,8 @@ public class TownCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
             return List.of("create", "claim", "unclaim", "home", "invite", "join", "kick", "rank",
-                    "deposit", "withdraw", "tax", "sellplot", "buyplot",
+                    "deposit", "withdraw", "tax", "sellplot", "rentoutplot", "buyplot",
+                    "rentplot", "endrent", "unlistplot",
                     "spawn", "setspawn", "list", "tp", "visitors", "border", "map", "plot", "move", "upgrades",
                     "leave", "disband", "help");
         }

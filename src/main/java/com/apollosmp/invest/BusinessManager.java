@@ -234,20 +234,76 @@ public class BusinessManager {
             if (def == null) continue;
             Particle particle = resolveParticle(def.particleName());
             if (particle == null) continue;
+
+            int level = Math.max(1, b.level());
             Location loc = new Location(world, b.x() + 0.5, b.y() + 1.15, b.z() + 0.5);
-            world.spawnParticle(particle, loc, 6, 0.25, 0.2, 0.25, 0.01);
+
+            // The base puff grows with level.
+            int count = 3 + level;
+            double spread = 0.22 + level * 0.02;
+            world.spawnParticle(particle, loc, count, spread, 0.2, spread, 0.01);
+
+            // Mid levels earn a slowly turning ring.
+            if (level >= 3) {
+                Particle ring = resolveParticle("ENCHANT");
+                if (ring != null) {
+                    int points = 4 + level;
+                    double radius = 0.55 + level * 0.03;
+                    double turn = (System.currentTimeMillis() % 6000L) / 6000.0 * Math.PI * 2;
+                    for (int i = 0; i < points; i++) {
+                        double angle = turn + (Math.PI * 2 * i / points);
+                        world.spawnParticle(ring,
+                                loc.clone().add(Math.cos(angle) * radius, -0.35, Math.sin(angle) * radius),
+                                1, 0, 0, 0, 0);
+                    }
+                }
+            }
+
+            // High levels get a crown above the block.
+            if (level >= 6) {
+                Particle crown = resolveParticle("END_ROD");
+                if (crown != null) {
+                    world.spawnParticle(crown, loc.clone().add(0, 0.55, 0),
+                            1 + (level - 5) / 2, 0.14, 0.05, 0.14, 0.004);
+                }
+            }
+
+            // Maxed businesses shimmer.
+            if (level >= Business.MAX_LEVEL) {
+                Particle top = resolveParticle("FLAME");
+                if (top != null) {
+                    double turn = (System.currentTimeMillis() % 2400L) / 2400.0 * Math.PI * 2;
+                    for (int i = 0; i < 3; i++) {
+                        double angle = turn + (Math.PI * 2 * i / 3);
+                        world.spawnParticle(top,
+                                loc.clone().add(Math.cos(angle) * 0.75, 0.85, Math.sin(angle) * 0.75),
+                                1, 0, 0, 0, 0);
+                    }
+                }
+            }
         }
     }
 
     private Particle resolveParticle(String name) {
-        try {
-            return Particle.valueOf(name);
-        } catch (IllegalArgumentException | NullPointerException e) {
+        if (name == null) return null;
+        // Some particles were renamed between versions, so try the old name too.
+        String[] candidates = switch (name) {
+            case "ENCHANT" -> new String[]{"ENCHANT", "ENCHANTMENT_TABLE"};
+            case "CRIT" -> new String[]{"CRIT", "CRIT_MAGIC"};
+            case "WAX_ON" -> new String[]{"WAX_ON", "HAPPY_VILLAGER"};
+            default -> new String[]{name};
+        };
+        for (String candidate : candidates) {
             try {
-                return Particle.valueOf("HAPPY_VILLAGER");
-            } catch (Exception ignored) {
-                return null;
+                return Particle.valueOf(candidate);
+            } catch (IllegalArgumentException ignored) {
+                // try the next one
             }
+        }
+        try {
+            return Particle.valueOf("HAPPY_VILLAGER");
+        } catch (Exception ignored) {
+            return null;
         }
     }
 

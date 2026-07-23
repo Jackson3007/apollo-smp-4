@@ -507,6 +507,142 @@ public class TownManager {
         return true;
     }
 
+    private long rentPeriodMillis() {
+        return Math.max(1L, plugin.getConfig().getLong("towns.rent-period-hours", 24)) * 3600_000L;
+    }
+
+    public String rentPeriodLabel() {
+        long hours = Math.max(1L, plugin.getConfig().getLong("towns.rent-period-hours", 24));
+        if (hours % 24 == 0) {
+            long days = hours / 24;
+            return days == 1 ? "day" : days + " days";
+        }
+        return hours == 1 ? "hour" : hours + " hours";
+    }
+
+    /** List the chunk you're standing in as a rental. */
+    public boolean rentOutPlotHere(Player player, double price) {
+        Town town = getTownOf(player.getUniqueId());
+        if (town == null) { plugin.msg().send(player, "<red>You're not in a town."); return false; }
+        if (!town.hasPerm(player.getUniqueId(), TownPerm.SELL_PLOT)) {
+            plugin.msg().send(player, "<red>You don't have permission to list plots."); return false;
+        }
+        String here = chunkKey(player.getLocation());
+        if (!town.hasClaim(here)) { plugin.msg().send(player, "<red>Your town doesn't own this chunk."); return false; }
+        if (price < 0) price = 0;
+        town.setForRent(here, price);
+        touch();
+        plugin.msg().send(player, "<green>This plot is up for rent at " + plugin.msg().money(price)
+                + " per " + rentPeriodLabel() + ".");
+        return true;
+    }
+
+    /** Take out a tenancy on the plot you're standing in. */
+    public boolean rentPlotHere(Player player) {
+        String here = chunkKey(player.getLocation());
+        Town town = getTownAt(here);
+        if (town == null) { plugin.msg().send(player, "<red>This land isn't part of a town."); return false; }
+        if (!town.isMember(player.getUniqueId())) {
+            plugin.msg().send(player, "<red>Only residents can rent plots in this town."); return false;
+        }
+        Double rent = town.rentPrice(here);
+        if (rent == null) { plugin.msg().send(player, "<red>This plot isn't for rent."); return false; }
+        if (town.plotOwner(here) != null) {
+            plugin.msg().send(player, "<red>Someone is already renting this plot."); return false;
+        }
+        if (!plugin.economy().has(player.getUniqueId(), rent)) {
+            plugin.msg().send(player, "<red>You need " + plugin.msg().money(rent)
+                    + " for the first " + rentPeriodLabel() + "."); return false;
+        }
+        plugin.economy().withdraw(player.getUniqueId(), rent);
+        town.depositBank(rent);
+        town.setPlotOwner(here, player.getUniqueId());
+        town.setRentDue(here, System.currentTimeMillis() + rentPeriodMillis());
+        touch();
+        plugin.msg().send(player, "<green>Rented! You paid " + plugin.msg().money(rent)
+                + ". Next payment in one " + rentPeriodLabel() + ".");
+        return true;
+    }
+
+    /** Give up a rental you hold. */
+    public boolean endRentHere(Player player) {
+        String here = chunkKey(player.getLocation());
+        Town town = getTownAt(here);
+        if (town == null) return false;
+        if (!player.getUniqueId().equals(town.plotOwner(here))) {
+            plugin.msg().send(player, "<red>You aren't renting this plot."); return false;
+        }
+        if (town.rentPrice(here) == null) {
+            plugin.msg().send(player, "<red>You own this plot outright - it isn't a rental."); return false;
+        }
+        town.setPlotOwner(here, null);
+        town.rentDue().remove(here);
+        touch();
+        plugin.msg().send(player, "<yellow>You've given up the tenancy. No more rent is due.");
+        return true;
+    }
+
+    /** Take a plot off the market. */
+    public boolean unlistPlotHere(Player player) {
+        Town town = getTownOf(player.getUniqueId());
+        if (town == null) { plugin.msg().send(player, "<red>You're not in a town."); return false; }
+        if (!town.hasPerm(player.getUniqueId(), TownPerm.SELL_PLOT)) {
+            plugin.msg().send(player, "<red>You don't have permission to change listings."); return false;
+        }
+        String here = chunkKey(player.getLocation());
+        if (!town.isListed(here)) { plugin.msg().send(player, "<gray>This plot isn't listed."); return false; }
+        town.clearListing(here);
+        touch();
+        plugin.msg().send(player, "<yellow>Listing removed.");
+        return true;
+    }
+
+    /** Charge tenants when their period is up. Evicts anyone who can't pay. */
+    public void collectRent() {
+        boolean changed = false;
+        long now = System.currentTimeMillis();
+
+        for (Town town : towns.values()) {
+            for (Map.Entry<String, Long> entry : new ArrayList<>(town.rentDue().entrySet())) {
+                String plot = entry.getKey();
+                if (entry.getValue() > now) continue;
+
+                Double rent = town.rentPrice(plot);
+                UUID tenant = town.plotOwner(plot);
+                if (rent == null || tenant == null) {
+                    town.rentDue().remove(plot);
+                    changed = true;
+                    continue;
+                }
+
+                Player online = plugin.getServer().getPlayer(tenant);
+                if (plugin.economy().has(tenant, rent)) {
+                    plugin.economy().withdraw(tenant, rent);
+                    town.depositBank(rent);
+                    town.setRentDue(plot, now + rentPeriodMillis());
+                    if (online != null) {
+                        plugin.msg().send(online, "<gray>Rent of " + plugin.msg().money(rent)
+                                + " paid to <white>" + town.name() + "</white>.");
+                    }
+                } else {
+                    town.setPlotOwner(plot, null);
+                    town.rentDue().remove(plot);
+                    if (online != null) {
+                        plugin.msg().send(online, "<red>You couldn't cover the rent on your plot in <white>"
+                                + town.name() + "</white>. The tenancy has ended.");
+                    }
+                    Player mayor = plugin.getServer().getPlayer(town.mayor());
+                    if (mayor != null) {
+                        plugin.msg().send(mayor, "<yellow>A tenant missed rent - a plot in <white>"
+                                + town.name() + "</white> is available again.");
+                    }
+                }
+                changed = true;
+            }
+        }
+        if (changed) touch();
+    }
+
     public boolean buyPlotHere(Player player) {
         String here = chunkKey(player.getLocation());
         Town town = getTownAt(here);
@@ -515,7 +651,17 @@ public class TownManager {
             plugin.msg().send(player, "<red>Only residents can buy plots in this town."); return false;
         }
         Double price = town.plotPrice(here);
-        if (price == null) { plugin.msg().send(player, "<red>This plot isn't for sale."); return false; }
+        if (price == null) {
+            if (town.rentPrice(here) != null) {
+                plugin.msg().send(player, "<gray>This plot is for rent, not sale. Use <white>/town rentplot</white>.");
+            } else {
+                plugin.msg().send(player, "<red>This plot isn't for sale.");
+            }
+            return false;
+        }
+        if (town.plotOwner(here) != null) {
+            plugin.msg().send(player, "<red>Someone already owns this plot."); return false;
+        }
         if (!plugin.economy().has(player.getUniqueId(), price)) {
             plugin.msg().send(player, "<red>You can't afford this plot."); return false;
         }
@@ -588,6 +734,12 @@ public class TownManager {
             List<String> sales = new ArrayList<>();
             for (Map.Entry<String, Double> e : town.plotSale().entrySet()) sales.add(e.getKey() + "=" + e.getValue());
             cfg.set(base + ".sales", sales);
+            List<String> rents = new ArrayList<>();
+            for (Map.Entry<String, Double> e : town.plotRent().entrySet()) rents.add(e.getKey() + "=" + e.getValue());
+            cfg.set(base + ".rents", rents);
+            List<String> due = new ArrayList<>();
+            for (Map.Entry<String, Long> e : town.rentDue().entrySet()) due.add(e.getKey() + "=" + e.getValue());
+            cfg.set(base + ".rentDue", due);
             for (TownRank r : TownRank.values()) {
                 List<String> perms = new ArrayList<>();
                 for (TownPerm p : town.permsFor(r)) perms.add(p.name());
@@ -640,6 +792,14 @@ public class TownManager {
                 for (String entry : cfg.getStringList(base + ".sales")) {
                     String[] pr = entry.split("=");
                     if (pr.length == 2) town.setForSale(pr[0], Double.parseDouble(pr[1]));
+                }
+                for (String entry : cfg.getStringList(base + ".rents")) {
+                    String[] pr = entry.split("=");
+                    if (pr.length == 2) town.setForRent(pr[0], Double.parseDouble(pr[1]));
+                }
+                for (String entry : cfg.getStringList(base + ".rentDue")) {
+                    String[] pr = entry.split("=");
+                    if (pr.length == 2) town.setRentDue(pr[0], Long.parseLong(pr[1]));
                 }
                 ConfigurationSection ps = cfg.getConfigurationSection(base + ".perms");
                 if (ps != null) {

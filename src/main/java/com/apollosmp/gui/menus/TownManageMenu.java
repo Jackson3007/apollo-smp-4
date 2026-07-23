@@ -13,10 +13,11 @@ import org.bukkit.inventory.ItemStack;
 public class TownManageMenu extends Gui {
 
     // land row (centred)
-    private static final int CLAIM = 20;
-    private static final int UNCLAIM = 21;
-    private static final int SELL_PLOT = 22;
-    private static final int BUY_PLOT = 23;
+    private static final int CLAIM = 19;
+    private static final int UNCLAIM = 20;
+    private static final int SELL_PLOT = 21;
+    private static final int RENT_PLOT = 22;
+    private static final int TAKE_PLOT = 23;
     private static final int ALL_PLOTS = 24;
 
     // town row (centred)
@@ -68,11 +69,19 @@ public class TownManageMenu extends Gui {
                         "", "<yellow>Click, then type a price")
                 .build());
 
-        inventory.setItem(BUY_PLOT, Items.of(Material.LIME_DYE)
-                .name("<green><bold>Buy This Plot</bold>")
-                .lore("<gray>Buy the chunk you're standing in,",
-                        "<gray>if the town has it for sale.",
-                        "", "<yellow>Click to buy")
+        inventory.setItem(RENT_PLOT, Items.of(Material.PAPER)
+                .name("<#5ad1e8><bold>Rent Out This Plot</bold>")
+                .lore("<gray>Charge a resident rent every",
+                        "<gray>" + plugin.towns().rentPeriodLabel() + " instead of selling it.",
+                        "<gray>Rent goes to the town bank.",
+                        "", "<yellow>Click, then type a price")
+                .build());
+
+        inventory.setItem(TAKE_PLOT, Items.of(Material.LIME_DYE)
+                .name("<green><bold>Take This Plot</bold>")
+                .lore("<gray>Buy or rent the chunk you're in,",
+                        "<gray>whichever the town listed it as.",
+                        "", "<yellow>Click to take it")
                 .build());
 
         inventory.setItem(ALL_PLOTS, Items.of(Material.FILLED_MAP)
@@ -138,7 +147,23 @@ public class TownManageMenu extends Gui {
                     catch (NumberFormatException e) { plugin.msg().send(player, "<red>That's not a number."); }
                 });
             }
-            case BUY_PLOT -> { plugin.towns().buyPlotHere(player); redraw(); }
+            case RENT_PLOT -> {
+                player.closeInventory();
+                plugin.msg().send(player, "<#f9d423>Type the rent per "
+                        + plugin.towns().rentPeriodLabel() + "</#f9d423> <gray>(or 'cancel').");
+                plugin.msg().send(player, "<dark_gray>Or use <white>/town rentoutplot <price></white>.");
+                plugin.prompts().await(player, s -> {
+                    try { plugin.towns().rentOutPlotHere(player, Double.parseDouble(s)); }
+                    catch (NumberFormatException e) { plugin.msg().send(player, "<red>That's not a number."); }
+                });
+            }
+            case TAKE_PLOT -> {
+                String here = com.apollosmp.town.TownManager.chunkKey(player.getLocation());
+                com.apollosmp.town.Town at = plugin.towns().getTownAtLoc(player.getLocation());
+                if (at != null && at.rentPrice(here) != null) plugin.towns().rentPlotHere(player);
+                else plugin.towns().buyPlotHere(player);
+                redraw();
+            }
             case ALL_PLOTS -> new TownPlotsMenu(plugin, player, 0).open();
 
             case MEMBERS -> new TownMembersMenu(plugin, player).open();

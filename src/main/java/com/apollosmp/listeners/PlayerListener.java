@@ -72,6 +72,7 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
+        plugin.snapshots().capture(event.getPlayer());
         plugin.board().remove(event.getPlayer());
         plugin.nameTags().remove(event.getPlayer());
     }

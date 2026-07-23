@@ -69,6 +69,17 @@ public class AdminPlayerMenu extends Gui {
                     .lore("<gray>Teleport to their town spawn.").hideAttributes().build());
         }
 
+        inventory.setItem(9, Items.of(Material.CHEST)
+                .name("<#5ad1e8><bold>View Inventory</bold>")
+                .lore(online != null
+                                ? "<gray>Opens their live inventory."
+                                : "<gray>Opens their last logout snapshot.",
+                        online != null
+                                ? "<yellow>You can edit it directly."
+                                : "<dark_gray>Read-only while they're offline.",
+                        "", "<yellow>Click to view")
+                .hideAttributes().build());
+
         inventory.setItem(14, Items.of(Material.EMERALD)
                 .name("<green><bold>Give Money</bold>")
                 .lore("<gray>Add funds to their balance.",
@@ -213,6 +224,17 @@ public class AdminPlayerMenu extends Gui {
                 player.teleport(town.spawn());
                 plugin.msg().send(player, "<green>Teleported to <white>" + town.name() + "</white>.");
                 player.closeInventory();
+            }
+            case 9 -> {
+                Player online = plugin.getServer().getPlayer(target);
+                if (online != null) {
+                    player.closeInventory();
+                    player.openInventory(online.getInventory());
+                    plugin.msg().send(player, "<gray>Viewing <white>" + online.getName()
+                            + "</white>'s live inventory - edits apply immediately.");
+                } else {
+                    new AdminInventoryMenu(plugin, player, target).open();
+                }
             }
             case 14 -> askAmount(player, "give");
             case 15 -> askAmount(player, "take");
