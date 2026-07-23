@@ -35,6 +35,8 @@ public class SpecialBusiness {
     // ---- placement state ----
     private UUID owner;
     private String ownerName;
+    /** Town this business pays into, or null to pay the owner. */
+    private String town;
     private String worldName;
     private int x, y, z;
     private long lastGen;
@@ -85,6 +87,8 @@ public class SpecialBusiness {
     public void setOwner(UUID owner) { this.owner = owner; }
     public String ownerName() { return ownerName; }
     public void setOwnerName(String ownerName) { this.ownerName = ownerName; }
+    public String town() { return town; }
+    public void setTown(String town) { this.town = (town == null || town.isBlank()) ? null : town; }
     public String worldName() { return worldName; }
     public int x() { return x; }
     public int y() { return y; }

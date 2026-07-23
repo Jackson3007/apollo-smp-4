@@ -169,6 +169,25 @@ public class SpecialBusinessManager {
         b.storage().put(material, (int) Math.min(cap, current + add));
     }
 
+    /**
+     * Pay a special business's earnings to its town if assigned, else the owner.
+     * Returns the town that was paid, or null when the owner was.
+     */
+    public String payOut(SpecialBusiness b, double amount) {
+        if (amount <= 0) return null;
+        if (b.town() != null) {
+            com.apollosmp.town.Town town = plugin.towns().townByName(b.town());
+            if (town != null) {
+                town.depositBank(amount);
+                plugin.towns().markDirty();
+                return town.name();
+            }
+            b.setTown(null);
+        }
+        if (b.owner() != null) plugin.economy().deposit(b.owner(), amount);
+        return null;
+    }
+
     /** Total items sitting in the business. */
     public int stored(SpecialBusiness b) {
         int total = 0;

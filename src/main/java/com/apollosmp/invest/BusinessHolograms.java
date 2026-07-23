@@ -281,8 +281,10 @@ public class BusinessHolograms {
         String header = specialIcon(b.industry()) + " <gradient:#f9d423:#ff4e50><bold>"
                 + b.name().toUpperCase() + "</bold></gradient> " + rarityStars(b.rarity());
 
-        String owner = "<gray>Owner:</gray> <white>"
-                + (b.ownerName() == null ? "Unknown" : b.ownerName()) + "</white>";
+        String owner = b.town() == null
+                ? "<gray>Owner:</gray> <white>"
+                        + (b.ownerName() == null ? "Unknown" : b.ownerName()) + "</white>"
+                : "<gray>Pays:</gray> <#f9d423>" + b.town() + "</#f9d423>";
         String rarity = "<gray>Rarity:</gray> <#e94fd0>" + b.rarity() + "</#e94fd0>";
         String income = "<gray>Income:</gray> <green>"
                 + plugin.msg().money(b.exactProfit()) + "/day</green>";

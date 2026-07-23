@@ -293,7 +293,8 @@ public class LogisticsManager {
             }
             for (SpecialBusiness b : linkedSpecials(d)) {
                 plugin.specialBusinesses().accrue(b);
-                moved += drain(b.storage(), wholesaler, room - moved, "");
+                String destination = b.town() == null ? "" : b.town();
+                moved += drain(b.storage(), wholesaler, room - moved, destination);
                 if (moved >= room) break;
             }
         }

@@ -88,6 +88,11 @@ commands:
     aliases: [vault, pvault]
     usage: /pv [number]
     permission: apollo.admin
+  staff:
+    description: Toggle staff mode
+    aliases: [adminmode, am, sm]
+    usage: /staff [vanish]
+    permission: apollo.admin
   items:
     description: Free catalogue of every unique item
     aliases: [itemlist, allitems]

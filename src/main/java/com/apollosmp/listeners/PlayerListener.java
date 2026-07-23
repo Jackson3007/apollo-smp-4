@@ -23,6 +23,8 @@ public class PlayerListener implements Listener {
         plugin.economy().ensureAccount(player.getUniqueId(), player.getName());
         plugin.board().create(player);
         plugin.nameTags().invalidate();
+        plugin.staffMode().applyVanishTo(player);
+        plugin.staffMode().restoreOnJoin(player);
         sendWelcome(player);
         plugin.auctions().flushNotifications(player);
 

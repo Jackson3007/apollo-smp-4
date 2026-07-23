@@ -94,6 +94,16 @@ public class AdminPlayersMenu extends Gui {
         inventory.setItem(49, Items.of(Material.PAPER)
                 .name("<#f9d423>Page " + (page + 1) + "</#f9d423>")
                 .lore("<gray>Players: <white>" + everyone.size() + "</white>").build());
+        boolean staff = plugin.staffMode().isStaff(viewer);
+        inventory.setItem(47, Items.of(staff ? Material.LIME_DYE : Material.GRAY_DYE)
+                .name(staff ? "<green><bold>Staff Mode: On</bold>" : "<gray><bold>Staff Mode: Off</bold>")
+                .lore("<gray>Swap between playing and moderating.",
+                        staff ? "<gray>Your survival gear is stored safely."
+                                : "<gray>Creative, flight and vanish.",
+                        "<dark_gray>/staff",
+                        "", "<yellow>Click to toggle")
+                .glow(staff).hideAttributes().build());
+
         inventory.setItem(50, Items.of(Material.BARRIER).name("<red>Close").build());
         inventory.setItem(53, Items.of(Material.ARROW).name("<gray>Next Page").build());
     }
@@ -109,6 +119,11 @@ public class AdminPlayersMenu extends Gui {
         }
         switch (slot) {
             case 45 -> { if (page > 0) new AdminPlayersMenu(plugin, player, page - 1, onlineOnly).open(); }
+            case 47 -> {
+                boolean now = plugin.staffMode().toggle(player);
+                if (now) player.closeInventory();
+                else redraw();
+            }
             case 48 -> new AdminPlayersMenu(plugin, player, 0, !onlineOnly).open();
             case 50 -> player.closeInventory();
             case 53 -> new AdminPlayersMenu(plugin, player, page + 1, onlineOnly).open();

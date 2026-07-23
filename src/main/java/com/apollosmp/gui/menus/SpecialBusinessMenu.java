@@ -19,6 +19,7 @@ import java.util.Map;
 public class SpecialBusinessMenu extends Gui {
 
     private static final int[] PRODUCT_SLOTS = {19, 20, 21, 22, 23, 24, 25};
+    private static final int TOWN_TOGGLE = 36;
     private static final int COLLECT_ALL = 38;
     private static final int SELL_ALL = 40;
     private static final int DETAILS = 42;
@@ -76,6 +77,7 @@ public class SpecialBusinessMenu extends Gui {
                 .lore("<gray>Sell everything for <#f9d423>" + plugin.msg().money(totalValue) + "</#f9d423>",
                         "", totalValue > 0 ? "<yellow>Click to sell" : "<dark_gray>Nothing to sell yet")
                 .glow(totalValue > 0).hideAttributes().build());
+        inventory.setItem(TOWN_TOGGLE, buildTownToggle());
         inventory.setItem(DETAILS, buildDetails());
         inventory.setItem(CLOSE, Items.of(Material.BARRIER).name("<red>Close").build());
 
@@ -112,6 +114,63 @@ public class SpecialBusinessMenu extends Gui {
                 .lore(info).glow(true).hideAttributes().build();
     }
 
+    /** Pay the owner, or pay their town. */
+    private ItemStack buildTownToggle() {
+        com.apollosmp.town.Town myTown = business.owner() == null
+                ? null : plugin.towns().getTownOf(business.owner());
+        String assigned = business.town();
+
+        List<String> lore = new ArrayList<>();
+        if (assigned != null) {
+            lore.add("<gray>Earnings go to <#f9d423>" + assigned + "</#f9d423>");
+            lore.add("<gray>instead of the owner's pocket.");
+            lore.add("");
+            lore.add("<yellow>Click to pay the owner again");
+        } else if (myTown == null) {
+            lore.add("<gray>Earnings go to <white>" + business.ownerName() + "</white>.");
+            lore.add("");
+            lore.add("<dark_gray>Join a town to donate this");
+            lore.add("<dark_gray>business's income to it.");
+        } else {
+            lore.add("<gray>Earnings go to <white>" + business.ownerName() + "</white>.");
+            lore.add("");
+            lore.add("<gray>Assign it to <#f9d423>" + myTown.name() + "</#f9d423> and every");
+            lore.add("<gray>sale pays the town bank instead.");
+            lore.add("");
+            lore.add("<yellow>Click to assign to your town");
+        }
+
+        return Items.of(assigned != null ? Material.WHITE_BANNER : Material.PLAYER_HEAD)
+                .name(assigned != null
+                        ? "<#f9d423><bold>Paying: " + assigned + "</bold>"
+                        : "<gray><bold>Paying: Owner</bold>")
+                .lore(lore).glow(assigned != null).hideAttributes().build();
+    }
+
+    private void toggleTown(Player player) {
+        if (!player.getUniqueId().equals(business.owner())) {
+            plugin.msg().send(player, "<red>Only the owner can change where the money goes.");
+            return;
+        }
+        if (business.town() != null) {
+            String was = business.town();
+            business.setTown(null);
+            plugin.specialBusinesses().save();
+            plugin.msg().send(player, "<yellow>This business now pays you again "
+                    + "<gray>(was paying " + was + ").");
+            return;
+        }
+        com.apollosmp.town.Town town = plugin.towns().getTownOf(player.getUniqueId());
+        if (town == null) {
+            plugin.msg().send(player, "<red>You're not in a town.");
+            return;
+        }
+        business.setTown(town.name());
+        plugin.specialBusinesses().save();
+        plugin.msg().send(player, "<green>Every sale from this business now pays <#f9d423>"
+                + town.name() + "</#f9d423>'s bank.");
+    }
+
     private ItemStack buildDetails() {
         List<String> lore = new ArrayList<>();
         lore.add("<gray>" + business.description());
@@ -130,12 +189,14 @@ public class SpecialBusinessMenu extends Gui {
 
     @Override
     public void onClick(Player player, int slot, ItemStack clicked, ClickType click) {
-        if (!player.getUniqueId().equals(business.owner()) && slot != CLOSE) {
+        if (!player.getUniqueId().equals(business.owner())
+                && slot != CLOSE && slot != TOWN_TOGGLE) {
             plugin.msg().send(player, "<red>This isn't your business.");
             return;
         }
         switch (slot) {
             case CLOSE -> player.closeInventory();
+            case TOWN_TOGGLE -> { toggleTown(player); redraw(); }
             case COLLECT_ALL -> { collectAll(player); redraw(); }
             case SELL_ALL -> { sellAll(player); redraw(); }
             case DETAILS -> { /* display only */ }
@@ -182,10 +243,14 @@ public class SpecialBusinessMenu extends Gui {
             return;
         }
         business.storage().clear();
-        plugin.economy().deposit(player.getUniqueId(), total);
+        String paidTown = plugin.specialBusinesses().payOut(business, total);
         plugin.specialBusinesses().save();
-        plugin.msg().send(player, "<green>Sold <white>" + sold + "</white> goods for <#f9d423>"
-                + plugin.msg().money(total) + "</#f9d423>.");
+        plugin.msg().send(player, paidTown == null
+                ? "<green>Sold <white>" + sold + "</white> goods for <#f9d423>"
+                        + plugin.msg().money(total) + "</#f9d423>."
+                : "<green>Sold <white>" + sold + "</white> goods for <#f9d423>"
+                        + plugin.msg().money(total) + "</#f9d423> <gray>into <white>"
+                        + paidTown + "</white>'s bank.");
     }
 
     private static String formatTime(long millis) {

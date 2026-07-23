@@ -203,6 +203,12 @@ voting:
     - name: "Site 4"
       link: ""
 
+# ---- Staff mode ----
+# /staff swaps between playing and moderating. Survival gear is stored on
+# disk while you're in staff mode, so a restart can't lose it.
+staff-mode:
+  vanish: true   # hide from non-staff players while in staff mode
+
 # ---- Storage vaults ----
 # /pv gives staff persistent storage. Contents save on close.
 vaults:

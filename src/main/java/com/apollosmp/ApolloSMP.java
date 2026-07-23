@@ -66,6 +66,7 @@ public class ApolloSMP extends JavaPlugin {
     private com.apollosmp.spawner.SpawnerManager spawners;
     private com.apollosmp.vault.VaultManager vaults;
     private com.apollosmp.admin.InventorySnapshots snapshots;
+    private com.apollosmp.admin.StaffMode staffMode;
     private com.apollosmp.logistics.LogisticsManager logistics;
     private com.apollosmp.merchant.ToolExpiryTask toolExpiry;
 
@@ -97,6 +98,7 @@ public class ApolloSMP extends JavaPlugin {
         this.spawners = new com.apollosmp.spawner.SpawnerManager(this);
         this.vaults = new com.apollosmp.vault.VaultManager(this);
         this.snapshots = new com.apollosmp.admin.InventorySnapshots(this);
+        this.staffMode = new com.apollosmp.admin.StaffMode(this);
         this.logistics = new com.apollosmp.logistics.LogisticsManager(this);
         this.spawners.cleanupOrphans();
         this.toolExpiry = new com.apollosmp.merchant.ToolExpiryTask(this);
@@ -160,6 +162,7 @@ public class ApolloSMP extends JavaPlugin {
         reg("specialauction", new com.apollosmp.commands.SpecialAuctionCommand(this));
         reg("pv", new com.apollosmp.commands.VaultCommand(this));
         reg("items", new com.apollosmp.commands.ItemsCommand(this));
+        reg("staff", new com.apollosmp.commands.StaffCommand(this));
 
         TpaCommand tpaCommand = new TpaCommand(this);
         reg("tpa", tpaCommand);
@@ -300,6 +303,7 @@ public class ApolloSMP extends JavaPlugin {
         vaults.save();
         snapshots.captureAll();
         snapshots.save();
+        staffMode.save();
         logistics.save();
     }
 
@@ -344,6 +348,7 @@ public class ApolloSMP extends JavaPlugin {
     public com.apollosmp.spawner.SpawnerManager spawners() { return spawners; }
     public com.apollosmp.vault.VaultManager vaults() { return vaults; }
     public com.apollosmp.admin.InventorySnapshots snapshots() { return snapshots; }
+    public com.apollosmp.admin.StaffMode staffMode() { return staffMode; }
     public com.apollosmp.logistics.LogisticsManager logistics() { return logistics; }
 
     /** Apply the "how many players must sleep" rule to every overworld. */

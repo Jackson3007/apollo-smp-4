@@ -444,6 +444,7 @@ public class SpecialAuctionManager {
             cfg.set(path + ".owner", b.owner().toString());
             cfg.set(path + ".ownerName", b.ownerName());
         }
+        if (b.town() != null) cfg.set(path + ".town", b.town());
     }
 
     SpecialBusiness readBusiness(FileConfiguration cfg, String path) {
@@ -470,6 +471,7 @@ public class SpecialAuctionManager {
             b.setOwner(UUID.fromString(owner));
             b.setOwnerName(cfg.getString(path + ".ownerName"));
         }
+        b.setTown(cfg.getString(path + ".town"));
         b.setLastGen(System.currentTimeMillis());
         return b;
     }
