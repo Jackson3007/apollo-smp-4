@@ -84,7 +84,14 @@ public class AuctionMenu extends Gui {
             List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
             lore.add(com.apollosmp.util.Msg.lore("<dark_gray>―――――――――――"));
             lore.add(com.apollosmp.util.Msg.lore("<gray>Seller: <white>" + listing.sellerName() + "</white>"));
-            lore.add(com.apollosmp.util.Msg.lore("<gray>Price: <#f9d423>" + plugin.msg().money(listing.price()) + "</#f9d423>"));
+            lore.add(com.apollosmp.util.Msg.lore("<gray>Price: <#f9d423>"
+                    + plugin.msg().money(listing.price()) + "</#f9d423>"));
+            double serverValue = plugin.sell().valueOf(icon);
+            if (serverValue > 0) {
+                lore.add(com.apollosmp.util.Msg.lore("<gray>Server pays: <white>"
+                        + plugin.msg().money(serverValue) + "</white> <dark_gray>("
+                        + Math.round(listing.price() / serverValue * 100) + "% of ask)</dark_gray>"));
+            }
             lore.add(com.apollosmp.util.Msg.lore("<gray>Time left: <white>" + formatDuration(listing.millisLeft()) + "</white>"));
             lore.add(com.apollosmp.util.Msg.lore(""));
             if (mine) {

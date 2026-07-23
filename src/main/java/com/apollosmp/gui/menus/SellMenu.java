@@ -9,7 +9,9 @@ import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A drop-in sell panel: the player drops any items into the top 45 slots, sees a
@@ -57,6 +59,34 @@ public class SellMenu extends Gui {
 
     private void drawSellButton(int sellableCount, double total, int unsellableCount) {
         List<String> lore = new ArrayList<>();
+
+        // Line-by-line breakdown of what's in the panel.
+        Map<Material, Integer> tally = new LinkedHashMap<>();
+        for (int i = 0; i < DROP_END; i++) {
+            ItemStack stack = inventory.getItem(i);
+            if (stack == null || stack.getType().isAir()) continue;
+            if (!plugin.sell().isSellable(stack)) continue;
+            tally.merge(stack.getType(), stack.getAmount(), Integer::sum);
+        }
+
+        if (!tally.isEmpty()) {
+            lore.add("<dark_gray>―――――――――――");
+            int shown = 0;
+            for (Map.Entry<Material, Integer> e : tally.entrySet()) {
+                if (shown >= 8) {
+                    lore.add("<dark_gray>...and " + (tally.size() - shown) + " more");
+                    break;
+                }
+                double unit = plugin.sell().priceOf(e.getKey());
+                double line = unit * e.getValue();
+                lore.add("<white>" + e.getValue() + "x</white> <gray>"
+                        + Items.pretty(e.getKey()) + "</gray> <dark_gray>@</dark_gray> <gray>"
+                        + plugin.msg().money(unit) + "</gray> <dark_gray>=</dark_gray> <#f9d423>"
+                        + plugin.msg().money(line) + "</#f9d423>");
+                shown++;
+            }
+        }
+
         lore.add("<dark_gray>―――――――――――");
         lore.add("<gray>Sellable items: <white>" + sellableCount + "</white>");
         lore.add("<gray>You'll earn: <#f9d423>" + plugin.msg().money(total) + "</#f9d423>");
