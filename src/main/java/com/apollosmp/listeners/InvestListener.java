@@ -41,6 +41,12 @@ public class InvestListener implements Listener {
         Player player = event.getPlayer();
         plugin.businesses().register(event.getBlockPlaced().getLocation(), id, level,
                 player.getUniqueId(), player.getName());
+        long carried = plugin.businesses().readProduced(event.getItemInHand());
+        if (carried > 0) {
+            com.apollosmp.invest.BusinessBlock placed =
+                    plugin.businesses().getAt(event.getBlockPlaced().getLocation());
+            if (placed != null) placed.setProducedSinceUpgrade(carried);
+        }
         plugin.msg().send(player, "<green>You set up <reset>" + def.displayName()
                 + " <gray>[L" + level + "]</gray> <green>here! Right-click it to manage.");
     }
@@ -57,7 +63,8 @@ public class InvestListener implements Listener {
         event.setDropItems(false);
 
         if (def != null) {
-            Items.give(player, plugin.businesses().createItem(def, block.level()));
+            Items.give(player, plugin.businesses().createItem(def, block.level(),
+                    block.producedSinceUpgrade()));
         }
         for (Map.Entry<Material, Integer> e : block.storage().entrySet()) {
             int amount = e.getValue();

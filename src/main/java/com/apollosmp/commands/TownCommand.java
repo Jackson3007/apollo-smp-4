@@ -40,7 +40,7 @@ public class TownCommand implements CommandExecutor, TabCompleter {
         switch (args[0].toLowerCase()) {
             case "claim" -> plugin.towns().claimHere(player);
             case "unclaim" -> plugin.towns().unclaimHere(player);
-            case "spawn" -> plugin.towns().teleportSpawn(player);
+            case "spawn", "home" -> plugin.towns().teleportSpawn(player);
             case "setspawn" -> plugin.towns().setSpawnHere(player);
             case "leave" -> plugin.towns().leave(player);
             case "move", "relocate" -> {
@@ -191,7 +191,7 @@ public class TownCommand implements CommandExecutor, TabCompleter {
         plugin.msg().send(player, "<gray>/town kick <player> <white>| <gray>/town rank <player> <rank>");
         plugin.msg().send(player, "<gray>/town deposit <amt> <white>| <gray>/town withdraw <amt>");
         plugin.msg().send(player, "<gray>/town tax <amt> <white>| <gray>/town sellplot <price>");
-        plugin.msg().send(player, "<gray>/town buyplot <white>| <gray>/town spawn <white>| <gray>/town setspawn");
+        plugin.msg().send(player, "<gray>/town buyplot <white>| <gray>/town home <white>| <gray>/town setspawn");
         plugin.msg().send(player, "<gray>/town list <white>- browse every town");
         plugin.msg().send(player, "<gray>/town tp <town> <white>- teleport to a town");
         plugin.msg().send(player, "<gray>/town visitors <on|off> <white>- allow outside teleports");
@@ -234,7 +234,7 @@ public class TownCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            return List.of("create", "claim", "unclaim", "invite", "join", "kick", "rank",
+            return List.of("create", "claim", "unclaim", "home", "invite", "join", "kick", "rank",
                     "deposit", "withdraw", "tax", "sellplot", "buyplot",
                     "spawn", "setspawn", "list", "tp", "visitors", "border", "map", "plot", "move", "upgrades",
                     "leave", "disband", "help");

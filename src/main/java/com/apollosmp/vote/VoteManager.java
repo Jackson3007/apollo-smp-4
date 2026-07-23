@@ -17,7 +17,7 @@ public class VoteManager {
 
     /** Used when config.yml has no properly configured sites yet. */
     private static final Service DEFAULT_SITE =
-            new Service("TopG", "https://topg.org/minecraft-servers/server-684435");
+            new Service("TopG", "http://topg.org/minecraft-servers/server-684435#vote");
 
     private final ApolloSMP plugin;
 

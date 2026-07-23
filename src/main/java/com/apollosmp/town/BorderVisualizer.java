@@ -44,8 +44,8 @@ public class BorderVisualizer {
     private static final Color PLOT = Color.fromRGB(233, 79, 208);     // Apollo purple
 
     private final ApolloSMP plugin;
-    /** Players who toggled the outline on permanently. */
-    private final Set<UUID> always = ConcurrentHashMap.newKeySet();
+    /** Players who have explicitly chosen. Anyone absent uses the server default. */
+    private final Map<UUID, Boolean> choices = new ConcurrentHashMap<>();
     /** Players getting a temporary flash, mapped to when it expires. */
     private final Map<UUID, Long> flashUntil = new ConcurrentHashMap<>();
 
@@ -62,7 +62,14 @@ public class BorderVisualizer {
         FileConfiguration cfg = YamlConfiguration.loadConfiguration(file);
         for (String raw : cfg.getStringList("showing")) {
             try {
-                always.add(UUID.fromString(raw));
+                choices.put(UUID.fromString(raw), true);
+            } catch (IllegalArgumentException ignored) {
+                // skip bad entries
+            }
+        }
+        for (String raw : cfg.getStringList("hidden")) {
+            try {
+                choices.put(UUID.fromString(raw), false);
             } catch (IllegalArgumentException ignored) {
                 // skip bad entries
             }
@@ -71,9 +78,13 @@ public class BorderVisualizer {
 
     public void save() {
         FileConfiguration cfg = new YamlConfiguration();
-        List<String> ids = new ArrayList<>();
-        for (UUID id : always) ids.add(id.toString());
-        cfg.set("showing", ids);
+        List<String> on = new ArrayList<>();
+        List<String> off = new ArrayList<>();
+        for (Map.Entry<UUID, Boolean> e : choices.entrySet()) {
+            (e.getValue() ? on : off).add(e.getKey().toString());
+        }
+        cfg.set("showing", on);
+        cfg.set("hidden", off);
         try {
             cfg.save(file);
         } catch (IOException ex) {
@@ -81,20 +92,21 @@ public class BorderVisualizer {
         }
     }
 
+    /** Borders are on unless the player turned them off. */
+    private boolean defaultOn() {
+        return plugin.getConfig().getBoolean("towns.border.default-on", true);
+    }
+
     /** Toggle the persistent outline. Returns the new state. */
     public boolean toggle(Player player) {
-        boolean on;
-        if (always.remove(player.getUniqueId())) on = false;
-        else {
-            always.add(player.getUniqueId());
-            on = true;
-        }
+        boolean on = !isOn(player);
+        choices.put(player.getUniqueId(), on);
         save();
         return on;
     }
 
     public boolean isOn(Player player) {
-        return always.contains(player.getUniqueId());
+        return choices.getOrDefault(player.getUniqueId(), defaultOn());
     }
 
     private double spacing() { return Math.max(0.25, plugin.getConfig().getDouble("towns.border.spacing", 1.0)); }
@@ -122,7 +134,7 @@ public class BorderVisualizer {
             Long until = flashUntil.get(id);
             boolean flashing = until != null && until > now;
             if (until != null && !flashing) flashUntil.remove(id);
-            if (!flashing && !always.contains(id)) continue;
+            if (!flashing && !isOn(player)) continue;
             draw(player);
         }
     }

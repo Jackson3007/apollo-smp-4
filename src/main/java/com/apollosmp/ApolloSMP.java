@@ -59,6 +59,7 @@ public class ApolloSMP extends JavaPlugin {
     private com.apollosmp.town.ChatPromptManager prompts;
     private com.apollosmp.board.NameTagManager nameTags;
     private com.apollosmp.town.BorderVisualizer borders;
+    private com.apollosmp.invest.BusinessHolograms holograms;
 
     @Override
     public void onEnable() {
@@ -82,6 +83,8 @@ public class ApolloSMP extends JavaPlugin {
         this.prompts = new com.apollosmp.town.ChatPromptManager(this);
         this.nameTags = new com.apollosmp.board.NameTagManager(this);
         this.borders = new com.apollosmp.town.BorderVisualizer(this);
+        this.holograms = new com.apollosmp.invest.BusinessHolograms(this);
+        this.holograms.cleanupOrphans();
 
         registerCommands();
         registerListeners();
@@ -99,6 +102,7 @@ public class ApolloSMP extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (holograms != null) holograms.removeAll();
         getServer().getScheduler().cancelTasks(this);
         saveAll();
         getLogger().info("Apollo SMP disabled. Data saved.");
@@ -190,6 +194,7 @@ public class ApolloSMP extends JavaPlugin {
         getServer().getScheduler().runTaskTimer(this, () -> nameTags.updateAll(), 40L, 40L);
         getServer().getScheduler().runTaskTimer(this, () -> borders.tick(), 8L, 8L);
         getServer().getScheduler().runTaskTimer(this, () -> towns.applyUpgradeEffects(), 60L, 60L);
+        getServer().getScheduler().runTaskTimer(this, () -> holograms.tick(), 40L, 20L);
     }
 
     // ---- world border ----
@@ -284,6 +289,7 @@ public class ApolloSMP extends JavaPlugin {
     public com.apollosmp.town.ChatPromptManager prompts() { return prompts; }
     public com.apollosmp.board.NameTagManager nameTags() { return nameTags; }
     public com.apollosmp.town.BorderVisualizer borders() { return borders; }
+    public com.apollosmp.invest.BusinessHolograms holograms() { return holograms; }
 
     /** Apply the "how many players must sleep" rule to every overworld. */
     public void applySleepRule() {

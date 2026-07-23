@@ -109,6 +109,8 @@ homes:
   # Home limits per permission rank. The plugin grants the HIGHEST matching value.
   # Give a rank permission like apollo.homes.5 to allow 5 homes.
   default-limit: 3
+  # Everyone gets at least this many, whatever default-limit says.
+  minimum-limit: 3
   limits:
     "apollo.homes.5": 5
     "apollo.homes.10": 10
@@ -160,7 +162,7 @@ scoreboard:
   #   %balance% %balance_raw% %player% %online% %world% %homes% %listings% %x% %y% %z%
   #   %skycoins% %businesses% %ip%
   #   %town% (your town)  %town_rank% (your role)  %town_bank%
-  #   %town_here% (the land you're standing on)
+  #   %town_here% (the land you're standing on)  %playtime%
   lines:
     - "<dark_gray>▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪</dark_gray>"
     - "<gray>Player:</gray> <white>%player%</white>"
@@ -173,10 +175,10 @@ scoreboard:
     - " <gray>Role:</gray> <#5ad1e8>%town_rank%</#5ad1e8>"
     - " <gray>Bank:</gray> <#f9d423>%town_bank%</#f9d423>"
     - " <gray>Standing in:</gray> <white>%town_here%</white>"
-    - ""
-    - " <gray>Homes:</gray> <white>%homes%</white>  <gray>AH:</gray> <white>%listings%</white>"
+    - " <gray>Playtime:</gray> <white>%playtime%</white>"
     - "<dark_gray>▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪</dark_gray>"
     - "<#ff4e50>%ip%</#ff4e50>"
+    - "<gray>/menu <dark_gray>for everything</dark_gray>"
 
 # Data auto-saves on a timer as a safety net (minutes). Changes also save immediately.
 autosave-minutes: 5
@@ -193,13 +195,18 @@ voting:
   # until you have the real links, and they'll show as "not set".
   services:
     - name: "TopG"
-      link: "https://topg.org/minecraft-servers/server-684435"
+      link: "http://topg.org/minecraft-servers/server-684435#vote"
     - name: "Site 2"
       link: ""
     - name: "Site 3"
       link: ""
     - name: "Site 4"
       link: ""
+
+# ---- Businesses ----
+invest:
+  # Floating text above business blocks showing income and the next payout.
+  holograms: true
 
 # ---- Spawners ----
 spawners:
@@ -236,6 +243,7 @@ towns:
   # Border look. spacing and radius are the performance dials - lower spacing
   # and higher radius mean a lot more particles.
   border:
+    default-on: true    # new players see claim borders until they turn them off
     spacing: 1.0        # blocks between particles along an edge (lower = denser)
     height: 2.0         # how tall the wall is, in blocks
     corner-height: 6.0  # taller pillars at chunk corners

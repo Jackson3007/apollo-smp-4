@@ -36,6 +36,7 @@ public class BusinessManager {
     private final File file;
     private final NamespacedKey idKey;
     private final NamespacedKey levelKey;
+    private final NamespacedKey producedKey;
     private final Map<String, BusinessBlock> blocks = new ConcurrentHashMap<>();
     private volatile boolean dirty = false;
 
@@ -44,6 +45,7 @@ public class BusinessManager {
         this.file = new File(plugin.getDataFolder(), "businesses.yml");
         this.idKey = new NamespacedKey(plugin, "business_id");
         this.levelKey = new NamespacedKey(plugin, "business_level");
+        this.producedKey = new NamespacedKey(plugin, "apollo_business_produced");
         load();
     }
 
@@ -51,6 +53,31 @@ public class BusinessManager {
 
     public ItemStack createItem(Business business) {
         return createItem(business, 1);
+    }
+
+    public ItemStack createItem(Business business, int level, long produced) {
+        ItemStack item = createItem(business, level);
+        if (produced <= 0) return item;
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.getPersistentDataContainer().set(producedKey, PersistentDataType.LONG, produced);
+            List<Component> lore = meta.lore();
+            if (lore == null) lore = new ArrayList<>();
+            long needed = business.unitsToUpgrade(level);
+            lore.add(Msg.lore("<gray>Upgrade progress kept: <#f9d423>" + produced
+                    + (needed > 0 ? "/" + needed : "") + "</#f9d423>"));
+            meta.lore(lore);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    /** Upgrade progress stored on a picked-up business item. */
+    public long readProduced(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) return 0L;
+        Long value = item.getItemMeta().getPersistentDataContainer()
+                .get(producedKey, PersistentDataType.LONG);
+        return value == null ? 0L : Math.max(0L, value);
     }
 
     /** Build the placeable item for a business at a given level (level travels with it). */
@@ -116,6 +143,7 @@ public class BusinessManager {
     }
 
     public void remove(BusinessBlock block) {
+        if (plugin.holograms() != null) plugin.holograms().forget(block.key());
         blocks.remove(block.key());
         dirty = true;
         save();
