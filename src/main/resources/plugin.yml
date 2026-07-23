@@ -75,6 +75,11 @@ commands:
   discord:
     description: Get the Discord invite link
     usage: /discord
+  admin:
+    description: Open the Apollo admin panel
+    aliases: [apanel, adminpanel]
+    usage: /admin
+    permission: apollo.admin
   tpa:
     description: Request to teleport to a player
     usage: /tpa <player>

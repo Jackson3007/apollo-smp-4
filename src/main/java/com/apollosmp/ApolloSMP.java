@@ -132,6 +132,7 @@ public class ApolloSMP extends JavaPlugin {
         reg("vote", new VoteCommand(this));
         reg("town", new com.apollosmp.commands.TownCommand(this));
         reg("discord", new com.apollosmp.commands.DiscordCommand(this));
+        reg("admin", new com.apollosmp.commands.AdminPanelCommand(this));
 
         TpaCommand tpaCommand = new TpaCommand(this);
         reg("tpa", tpaCommand);
