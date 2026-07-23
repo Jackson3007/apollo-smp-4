@@ -28,6 +28,10 @@ public class Town {
     private final Map<String, UUID> plotOwners = new HashMap<>();   // chunkKey -> owner
     private final Map<String, Double> plotSale = new HashMap<>();   // chunkKey -> asking price
     private final Map<TownRank, EnumSet<TownPerm>> rankPerms = new EnumMap<>(TownRank.class);
+<<<<<<< Updated upstream
+=======
+    private final Map<TownUpgrade, Integer> upgrades = new EnumMap<>(TownUpgrade.class);
+>>>>>>> Stashed changes
 
     public Town(String name, UUID mayor, long founded) {
         this.name = name;
@@ -91,6 +95,27 @@ public class Town {
     public void setForSale(String chunkKey, double price) { plotSale.put(chunkKey, price); }
     public void clearSale(String chunkKey) { plotSale.remove(chunkKey); }
 
+<<<<<<< Updated upstream
+=======
+    // ---- upgrades ----
+    public Map<TownUpgrade, Integer> upgrades() { return upgrades; }
+
+    public int upgradeLevel(TownUpgrade upgrade) {
+        return upgrades.getOrDefault(upgrade, 0);
+    }
+
+    public void setUpgradeLevel(TownUpgrade upgrade, int level) {
+        int capped = Math.max(0, Math.min(upgrade.maxLevel(), level));
+        if (capped == 0) upgrades.remove(upgrade);
+        else upgrades.put(upgrade, capped);
+    }
+
+    /** Business production multiplier from the Industry upgrade. */
+    public double productionMultiplier() {
+        return 1.0 + (0.15 * upgradeLevel(TownUpgrade.PRODUCTION));
+    }
+
+>>>>>>> Stashed changes
     // ---- permissions ----
     public EnumSet<TownPerm> permsFor(TownRank rank) {
         return rankPerms.computeIfAbsent(rank, TownRank::defaultPerms);

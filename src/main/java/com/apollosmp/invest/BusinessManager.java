@@ -133,12 +133,13 @@ public class BusinessManager {
 
         long intervals = elapsed / interval;
         long producedThisRun = 0;
+        double townBoost = townBoostAt(block);
         for (Business.Product p : def.products()) {
             int perInterval = def.amountAtLevel(p, block.level());
             int cap = def.capacityForAtLevel(p, block.level());
             int current = block.storage().getOrDefault(p.material(), 0);
             if (current >= cap) continue;
-            long add = (long) perInterval * intervals;
+            long add = (long) Math.floor(perInterval * intervals * townBoost);
             int next = (int) Math.min(cap, current + add);
             producedThisRun += (next - current);
             block.storage().put(p.material(), next);
@@ -146,6 +147,19 @@ public class BusinessManager {
         block.addProduced(producedThisRun);
         block.setLastGen(block.lastGen() + intervals * interval);
         dirty = true;
+    }
+
+    /** Industry upgrade bonus for a business standing on town land. */
+    private double townBoostAt(BusinessBlock block) {
+        try {
+            org.bukkit.World world = plugin.getServer().getWorld(block.worldName());
+            if (world == null) return 1.0;
+            String key = com.apollosmp.town.TownManager.chunkKey(world, block.x() >> 4, block.z() >> 4);
+            com.apollosmp.town.Town town = plugin.towns().getTownAt(key);
+            return town == null ? 1.0 : town.productionMultiplier();
+        } catch (Exception ex) {
+            return 1.0;
+        }
     }
 
     public boolean canUpgrade(BusinessBlock block) {

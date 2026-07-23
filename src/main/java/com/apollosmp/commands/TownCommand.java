@@ -43,7 +43,43 @@ public class TownCommand implements CommandExecutor, TabCompleter {
             case "spawn" -> plugin.towns().teleportSpawn(player);
             case "setspawn" -> plugin.towns().setSpawnHere(player);
             case "leave" -> plugin.towns().leave(player);
+<<<<<<< Updated upstream
             case "disband" -> plugin.towns().disband(player);
+=======
+            case "move", "relocate" -> {
+                if (args.length < 2 || !args[1].equalsIgnoreCase("confirm")) {
+                    Town own = plugin.towns().getTownOf(player.getUniqueId());
+                    if (own == null) {
+                        plugin.msg().send(player, "<red>You're not in a town.");
+                    } else {
+                        plugin.msg().send(player, "<yellow>Moving <white>" + own.name()
+                                + "</white> releases all <white>" + own.claims().size()
+                                + "</white> claimed chunks and every plot.");
+                        plugin.msg().send(player, "<gray>Residents, ranks and the bank are kept.");
+                        plugin.msg().send(player, "<gray>Stand where you want the new centre and type "
+                                + "<white>/town move confirm</white>.");
+                    }
+                } else {
+                    plugin.towns().moveTown(player);
+                }
+            }
+            case "disband" -> {
+                if (args.length < 2 || !args[1].equalsIgnoreCase("confirm")) {
+                    Town own = plugin.towns().getTownOf(player.getUniqueId());
+                    if (own == null) {
+                        plugin.msg().send(player, "<red>You're not in a town.");
+                    } else {
+                        plugin.msg().send(player, "<red><bold>Careful!</bold> Disbanding <white>"
+                                + own.name() + "</white> releases all its land, removes every");
+                        plugin.msg().send(player, "<red>resident and destroys the bank balance of <white>"
+                                + plugin.msg().money(own.bank()) + "</white>. This cannot be undone.");
+                        plugin.msg().send(player, "<gray>Type <white>/town disband confirm</white> to go ahead.");
+                    }
+                } else {
+                    plugin.towns().disband(player);
+                }
+            }
+>>>>>>> Stashed changes
             case "buyplot" -> plugin.towns().buyPlotHere(player);
 
             case "create" -> {
@@ -120,6 +156,10 @@ public class TownCommand implements CommandExecutor, TabCompleter {
                         ? "<green>Claim borders shown. <gray>Run it again to hide them."
                         : "<yellow>Claim borders hidden.");
             }
+<<<<<<< Updated upstream
+=======
+            case "upgrades", "upgrade" -> new com.apollosmp.gui.menus.TownUpgradesMenu(plugin, player).open();
+>>>>>>> Stashed changes
             case "map" -> plugin.borders().sendMap(player);
             case "plot", "plotinfo" -> {
                 Town here = plugin.towns().getTownAtLoc(player.getLocation());
@@ -165,6 +205,11 @@ public class TownCommand implements CommandExecutor, TabCompleter {
         plugin.msg().send(player, "<gray>/town border <white>- outline claims with particles");
         plugin.msg().send(player, "<gray>/town map <white>- text map of nearby land");
         plugin.msg().send(player, "<gray>/town plot <white>- who owns the chunk you're on");
+<<<<<<< Updated upstream
+=======
+        plugin.msg().send(player, "<gray>/town move <white>- relocate the whole town");
+        plugin.msg().send(player, "<gray>/town upgrades <white>- spend the bank on perks");
+>>>>>>> Stashed changes
         plugin.msg().send(player, "<gray>/town leave <white>| <gray>/town disband");
     }
 
@@ -201,7 +246,11 @@ public class TownCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             return List.of("create", "claim", "unclaim", "invite", "join", "kick", "rank",
                     "deposit", "withdraw", "tax", "sellplot", "buyplot",
+<<<<<<< Updated upstream
                     "spawn", "setspawn", "list", "tp", "visitors", "border", "map", "plot",
+=======
+                    "spawn", "setspawn", "list", "tp", "visitors", "border", "map", "plot", "move", "upgrades",
+>>>>>>> Stashed changes
                     "leave", "disband", "help");
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("kick") || args[0].equalsIgnoreCase("rank"))
@@ -224,6 +273,12 @@ public class TownCommand implements CommandExecutor, TabCompleter {
         if (args.length == 2 && args[0].equalsIgnoreCase("visitors")) {
             return List.of("on", "off");
         }
+<<<<<<< Updated upstream
+=======
+        if (args.length == 2 && (args[0].equalsIgnoreCase("disband") || args[0].equalsIgnoreCase("move"))) {
+            return List.of("confirm");
+        }
+>>>>>>> Stashed changes
         if (args.length == 3 && args[0].equalsIgnoreCase("rank")) {
             return List.of("assistant", "commander", "resident");
         }

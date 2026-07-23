@@ -59,7 +59,10 @@ public class ApolloSMP extends JavaPlugin {
     private com.apollosmp.town.ChatPromptManager prompts;
     private com.apollosmp.board.NameTagManager nameTags;
     private com.apollosmp.town.BorderVisualizer borders;
+<<<<<<< Updated upstream
     private com.apollosmp.listeners.MenuItemListener menuItem;
+=======
+>>>>>>> Stashed changes
 
     @Override
     public void onEnable() {
@@ -174,8 +177,11 @@ public class ApolloSMP extends JavaPlugin {
                 new com.apollosmp.listeners.SleepListener(this), this);
         getServer().getPluginManager().registerEvents(
                 new com.apollosmp.listeners.SpawnerListener(this), this);
+<<<<<<< Updated upstream
         this.menuItem = new com.apollosmp.listeners.MenuItemListener(this);
         getServer().getPluginManager().registerEvents(menuItem, this);
+=======
+>>>>>>> Stashed changes
 
         long taxTicks = Math.max(1L, getConfig().getLong("towns.tax-interval-hours", 24)) * 3600L * 20L;
         getServer().getScheduler().runTaskTimer(this, () -> towns.collectTaxes(), taxTicks, taxTicks);
@@ -190,7 +196,12 @@ public class ApolloSMP extends JavaPlugin {
         applySleepRule();
 
         getServer().getScheduler().runTaskTimer(this, () -> nameTags.updateAll(), 40L, 40L);
+<<<<<<< Updated upstream
         getServer().getScheduler().runTaskTimer(this, () -> borders.tick(), 10L, 10L);
+=======
+        getServer().getScheduler().runTaskTimer(this, () -> borders.tick(), 8L, 8L);
+        getServer().getScheduler().runTaskTimer(this, () -> towns.applyUpgradeEffects(), 60L, 60L);
+>>>>>>> Stashed changes
     }
 
     // ---- world border ----
@@ -248,6 +259,10 @@ public class ApolloSMP extends JavaPlugin {
         businesses.save();
         skyCoins.save();
         towns.save();
+<<<<<<< Updated upstream
+=======
+        borders.save();
+>>>>>>> Stashed changes
     }
 
     public void reloadAll() {
@@ -284,7 +299,10 @@ public class ApolloSMP extends JavaPlugin {
     public com.apollosmp.town.ChatPromptManager prompts() { return prompts; }
     public com.apollosmp.board.NameTagManager nameTags() { return nameTags; }
     public com.apollosmp.town.BorderVisualizer borders() { return borders; }
+<<<<<<< Updated upstream
     public com.apollosmp.listeners.MenuItemListener menuItem() { return menuItem; }
+=======
+>>>>>>> Stashed changes
 
     /** Apply the "how many players must sleep" rule to every overworld. */
     public void applySleepRule() {
