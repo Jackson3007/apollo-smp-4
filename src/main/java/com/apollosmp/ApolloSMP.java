@@ -222,6 +222,10 @@ public class ApolloSMP extends JavaPlugin {
         long taxTicks = Math.max(1L, getConfig().getLong("towns.tax-interval-hours", 24)) * 3600L * 20L;
         getServer().getScheduler().runTaskTimer(this, () -> towns.collectTaxes(), taxTicks, taxTicks);
 
+        com.apollosmp.vote.VotifierHook votifier = new com.apollosmp.vote.VotifierHook(this);
+        votifier.tryRegister();
+        voting.setVotifierActive(votifier.isActive());
+
         long reminderTicks = (long) voting.reminderMinutes() * 60L * 20L;
         getServer().getScheduler().runTaskTimer(this, () -> voting.sendReminders(),
                 reminderTicks, reminderTicks);
@@ -301,6 +305,7 @@ public class ApolloSMP extends JavaPlugin {
         businesses.save();
         skyCoins.save();
         towns.save();
+        voting.save();
         borders.save();
         specialAuction.save();
         specialBusinesses.save();

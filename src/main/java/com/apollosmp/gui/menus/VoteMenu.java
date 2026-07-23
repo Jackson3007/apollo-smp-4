@@ -31,8 +31,13 @@ public class VoteMenu extends Gui {
 
         inventory.setItem(4, Items.of(Material.NETHER_STAR)
                 .name("<gradient:#f9d423:#ff4e50><bold>Support the Server</bold></gradient>")
-                .lore("<gray>Voting pushes Apollo up the server",
-                        "<gray>lists so more players can find us.",
+                .lore("<gray>Each confirmed vote pays you",
+                        "<#f9d423>" + plugin.msg().money(plugin.voting().reward()) + "</#f9d423> <gray>and pushes Apollo up",
+                        "<gray>the server lists.",
+                        "",
+                        plugin.voting().votifierActive()
+                                ? "<green>\u2714 Votes are verified automatically."
+                                : "<red>Vote verification isn't set up yet.",
                         "",
                         "<gray>Click a site below for its link.")
                 .glow(true).hideAttributes().build());
@@ -44,6 +49,8 @@ public class VoteMenu extends Gui {
                         .name("<#f9d423><bold>" + s.name() + "</bold>")
                         .lore("<gray>" + s.link(),
                                 "",
+                                "<gray>Reward lands automatically once",
+                                "<gray>the site confirms your vote.",
                                 "<yellow>Click for a clickable link")
                         .glow(true).hideAttributes().build());
             } else {

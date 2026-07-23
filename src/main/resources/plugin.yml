@@ -5,6 +5,7 @@ api-version: '26.2'
 author: Apollo SMP
 description: Branded economy core for Apollo SMP - money, /sell, auction house, buy orders, homes, RTP, world border and a branded sidebar.
 website: https://apollosmp.example
+softdepend: [Votifier, NuVotifier]
 
 commands:
   balance:

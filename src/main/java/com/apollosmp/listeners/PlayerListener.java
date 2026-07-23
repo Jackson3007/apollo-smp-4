@@ -27,6 +27,7 @@ public class PlayerListener implements Listener {
         plugin.staffMode().restoreOnJoin(player);
         sendWelcome(player);
         plugin.auctions().flushNotifications(player);
+        plugin.voting().deliverPending(player);
 
         boolean wildEveryJoin = plugin.getConfig().getBoolean("rtp.wild-on-join", false);
         boolean wildFirstJoin = firstJoin

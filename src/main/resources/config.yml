@@ -196,8 +196,9 @@ autosave-minutes: 5
 # Players earn Sky Coins (a second currency) for voting. Replace the links below
 # with your real vote-site URLs. Doing all 5 in one day pays the all-voted bonus.
 voting:
-  # Voting is informational only right now - no coins, keys or rewards.
-  # Players get a reminder in chat and can grab the links from /vote.
+  # Paid out when a vote site confirms a vote through Votifier/NuVotifier.
+  reward: 500.0
+  announce: true          # tell the server when someone votes
   reminder-enabled: true
   reminder-minutes: 60
   # Up to 4 sites are shown in /vote. Leave the blank ones as they are
