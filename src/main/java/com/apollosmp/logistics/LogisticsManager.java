@@ -48,6 +48,8 @@ public class LogisticsManager {
         public long lastSale;
         /** Goods pulled in from the businesses, waiting to be sold or collected. */
         public final Map<Material, Integer> storage = new java.util.LinkedHashMap<>();
+        /** Who the stored value belongs to: town name, or "" for the owner. */
+        public final Map<String, Double> ledger = new java.util.LinkedHashMap<>();
 
         Node(String world, int x, int y, int z, UUID owner, String ownerName) {
             this.world = world;
@@ -285,12 +287,13 @@ public class LogisticsManager {
         for (Node d : linkedDistributors(wholesaler)) {
             for (BusinessBlock b : linkedBusinesses(d)) {
                 plugin.businesses().updateProduction(b);
-                moved += drain(b.storage(), wholesaler, room - moved);
+                String destination = b.town() == null ? "" : b.town();
+                moved += drain(b.storage(), wholesaler, room - moved, destination);
                 if (moved >= room) break;
             }
             for (SpecialBusiness b : linkedSpecials(d)) {
                 plugin.specialBusinesses().accrue(b);
-                moved += drain(b.storage(), wholesaler, room - moved);
+                moved += drain(b.storage(), wholesaler, room - moved, "");
                 if (moved >= room) break;
             }
         }
@@ -303,7 +306,7 @@ public class LogisticsManager {
     }
 
     /** Move up to {@code room} items out of a business into the wholesaler. */
-    private int drain(Map<Material, Integer> from, Node into, int room) {
+    private int drain(Map<Material, Integer> from, Node into, int room, String destination) {
         if (room <= 0) return 0;
         int moved = 0;
         for (Map.Entry<Material, Integer> e : new ArrayList<>(from.entrySet())) {
@@ -311,6 +314,7 @@ public class LogisticsManager {
             int take = Math.min(e.getValue(), room - moved);
             if (take <= 0) continue;
             into.storage.merge(e.getKey(), take, Integer::sum);
+            into.ledger.merge(destination, plugin.sell().priceOf(e.getKey()) * take, Double::sum);
             int left = e.getValue() - take;
             if (left <= 0) from.remove(e.getKey());
             else from.put(e.getKey(), left);
@@ -353,12 +357,13 @@ public class LogisticsManager {
             }
         }
         wholesaler.storage.clear();
+        wholesaler.ledger.clear();
         save();
         return given;
     }
 
     // ---- selling ----
-    /** Pull anything outstanding, then sell the lot and pay the owner. */
+    /** Pull anything outstanding, then sell the lot and pay whoever it's owed to. */
     public double sell(Node wholesaler, boolean announce) {
         pull(wholesaler);
         if (wholesaler.storage.isEmpty()) return 0;
@@ -370,11 +375,46 @@ public class LogisticsManager {
             items += e.getValue();
         }
         wholesaler.storage.clear();
-        if (items == 0) return 0;
+        if (items == 0) {
+            wholesaler.ledger.clear();
+            return 0;
+        }
 
         double fee = gross * (feePercent() / 100.0);
         double net = gross - fee;
-        plugin.economy().deposit(wholesaler.owner, net);
+
+        // Split by whoever the goods were earned for.
+        double ledgerTotal = 0;
+        for (double v : wholesaler.ledger.values()) ledgerTotal += v;
+
+        double toOwner = net;
+        Map<String, Double> townPayouts = new java.util.LinkedHashMap<>();
+        if (ledgerTotal > 0) {
+            toOwner = 0;
+            for (Map.Entry<String, Double> e : wholesaler.ledger.entrySet()) {
+                double share = net * (e.getValue() / ledgerTotal);
+                if (e.getKey().isEmpty()) {
+                    toOwner += share;
+                } else {
+                    townPayouts.merge(e.getKey(), share, Double::sum);
+                }
+            }
+        }
+        wholesaler.ledger.clear();
+
+        if (toOwner > 0) plugin.economy().deposit(wholesaler.owner, toOwner);
+        for (Map.Entry<String, Double> e : townPayouts.entrySet()) {
+            com.apollosmp.town.Town town = plugin.towns().townByName(e.getKey());
+            if (town != null) {
+                town.depositBank(e.getValue());
+                plugin.towns().markDirty();
+            } else {
+                // Town vanished - don't lose the money.
+                plugin.economy().deposit(wholesaler.owner, e.getValue());
+                toOwner += e.getValue();
+            }
+        }
+
         wholesaler.lifetimeEarned += net;
         wholesaler.lastSale = System.currentTimeMillis();
         save();
@@ -382,9 +422,22 @@ public class LogisticsManager {
         if (announce && wholesaler.notify) {
             Player online = plugin.getServer().getPlayer(wholesaler.owner);
             if (online != null) {
-                plugin.msg().send(online, "<#f9d423>Wholesale:</#f9d423> <gray>sold <white>"
-                        + items + "</white> goods for <green>" + plugin.msg().money(net)
-                        + "</green> <dark_gray>(after " + (int) feePercent() + "% fee)</dark_gray>");
+                StringBuilder msg = new StringBuilder("<#f9d423>Wholesale:</#f9d423> <gray>sold <white>"
+                        + items + "</white> goods for <green>" + plugin.msg().money(net) + "</green>");
+                if (!townPayouts.isEmpty()) {
+                    msg.append(" <dark_gray>(");
+                    if (toOwner > 0) msg.append("you ").append(plugin.msg().money(toOwner)).append(", ");
+                    boolean first = true;
+                    for (Map.Entry<String, Double> e : townPayouts.entrySet()) {
+                        if (!first) msg.append(", ");
+                        msg.append(e.getKey()).append(" ").append(plugin.msg().money(e.getValue()));
+                        first = false;
+                    }
+                    msg.append(")</dark_gray>");
+                } else {
+                    msg.append(" <dark_gray>(after ").append((int) feePercent()).append("% fee)</dark_gray>");
+                }
+                plugin.msg().send(online, msg.toString());
             }
         }
         return net;
@@ -497,6 +550,11 @@ public class LogisticsManager {
                 stored.add(e.getKey().name() + "=" + e.getValue());
             }
             cfg.set(base + ".stored", stored);
+            List<String> ledger = new ArrayList<>();
+            for (Map.Entry<String, Double> e : n.ledger.entrySet()) {
+                ledger.add(e.getKey() + "=" + e.getValue());
+            }
+            cfg.set(base + ".ledger", ledger);
             cfg.set(base + ".earned", n.lifetimeEarned);
             cfg.set(base + ".lastSale", n.lastSale);
         }
@@ -521,6 +579,16 @@ public class LogisticsManager {
                         cfg.getString(base + ".ownerName", "Unknown"));
                 n.notify = cfg.getBoolean(base + ".notify", true);
                 n.autoSell = cfg.getBoolean(base + ".autoSell", true);
+                for (String entry : cfg.getStringList(base + ".ledger")) {
+                    int split = entry.lastIndexOf('=');
+                    if (split < 0) continue;
+                    try {
+                        n.ledger.put(entry.substring(0, split),
+                                Double.parseDouble(entry.substring(split + 1)));
+                    } catch (NumberFormatException ignored) {
+                        // skip
+                    }
+                }
                 for (String entry : cfg.getStringList(base + ".stored")) {
                     String[] pr = entry.split("=");
                     if (pr.length != 2) continue;

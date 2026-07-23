@@ -18,6 +18,8 @@ public class BusinessBlock {
     private long lastGen;
     private int level = 1;
     private long producedSinceUpgrade = 0;
+    /** Town this business pays into, or null to pay the owner. */
+    private String town;
     private final Map<Material, Integer> storage = new EnumMap<>(Material.class);
 
     public BusinessBlock(String worldName, int x, int y, int z, String businessId,
@@ -57,6 +59,9 @@ public class BusinessBlock {
 
     public int level() { return level; }
     public void setLevel(int level) { this.level = Math.max(1, level); }
+
+    public String town() { return town; }
+    public void setTown(String town) { this.town = (town == null || town.isBlank()) ? null : town; }
 
     public long producedSinceUpgrade() { return producedSinceUpgrade; }
     public void setProducedSinceUpgrade(long value) { this.producedSinceUpgrade = Math.max(0, value); }

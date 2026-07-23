@@ -177,6 +177,26 @@ public class BusinessManager {
         dirty = true;
     }
 
+    /**
+     * Pay out a business's earnings - to its town if it's been assigned to one,
+     * otherwise to the owner. Returns the name of whoever got paid.
+     */
+    public String payOut(BusinessBlock block, double amount) {
+        if (amount <= 0) return null;
+        if (block.town() != null) {
+            com.apollosmp.town.Town town = plugin.towns().townByName(block.town());
+            if (town != null) {
+                town.depositBank(amount);
+                plugin.towns().markDirty();
+                return town.name();
+            }
+            // Town is gone - fall back to the owner rather than losing the money.
+            block.setTown(null);
+        }
+        plugin.economy().deposit(block.owner(), amount);
+        return null;
+    }
+
     /** Industry upgrade bonus for a business standing on town land. */
     private double townBoostAt(BusinessBlock block) {
         try {
@@ -324,6 +344,7 @@ public class BusinessManager {
             cfg.set(base + ".lastGen", b.lastGen());
             cfg.set(base + ".level", b.level());
             cfg.set(base + ".produced", b.producedSinceUpgrade());
+            if (b.town() != null) cfg.set(base + ".town", b.town());
             for (Map.Entry<Material, Integer> e : b.storage().entrySet()) {
                 if (e.getValue() > 0) cfg.set(base + ".storage." + e.getKey().name(), e.getValue());
             }
@@ -354,6 +375,7 @@ public class BusinessManager {
                         s.getLong("lastGen"));
                 block.setLevel(s.getInt("level", 1));
                 block.setProducedSinceUpgrade(s.getLong("produced", 0));
+                block.setTown(s.getString("town"));
                 ConfigurationSection store = s.getConfigurationSection("storage");
                 if (store != null) {
                     for (String matName : store.getKeys(false)) {

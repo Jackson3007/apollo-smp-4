@@ -174,7 +174,9 @@ public class BusinessHolograms {
         String header = icon(def) + " <gradient:#f9d423:#ff4e50><bold>"
                 + plainName(def).toUpperCase() + "</bold></gradient> " + stars(level);
 
-        String owner = "<gray>Owner:</gray> <white>" + block.ownerName() + "</white>";
+        String owner = block.town() == null
+                ? "<gray>Owner:</gray> <white>" + block.ownerName() + "</white>"
+                : "<gray>Pays:</gray> <#f9d423>" + block.town() + "</#f9d423>";
         String lvl = "<gray>Level:</gray> <#f9d423>" + roman(level) + "</#f9d423>";
         String income = "<gray>Income:</gray> <green>" + plugin.msg().money(hourly) + "/hr</green>"
                 + (boost > 1.0 ? " <#5ad1e8>+town</#5ad1e8>" : "");

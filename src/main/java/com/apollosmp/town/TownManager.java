@@ -710,6 +710,9 @@ public class TownManager {
     // ---- persistence ----
     private void touch() { dirty = true; save(); }
 
+    /** Let other systems record that a town changed. */
+    public void markDirty() { touch(); }
+
     public void save() {
         if (!dirty) return;
         FileConfiguration cfg = new YamlConfiguration();
