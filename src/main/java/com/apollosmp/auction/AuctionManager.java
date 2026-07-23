@@ -79,6 +79,8 @@ public class AuctionManager {
         }
 
         ItemStack listed = hand.clone();
+        // Drop the inventory price tag so listings show only the asking price.
+        if (plugin.worthTags() != null) plugin.worthTags().strip(listed);
         seller.getInventory().setItemInMainHand(null);
 
         long now = System.currentTimeMillis();

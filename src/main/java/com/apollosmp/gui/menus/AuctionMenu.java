@@ -80,18 +80,14 @@ public class AuctionMenu extends Gui {
         for (int i = 0; i < pageItems.size(); i++) {
             Listing listing = pageItems.get(i);
             ItemStack icon = listing.item();
+            // Clear any leftover inventory price tag before we read the meta.
+            if (plugin.worthTags() != null) plugin.worthTags().strip(icon);
             ItemMeta meta = icon.getItemMeta();
             List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
             lore.add(com.apollosmp.util.Msg.lore("<dark_gray>―――――――――――"));
             lore.add(com.apollosmp.util.Msg.lore("<gray>Seller: <white>" + listing.sellerName() + "</white>"));
             lore.add(com.apollosmp.util.Msg.lore("<gray>Price: <#f9d423>"
                     + plugin.msg().money(listing.price()) + "</#f9d423>"));
-            double serverValue = plugin.sell().valueOf(icon);
-            if (serverValue > 0) {
-                lore.add(com.apollosmp.util.Msg.lore("<gray>Server pays: <white>"
-                        + plugin.msg().money(serverValue) + "</white> <dark_gray>("
-                        + Math.round(listing.price() / serverValue * 100) + "% of ask)</dark_gray>"));
-            }
             lore.add(com.apollosmp.util.Msg.lore("<gray>Time left: <white>" + formatDuration(listing.millisLeft()) + "</white>"));
             lore.add(com.apollosmp.util.Msg.lore(""));
             if (mine) {
