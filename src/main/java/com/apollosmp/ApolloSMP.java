@@ -59,7 +59,6 @@ public class ApolloSMP extends JavaPlugin {
     private com.apollosmp.town.ChatPromptManager prompts;
     private com.apollosmp.board.NameTagManager nameTags;
     private com.apollosmp.town.BorderVisualizer borders;
-    private com.apollosmp.listeners.MenuItemListener menuItem;
 
     @Override
     public void onEnable() {
@@ -174,8 +173,6 @@ public class ApolloSMP extends JavaPlugin {
                 new com.apollosmp.listeners.SleepListener(this), this);
         getServer().getPluginManager().registerEvents(
                 new com.apollosmp.listeners.SpawnerListener(this), this);
-        this.menuItem = new com.apollosmp.listeners.MenuItemListener(this);
-        getServer().getPluginManager().registerEvents(menuItem, this);
 
         long taxTicks = Math.max(1L, getConfig().getLong("towns.tax-interval-hours", 24)) * 3600L * 20L;
         getServer().getScheduler().runTaskTimer(this, () -> towns.collectTaxes(), taxTicks, taxTicks);
@@ -190,7 +187,8 @@ public class ApolloSMP extends JavaPlugin {
         applySleepRule();
 
         getServer().getScheduler().runTaskTimer(this, () -> nameTags.updateAll(), 40L, 40L);
-        getServer().getScheduler().runTaskTimer(this, () -> borders.tick(), 10L, 10L);
+        getServer().getScheduler().runTaskTimer(this, () -> borders.tick(), 8L, 8L);
+        getServer().getScheduler().runTaskTimer(this, () -> towns.applyUpgradeEffects(), 60L, 60L);
     }
 
     // ---- world border ----
@@ -248,6 +246,7 @@ public class ApolloSMP extends JavaPlugin {
         businesses.save();
         skyCoins.save();
         towns.save();
+        borders.save();
     }
 
     public void reloadAll() {
@@ -284,7 +283,6 @@ public class ApolloSMP extends JavaPlugin {
     public com.apollosmp.town.ChatPromptManager prompts() { return prompts; }
     public com.apollosmp.board.NameTagManager nameTags() { return nameTags; }
     public com.apollosmp.town.BorderVisualizer borders() { return borders; }
-    public com.apollosmp.listeners.MenuItemListener menuItem() { return menuItem; }
 
     /** Apply the "how many players must sleep" rule to every overworld. */
     public void applySleepRule() {

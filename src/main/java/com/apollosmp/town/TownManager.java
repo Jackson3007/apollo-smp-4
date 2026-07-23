@@ -43,7 +43,69 @@ public class TownManager {
     private int claimsBase() { return plugin.getConfig().getInt("towns.claims-base", 6); }
     private int claimsPerMember() { return plugin.getConfig().getInt("towns.claims-per-member", 4); }
 
-    private int maxClaims(Town town) { return claimsBase() + town.memberCount() * claimsPerMember(); }
+    private int maxClaims(Town town) {
+        return claimsBase() + town.memberCount() * claimsPerMember()
+                + town.upgradeLevel(TownUpgrade.CLAIM_LIMIT) * 2;
+    }
+
+    /** Public so menus can show the same number. */
+    public int claimLimit(Town town) { return maxClaims(town); }
+
+    public double upgradeCost(Town town, TownUpgrade upgrade) {
+        double multiplier = plugin.getConfig().getDouble("towns.upgrade-cost-multiplier", 1.0);
+        return upgrade.costFor(town.upgradeLevel(upgrade)) * Math.max(0.1, multiplier);
+    }
+
+    /** Buy the next level of an upgrade using the town bank. */
+    public boolean buyUpgrade(Player player, TownUpgrade upgrade) {
+        Town town = getTownOf(player.getUniqueId());
+        if (town == null) { plugin.msg().send(player, "<red>You're not in a town."); return false; }
+        if (!town.hasPerm(player.getUniqueId(), TownPerm.WITHDRAW)) {
+            plugin.msg().send(player, "<red>You don't have permission to spend the town bank.");
+            return false;
+        }
+        int level = town.upgradeLevel(upgrade);
+        if (level >= upgrade.maxLevel()) {
+            plugin.msg().send(player, "<yellow>" + upgrade.display() + " is already maxed out.");
+            return false;
+        }
+        double cost = upgradeCost(town, upgrade);
+        if (!town.withdrawBank(cost)) {
+            plugin.msg().send(player, "<red>The town bank needs " + plugin.msg().money(cost)
+                    + " for that. It has " + plugin.msg().money(town.bank()) + ".");
+            return false;
+        }
+        town.setUpgradeLevel(upgrade, level + 1);
+        touch();
+
+        plugin.msg().send(player, "<green>" + upgrade.display() + " upgraded to level <white>"
+                + (level + 1) + "</white> for " + plugin.msg().money(cost) + ".");
+        for (UUID member : town.members().keySet()) {
+            if (member.equals(player.getUniqueId())) continue;
+            Player other = plugin.getServer().getPlayer(member);
+            if (other != null) {
+                plugin.msg().send(other, "<#f9d423>" + town.name() + "</#f9d423> <gray>upgraded <white>"
+                        + upgrade.display() + "</white> to level <white>" + (level + 1) + "</white>.");
+            }
+        }
+        return true;
+    }
+
+    /** Give residents their town's perks while they stand on its land. */
+    public void applyUpgradeEffects() {
+        for (Player player : plugin.getServer().getOnlinePlayers()) {
+            Town town = getTownAtLoc(player.getLocation());
+            if (town == null || !town.isMember(player.getUniqueId())) continue;
+            for (TownUpgrade upgrade : TownUpgrade.values()) {
+                int level = town.upgradeLevel(upgrade);
+                if (level <= 0) continue;
+                org.bukkit.potion.PotionEffectType type = upgrade.effect();
+                if (type == null) continue;
+                player.addPotionEffect(new org.bukkit.potion.PotionEffect(
+                        type, 120, level - 1, true, false, true));
+            }
+        }
+    }
 
     // ---- keys ----
     public static String chunkKey(World world, int cx, int cz) { return world.getName() + "," + cx + "," + cz; }
@@ -109,6 +171,53 @@ public class TownManager {
         towns.remove(town.name().toLowerCase());
         touch();
         plugin.msg().send(player, "<yellow>Town <white>" + town.name() + "</white> has been disbanded.");
+        return true;
+    }
+
+    /**
+     * Pick the whole town up and drop it where the mayor is standing.
+     * Members, ranks and the bank survive; land and plots are released.
+     */
+    public boolean moveTown(Player player) {
+        Town town = getTownOf(player.getUniqueId());
+        if (town == null) { plugin.msg().send(player, "<red>You're not in a town."); return false; }
+        if (!town.mayor().equals(player.getUniqueId())) {
+            plugin.msg().send(player, "<red>Only the mayor can move the town."); return false;
+        }
+        String here = chunkKey(player.getLocation());
+        Town at = getTownAt(here);
+        if (at != null && !at.name().equalsIgnoreCase(town.name())) {
+            plugin.msg().send(player, "<red>That chunk belongs to <white>" + at.name() + "</white>.");
+            return false;
+        }
+        double cost = plugin.getConfig().getDouble("towns.move-cost", 0.0);
+        if (cost > 0 && !plugin.economy().has(player.getUniqueId(), cost)) {
+            plugin.msg().send(player, "<red>Moving the town costs " + plugin.msg().money(cost) + ".");
+            return false;
+        }
+        if (cost > 0) plugin.economy().withdraw(player.getUniqueId(), cost);
+
+        int released = town.claims().size();
+        for (String ck : new ArrayList<>(town.claims())) chunkIndex.remove(ck);
+        town.claims().clear();
+        town.plotOwners().clear();
+        town.plotSale().clear();
+
+        town.addClaim(here);
+        chunkIndex.put(here, town.name().toLowerCase());
+        town.setSpawn(player.getLocation());
+        touch();
+
+        plugin.msg().send(player, "<green><white>" + town.name() + "</white> has moved here. <gray>"
+                + released + " old chunk(s) released; this chunk is now your town centre.");
+        for (UUID member : town.members().keySet()) {
+            if (member.equals(player.getUniqueId())) continue;
+            Player other = plugin.getServer().getPlayer(member);
+            if (other != null) {
+                plugin.msg().send(other, "<#f9d423>" + town.name()
+                        + " has relocated. <gray>Use <white>/town spawn</white> to find the new centre.");
+            }
+        }
         return true;
     }
 
@@ -465,6 +574,9 @@ public class TownManager {
             cfg.set(base + ".bank", town.bank());
             cfg.set(base + ".tax", town.tax());
             cfg.set(base + ".public-spawn", town.publicSpawn());
+            for (Map.Entry<TownUpgrade, Integer> e : town.upgrades().entrySet()) {
+                cfg.set(base + ".upgrades." + e.getKey().name(), e.getValue());
+            }
             if (town.spawn() != null) cfg.set(base + ".spawn", serLoc(town.spawn()));
             for (Map.Entry<UUID, TownRank> e : town.members().entrySet()) {
                 cfg.set(base + ".members." + e.getKey(), e.getValue().name());
@@ -504,6 +616,13 @@ public class TownManager {
                 town.setBank(cfg.getDouble(base + ".bank"));
                 town.setTax(cfg.getDouble(base + ".tax"));
                 town.setPublicSpawn(cfg.getBoolean(base + ".public-spawn", true));
+                ConfigurationSection ups = cfg.getConfigurationSection(base + ".upgrades");
+                if (ups != null) {
+                    for (String upName : ups.getKeys(false)) {
+                        TownUpgrade up = TownUpgrade.fromString(upName);
+                        if (up != null) town.setUpgradeLevel(up, ups.getInt(upName));
+                    }
+                }
                 String spawn = cfg.getString(base + ".spawn");
                 if (spawn != null) town.setSpawn(deserLoc(spawn));
 

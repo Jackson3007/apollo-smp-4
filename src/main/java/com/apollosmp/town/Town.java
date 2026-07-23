@@ -28,6 +28,7 @@ public class Town {
     private final Map<String, UUID> plotOwners = new HashMap<>();   // chunkKey -> owner
     private final Map<String, Double> plotSale = new HashMap<>();   // chunkKey -> asking price
     private final Map<TownRank, EnumSet<TownPerm>> rankPerms = new EnumMap<>(TownRank.class);
+    private final Map<TownUpgrade, Integer> upgrades = new EnumMap<>(TownUpgrade.class);
 
     public Town(String name, UUID mayor, long founded) {
         this.name = name;
@@ -90,6 +91,24 @@ public class Town {
     public Double plotPrice(String chunkKey) { return plotSale.get(chunkKey); }
     public void setForSale(String chunkKey, double price) { plotSale.put(chunkKey, price); }
     public void clearSale(String chunkKey) { plotSale.remove(chunkKey); }
+
+    // ---- upgrades ----
+    public Map<TownUpgrade, Integer> upgrades() { return upgrades; }
+
+    public int upgradeLevel(TownUpgrade upgrade) {
+        return upgrades.getOrDefault(upgrade, 0);
+    }
+
+    public void setUpgradeLevel(TownUpgrade upgrade, int level) {
+        int capped = Math.max(0, Math.min(upgrade.maxLevel(), level));
+        if (capped == 0) upgrades.remove(upgrade);
+        else upgrades.put(upgrade, capped);
+    }
+
+    /** Business production multiplier from the Industry upgrade. */
+    public double productionMultiplier() {
+        return 1.0 + (0.15 * upgradeLevel(TownUpgrade.PRODUCTION));
+    }
 
     // ---- permissions ----
     public EnumSet<TownPerm> permsFor(TownRank rank) {

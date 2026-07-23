@@ -79,10 +79,20 @@ public class TownMenu extends Gui {
                 .lore("<gray>Mayor: <white>" + mayorName + "</white>",
                         "<gray>Founded: <white>" + founded + "</white>",
                         "<gray>Residents: <white>" + town.memberCount() + "</white>",
-                        "<gray>Land claimed: <white>" + town.claims().size() + "</white> chunks",
+                        "<gray>Land: <white>" + town.claims().size() + " / "
+                                + plugin.towns().claimLimit(town) + "</white> chunks",
                         "<gray>Bank: <#f9d423>" + plugin.msg().money(town.bank()) + "</#f9d423>",
                         "<gray>Daily tax: <white>" + plugin.msg().money(town.tax()) + "</white>",
                         "<gray>Your rank: <#5ad1e8>" + (myRank != null ? myRank.display() : "?") + "</#5ad1e8>")
+                .glow(true).hideAttributes().build());
+
+        inventory.setItem(18, Items.of(Material.BEACON)
+                .name("<#f9d423><bold>Town Upgrades</bold>")
+                .lore("<gray>Spend the town bank on perks:",
+                        "<gray>haste, speed, healing, tougher",
+                        "<gray>residents and faster businesses.",
+                        "",
+                        "<yellow>Click to open")
                 .glow(true).hideAttributes().build());
 
         inventory.setItem(19, Items.of(Material.GRASS_BLOCK)
@@ -151,6 +161,19 @@ public class TownMenu extends Gui {
                 .lore(plotLore.toArray(new String[0]))
                 .hideAttributes().build());
 
+        if (town.mayor().equals(viewer.getUniqueId())) {
+            inventory.setItem(26, Items.of(Material.MINECART)
+                    .name("<#ff4e50><bold>Move Town</bold>")
+                    .lore("<gray>Release every claimed chunk and",
+                            "<gray>restart your town where you stand.",
+                            "",
+                            "<gray>Members, ranks and the bank stay.",
+                            "<red>Plots and claimed land are lost.",
+                            "",
+                            "<yellow>Click to move")
+                    .hideAttributes().build());
+        }
+
         inventory.setItem(34, Items.of(Material.FILLED_MAP)
                 .name("<#e94fd0><bold>All Plots</bold>")
                 .lore("<gray>See every plot in your town",
@@ -163,6 +186,13 @@ public class TownMenu extends Gui {
                         "<gray><#5ad1e8>Cyan</#5ad1e8> = your town,",
                         "<gray><#ff4e50>Red</#ff4e50> = other towns,",
                         "<gray><#e94fd0>Purple</#e94fd0> = owned plots.",
+                        "",
+                        bordersOn
+                                ? "<green>Staying on until you turn it off."
+                                : "<gray>Stays on until you turn it off,",
+                        bordersOn
+                                ? "<gray>Only you can see it."
+                                : "<gray>even after you log out.",
                         "",
                         "<yellow>Click to toggle")
                 .glow(bordersOn).hideAttributes().build());
@@ -202,6 +232,7 @@ public class TownMenu extends Gui {
         }
 
         switch (slot) {
+            case 18 -> new TownUpgradesMenu(plugin, player).open();
             case 19 -> { plugin.towns().claimHere(player); redraw(); }
             case 20 -> { plugin.towns().unclaimHere(player); redraw(); }
             case 21 -> new TownMembersMenu(plugin, player).open();
@@ -228,6 +259,31 @@ public class TownMenu extends Gui {
                 redraw();
             }
             case 25 -> redraw();
+            case 26 -> {
+                if (!town.mayor().equals(player.getUniqueId())) {
+                    plugin.msg().send(player, "<red>Only the mayor can move the town.");
+                    return;
+                }
+                String townName = town.name();
+                new ConfirmMenu(plugin, player,
+                        "<red><bold>Move " + townName + "?</bold>",
+                        "Move " + townName + " here?",
+                        java.util.List.of(
+                                "<gray>Your town will restart in this chunk.",
+                                "",
+                                "<green>Kept:</green> <gray>residents, ranks, bank</gray>",
+                                "<red>Lost:</red> <gray>all <white>" + town.claims().size()
+                                        + "</white> claimed chunks and every plot</gray>",
+                                "",
+                                "<gray>Anything you've built stays put, but the",
+                                "<gray>land stops being protected."),
+                        () -> {
+                            plugin.towns().moveTown(player);
+                            player.closeInventory();
+                        },
+                        () -> new TownMenu(plugin, player).open()
+                ).open();
+            }
             case 34 -> new TownPlotsMenu(plugin, player, 0).open();
             case 32 -> {
                 boolean on = plugin.borders().toggle(player);
@@ -250,9 +306,41 @@ public class TownMenu extends Gui {
             case 31 -> { plugin.towns().buyPlotHere(player); redraw(); }
             case 33 -> {
                 if (town.mayor().equals(player.getUniqueId())) {
-                    if (plugin.towns().disband(player)) player.closeInventory();
+                    String townName = town.name();
+                    new ConfirmMenu(plugin, player,
+                            "<red><bold>Disband " + townName + "?</bold>",
+                            "Disband " + townName + "?",
+                            java.util.List.of(
+                                    "<gray>This will permanently:",
+                                    "<red>- release all <white>" + town.claims().size() + "</white> claimed chunks",
+                                    "<red>- remove all <white>" + town.memberCount() + "</white> residents",
+                                    "<red>- delete every plot owner",
+                                    "<red>- destroy the bank balance of <white>"
+                                            + plugin.msg().money(town.bank()) + "</white>",
+                                    "",
+                                    "<gray>There is no way to get it back."),
+                            () -> {
+                                plugin.towns().disband(player);
+                                player.closeInventory();
+                            },
+                            () -> new TownMenu(plugin, player).open()
+                    ).open();
                 } else {
-                    if (plugin.towns().leave(player)) new TownMenu(plugin, player).open();
+                    String townName = town.name();
+                    new ConfirmMenu(plugin, player,
+                            "<yellow><bold>Leave " + townName + "?</bold>",
+                            "Leave " + townName + "?",
+                            java.util.List.of(
+                                    "<gray>You'll lose access to town land",
+                                    "<gray>and any plots you own here.",
+                                    "",
+                                    "<gray>You'd need a new invite to return."),
+                            () -> {
+                                plugin.towns().leave(player);
+                                new TownMenu(plugin, player).open();
+                            },
+                            () -> new TownMenu(plugin, player).open()
+                    ).open();
                 }
             }
             default -> { /* no-op */ }

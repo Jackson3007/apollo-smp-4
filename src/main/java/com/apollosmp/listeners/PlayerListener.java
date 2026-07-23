@@ -23,7 +23,6 @@ public class PlayerListener implements Listener {
         plugin.economy().ensureAccount(player.getUniqueId(), player.getName());
         plugin.board().create(player);
         plugin.nameTags().invalidate();
-        plugin.menuItem().give(player);
         sendWelcome(player);
         plugin.auctions().flushNotifications(player);
 
@@ -68,8 +67,6 @@ public class PlayerListener implements Listener {
         msg.send(player, "  <white>/sethome</white> <dark_gray>&</dark_gray> <white>/home</white> <dark_gray>-</dark_gray> <gray>set & travel home</gray>");
         msg.send(player, "  <white>/rtp</white> <dark_gray>-</dark_gray> <gray>teleport into the wild</gray>");
         msg.send(player, "  <white>/tpa</white> <dark_gray>-</dark_gray> <gray>teleport to a friend</gray>");
-        msg.send(player, "");
-        msg.send(player, "<gray>Tip: right-click the <#f9d423>Apollo Menu</#f9d423> compass any time.");
         msg.send(player, "<#f9d423>\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501</#f9d423>");
     }
 

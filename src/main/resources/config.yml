@@ -201,13 +201,6 @@ voting:
     - name: "Site 4"
       link: ""
 
-# ---- Menu compass ----
-# A compass that opens /menu, handed out on join so new players
-# always have an obvious way into every feature.
-menu-compass:
-  enabled: true
-  slot: 8      # hotbar slot 0-8
-
 # ---- Spawners ----
 spawners:
   silk-touch-pickup: true   # mine spawners with Silk Touch and keep the mob type
@@ -236,5 +229,15 @@ towns:
   # Master switch for /town tp. Each town can also block visitors itself
   # from the town menu, so leave this on unless you want to disable it server-wide.
   public-spawn-teleport: true
+  move-cost: 0.0           # price for a mayor to relocate the whole town
+  upgrade-cost-multiplier: 1.0  # scale every town upgrade price at once
   name-tag: true           # show [Town] above heads and in the tab list
   border-flash-on-enter: true  # briefly outline the claim when you walk into a town
+  # Border look. spacing and radius are the performance dials - lower spacing
+  # and higher radius mean a lot more particles.
+  border:
+    spacing: 1.0        # blocks between particles along an edge (lower = denser)
+    height: 2.0         # how tall the wall is, in blocks
+    corner-height: 6.0  # taller pillars at chunk corners
+    size: 2.0           # particle size (1.0 = vanilla redstone dust)
+    radius: 2           # how many chunks around you get drawn (1-6)

@@ -7,6 +7,13 @@ import org.bukkit.Particle;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -42,28 +49,67 @@ public class BorderVisualizer {
     /** Players getting a temporary flash, mapped to when it expires. */
     private final Map<UUID, Long> flashUntil = new ConcurrentHashMap<>();
 
+    private final File file;
+
     public BorderVisualizer(ApolloSMP plugin) {
         this.plugin = plugin;
+        this.file = new File(plugin.getDataFolder(), "borders.yml");
+        load();
+    }
+
+    private void load() {
+        if (!file.exists()) return;
+        FileConfiguration cfg = YamlConfiguration.loadConfiguration(file);
+        for (String raw : cfg.getStringList("showing")) {
+            try {
+                always.add(UUID.fromString(raw));
+            } catch (IllegalArgumentException ignored) {
+                // skip bad entries
+            }
+        }
+    }
+
+    public void save() {
+        FileConfiguration cfg = new YamlConfiguration();
+        List<String> ids = new ArrayList<>();
+        for (UUID id : always) ids.add(id.toString());
+        cfg.set("showing", ids);
+        try {
+            cfg.save(file);
+        } catch (IOException ex) {
+            plugin.getLogger().warning("Failed to save borders.yml: " + ex.getMessage());
+        }
     }
 
     /** Toggle the persistent outline. Returns the new state. */
     public boolean toggle(Player player) {
-        if (always.remove(player.getUniqueId())) return false;
-        always.add(player.getUniqueId());
-        return true;
+        boolean on;
+        if (always.remove(player.getUniqueId())) on = false;
+        else {
+            always.add(player.getUniqueId());
+            on = true;
+        }
+        save();
+        return on;
     }
 
     public boolean isOn(Player player) {
         return always.contains(player.getUniqueId());
     }
 
+    private double spacing() { return Math.max(0.25, plugin.getConfig().getDouble("towns.border.spacing", 1.0)); }
+    private double height() { return Math.max(1.0, plugin.getConfig().getDouble("towns.border.height", 2.0)); }
+    private float dotSize() { return (float) Math.max(0.5, plugin.getConfig().getDouble("towns.border.size", 2.0)); }
+    private int radius() { return Math.max(1, Math.min(6, plugin.getConfig().getInt("towns.border.radius", 2))); }
+    private double cornerHeight() { return Math.max(height(), plugin.getConfig().getDouble("towns.border.corner-height", 6.0)); }
+
     /** Briefly show the outline, e.g. when walking into a town. */
     public void flash(Player player, long millis) {
         flashUntil.put(player.getUniqueId(), System.currentTimeMillis() + millis);
     }
 
+    /** Clears the temporary flash only - the on/off choice is remembered. */
     public void forget(Player player) {
-        always.remove(player.getUniqueId());
         flashUntil.remove(player.getUniqueId());
     }
 
@@ -84,7 +130,7 @@ public class BorderVisualizer {
     /** Draw the exposed edges of every claim near the player. */
     private void draw(Player player) {
         World world = player.getWorld();
-        int radius = 3; // chunks
+        int radius = radius();
         int pcx = player.getLocation().getBlockX() >> 4;
         int pcz = player.getLocation().getBlockZ() >> 4;
         double baseY = player.getLocation().getY();
@@ -110,11 +156,14 @@ public class BorderVisualizer {
 
                 double minX = cx * 16.0;
                 double minZ = cz * 16.0;
-                for (double step = 0; step <= 16; step += 2) {
-                    if (north) column(player, minX + step, baseY, minZ, color);
-                    if (south) column(player, minX + step, baseY, minZ + 16, color);
-                    if (west) column(player, minX, baseY, minZ + step, color);
-                    if (east) column(player, minX + 16, baseY, minZ + step, color);
+                double gap = spacing();
+                for (double step = 0; step <= 16; step += gap) {
+                    // Chunk corners get a tall pillar so the outline reads from a distance.
+                    boolean corner = step < 0.01 || step > 15.99;
+                    if (north) column(player, minX + step, baseY, minZ, color, corner);
+                    if (south) column(player, minX + step, baseY, minZ + 16, color, corner);
+                    if (west) column(player, minX, baseY, minZ + step, color, corner);
+                    if (east) column(player, minX + 16, baseY, minZ + step, color, corner);
                 }
             }
         }
@@ -125,11 +174,12 @@ public class BorderVisualizer {
         return other != null && other.name().equalsIgnoreCase(town.name());
     }
 
-    /** A short vertical stack of particles so the edge reads as a wall. */
-    private void column(Player player, double x, double baseY, double z, Color color) {
-        Particle.DustOptions options = new Particle.DustOptions(color, 1.2f);
-        for (double dy = 0; dy <= 2.5; dy += 1.25) {
-            player.spawnParticle(DUST, new Location(player.getWorld(), x, baseY + dy, z),
+    /** A vertical stack of particles so the edge reads as a solid wall. */
+    private void column(Player player, double x, double baseY, double z, Color color, boolean corner) {
+        Particle.DustOptions options = new Particle.DustOptions(color, dotSize());
+        double top = corner ? cornerHeight() : height();
+        for (double dy = 0; dy <= top; dy += 1.0) {
+            player.spawnParticle(DUST, new Location(player.getWorld(), x, baseY + dy + 0.2, z),
                     1, 0, 0, 0, 0, options);
         }
     }
