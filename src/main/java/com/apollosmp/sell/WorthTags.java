@@ -194,7 +194,7 @@ public class WorthTags implements Listener {
         for (Player player : plugin.getServer().getOnlinePlayers()) {
             if (enabled()) markAll(player.getInventory());
             else stripAll(player.getInventory());
-            showContainerTotal(player);
+            updateTitle(player);
         }
     }
 
@@ -202,36 +202,95 @@ public class WorthTags implements Listener {
         return plugin.getConfig().getBoolean("sell.chest-total", true);
     }
 
-    /** Keep a running total of the open container on the action bar. */
-    public void showContainerTotal(Player player) {
+    /** The container's own title, remembered so the total isn't appended twice. */
+    private final java.util.Map<java.util.UUID, String> baseTitle = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<java.util.UUID, Double> shownTotal = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Put the contents' value in the container's title bar. */
+    public void updateTitle(Player player) {
         if (!showTotals()) return;
         InventoryView view = player.getOpenInventory();
         Inventory top = view.getTopInventory();
-        if (top == null || top instanceof PlayerInventory || isOurMenu(top)) return;
-        if (top.getSize() <= 0) return;
-
-        double total = 0;
-        int items = 0;
-        int unsellable = 0;
-        for (ItemStack stack : top.getContents()) {
-            if (stack == null || stack.getType().isAir()) continue;
-            if (plugin.sell().isSellable(stack)) {
-                total += plugin.sell().valueOf(stack);
-                items += stack.getAmount();
-            } else {
-                unsellable += stack.getAmount();
-            }
-        }
-
-        if (items == 0 && unsellable == 0) {
-            player.sendActionBar(Msg.mm("<dark_gray>Empty</dark_gray>"));
+        if (top == null || top instanceof PlayerInventory || isOurMenu(top)) {
+            forgetTitle(player);
             return;
         }
-        String text = "<gray>Contents:</gray> <#f9d423>" + plugin.msg().money(total)
-                + "</#f9d423> <dark_gray>(" + items + " item" + (items == 1 ? "" : "s");
-        if (unsellable > 0) text += ", " + unsellable + " unsellable";
-        text += ")</dark_gray>";
-        player.sendActionBar(Msg.mm(text));
+        // Re-sending the window while an item is on the cursor can drop it.
+        if (!player.getItemOnCursor().getType().isAir()) return;
+
+        double total = 0;
+        for (ItemStack stack : top.getContents()) {
+            if (stack == null || stack.getType().isAir()) continue;
+            if (plugin.sell().isSellable(stack)) total += plugin.sell().valueOf(stack);
+        }
+
+        Double last = shownTotal.get(player.getUniqueId());
+        if (last != null && Math.abs(last - total) < 0.005) return;
+
+        String base = baseTitle.computeIfAbsent(player.getUniqueId(), k -> readTitle(view, top));
+        String title = total > 0
+                ? base + " \u00a76(" + plugin.msg().money(total) + ")"
+                : base;
+        if (setTitle(view, title)) shownTotal.put(player.getUniqueId(), total);
+    }
+
+    // Called reflectively: setTitle/getTitle aren't on every server build, and a
+    // missing method should degrade quietly rather than break the plugin.
+    private java.lang.reflect.Method setTitleMethod;
+    private java.lang.reflect.Method getTitleMethod;
+    private boolean titleUnavailable;
+
+    private boolean setTitle(InventoryView view, String title) {
+        if (titleUnavailable) return false;
+        try {
+            if (setTitleMethod == null) {
+                setTitleMethod = view.getClass().getMethod("setTitle", String.class);
+            }
+            setTitleMethod.invoke(view, title);
+            return true;
+        } catch (Throwable ex) {
+            titleUnavailable = true;
+            plugin.getLogger().info("Chest totals disabled: this server build can't retitle inventories.");
+            return false;
+        }
+    }
+
+    private String getTitle(InventoryView view) {
+        try {
+            if (getTitleMethod == null) {
+                getTitleMethod = view.getClass().getMethod("getTitle");
+            }
+            Object result = getTitleMethod.invoke(view);
+            return result instanceof String s ? s : null;
+        } catch (Throwable ex) {
+            return null;
+        }
+    }
+
+    /** Work out the container's original name, without any total we added. */
+    private String readTitle(InventoryView view, Inventory top) {
+        String title = getTitle(view);
+        if (title == null || title.isBlank()) {
+            title = switch (top.getType()) {
+                case CHEST -> top.getSize() > 27 ? "Large Chest" : "Chest";
+                case BARREL -> "Barrel";
+                case ENDER_CHEST -> "Ender Chest";
+                case SHULKER_BOX -> "Shulker Box";
+                case HOPPER -> "Hopper";
+                case DISPENSER -> "Dispenser";
+                case DROPPER -> "Dropper";
+                default -> "Container";
+            };
+        }
+        // Strip a total we appended earlier, if the title got captured mid-update.
+        int marker = title.lastIndexOf(" \u00a76(");
+        if (marker > 0 && title.endsWith(")")) title = title.substring(0, marker);
+        return title;
+    }
+
+    private void forgetTitle(Player player) {
+        baseTitle.remove(player.getUniqueId());
+        shownTotal.remove(player.getUniqueId());
     }
 
     // ------------------------------------------------ events
@@ -266,7 +325,10 @@ public class WorthTags implements Listener {
         if (top instanceof PlayerInventory || isOurMenu(top)) return;
         plugin.getServer().getScheduler().runTask(plugin, () -> {
             markAll(top);
-            if (event.getPlayer() instanceof Player p) showContainerTotal(p);
+            if (event.getPlayer() instanceof Player p) {
+                forgetTitle(p);
+                updateTitle(p);
+            }
         });
     }
 
@@ -276,6 +338,7 @@ public class WorthTags implements Listener {
         Inventory top = event.getInventory();
         if (top instanceof PlayerInventory || isOurMenu(top)) return;
         stripAll(top);
+        if (event.getPlayer() instanceof Player p) forgetTitle(p);
     }
 
     /** Strip everything involved in a click so merges work, then re-tag. */
@@ -309,7 +372,7 @@ public class WorthTags implements Listener {
             if (!(top instanceof PlayerInventory) && !isOurMenu(top)) markAll(top);
             if (view.getPlayer() instanceof Player p) {
                 p.updateInventory();
-                showContainerTotal(p);
+                updateTitle(p);
             }
         });
     }
