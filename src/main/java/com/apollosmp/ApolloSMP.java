@@ -67,6 +67,7 @@ public class ApolloSMP extends JavaPlugin {
     private com.apollosmp.vault.VaultManager vaults;
     private com.apollosmp.admin.InventorySnapshots snapshots;
     private com.apollosmp.admin.StaffMode staffMode;
+    private com.apollosmp.sell.WorthTags worthTags;
     private com.apollosmp.logistics.LogisticsManager logistics;
     private com.apollosmp.merchant.ToolExpiryTask toolExpiry;
 
@@ -99,6 +100,7 @@ public class ApolloSMP extends JavaPlugin {
         this.vaults = new com.apollosmp.vault.VaultManager(this);
         this.snapshots = new com.apollosmp.admin.InventorySnapshots(this);
         this.staffMode = new com.apollosmp.admin.StaffMode(this);
+        this.worthTags = new com.apollosmp.sell.WorthTags(this);
         this.logistics = new com.apollosmp.logistics.LogisticsManager(this);
         this.spawners.cleanupOrphans();
         this.toolExpiry = new com.apollosmp.merchant.ToolExpiryTask(this);
@@ -163,6 +165,7 @@ public class ApolloSMP extends JavaPlugin {
         reg("pv", new com.apollosmp.commands.VaultCommand(this));
         reg("items", new com.apollosmp.commands.ItemsCommand(this));
         reg("staff", new com.apollosmp.commands.StaffCommand(this));
+        reg("worth", new com.apollosmp.commands.WorthCommand(this));
 
         TpaCommand tpaCommand = new TpaCommand(this);
         reg("tpa", tpaCommand);
@@ -214,6 +217,7 @@ public class ApolloSMP extends JavaPlugin {
                 new com.apollosmp.listeners.VaultListener(this), this);
         getServer().getPluginManager().registerEvents(
                 new com.apollosmp.listeners.LogisticsListener(this), this);
+        getServer().getPluginManager().registerEvents(worthTags, this);
 
         long taxTicks = Math.max(1L, getConfig().getLong("towns.tax-interval-hours", 24)) * 3600L * 20L;
         getServer().getScheduler().runTaskTimer(this, () -> towns.collectTaxes(), taxTicks, taxTicks);
@@ -237,6 +241,7 @@ public class ApolloSMP extends JavaPlugin {
         getServer().getScheduler().runTaskTimer(this, () -> specialAuction.tick(), 100L, 20L);
         getServer().getScheduler().runTaskTimer(this, () -> spawners.tick(), 60L, 20L);
         getServer().getScheduler().runTaskTimer(this, () -> logistics.tick(), 600L, 600L);
+        getServer().getScheduler().runTaskTimer(this, () -> worthTags.tick(), 40L, 20L);
     }
 
     // ---- world border ----
@@ -349,6 +354,7 @@ public class ApolloSMP extends JavaPlugin {
     public com.apollosmp.vault.VaultManager vaults() { return vaults; }
     public com.apollosmp.admin.InventorySnapshots snapshots() { return snapshots; }
     public com.apollosmp.admin.StaffMode staffMode() { return staffMode; }
+    public com.apollosmp.sell.WorthTags worthTags() { return worthTags; }
     public com.apollosmp.logistics.LogisticsManager logistics() { return logistics; }
 
     /** Apply the "how many players must sleep" rule to every overworld. */

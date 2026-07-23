@@ -22,6 +22,10 @@ commands:
     description: Admin economy management
     usage: /eco <give|take|set> <player> <amount>
     permission: apollo.admin
+  worth:
+    description: See what your items sell for
+    aliases: [value, prices, pricecheck]
+    usage: /worth [hand]
   sell:
     description: Sell items to the server
     aliases: [shop]

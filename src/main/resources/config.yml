@@ -38,6 +38,9 @@ economy:
   pay-tax-percent: 0.0
 
 sell:
+  # Show each item's sell price on its tooltip while it's in your inventory.
+  # The line is removed again as soon as the item leaves.
+  worth-lore: true
   # Prices the SERVER pays you per item when using /sell.
   # Material names: https://jd.papermc.io/paper/1.21/org/bukkit/Material.html
   # Anything not listed here cannot be sold to the server.
