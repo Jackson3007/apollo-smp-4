@@ -1,115 +1,175 @@
 package com.apollosmp.sell;
 
 import com.apollosmp.ApolloSMP;
+import com.apollosmp.gui.Gui;
 import com.apollosmp.util.Msg;
 import net.kyori.adventure.text.Component;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Writes a small price line onto items while they're in a player's inventory,
- * and takes it back off again the moment they leave.
+ * Puts the sell value on item tooltips while they're in a player's inventory or
+ * an open chest, and takes it off again when they leave.
  *
- * The line shows the price of ONE item, not the stack, so identical items still
- * have identical lore and stack together normally.
+ * Because the total depends on stack size, identical items would otherwise stop
+ * stacking. The fix is to strip the lines just before anything merges, then
+ * re-apply once the dust settles.
  */
 public class WorthTags implements Listener {
 
     private final ApolloSMP plugin;
-    private final NamespacedKey key;
+    private final NamespacedKey valueKey;
+    private final NamespacedKey linesKey;
 
     public WorthTags(ApolloSMP plugin) {
         this.plugin = plugin;
-        this.key = new NamespacedKey(plugin, "apollo_worth");
+        this.valueKey = new NamespacedKey(plugin, "apollo_worth");
+        this.linesKey = new NamespacedKey(plugin, "apollo_worth_lines");
     }
 
     public boolean enabled() {
         return plugin.getConfig().getBoolean("sell.worth-lore", true);
     }
 
-    // ---- the periodic pass ----
-    public void tick() {
-        for (Player player : plugin.getServer().getOnlinePlayers()) {
-            PlayerInventory inv = player.getInventory();
-            for (int slot = 0; slot < 41; slot++) {
-                ItemStack stack = inv.getItem(slot);
-                if (stack == null || stack.getType().isAir()) continue;
-                boolean changed = enabled() ? mark(stack) : strip(stack);
-                if (changed) inv.setItem(slot, stack);
-            }
-        }
-    }
-
-    /** Add or refresh the price line. Returns true if the item changed. */
+    // ------------------------------------------------ tagging
+    /** Add or refresh the price lines. Returns true if the item changed. */
     public boolean mark(ItemStack stack) {
         if (stack == null || stack.getType().isAir()) return false;
-        if (!plugin.sell().isSellable(stack)) return strip(stack);
+        if (!enabled() || !plugin.sell().isSellable(stack)) return strip(stack);
 
         double unit = plugin.sell().priceOf(stack.getType());
         if (unit <= 0) return strip(stack);
+        int amount = stack.getAmount();
+        double total = unit * amount;
 
         ItemMeta meta = stack.getItemMeta();
         if (meta == null) return false;
+        PersistentDataContainer pdc = meta.getPersistentDataContainer();
 
-        Double written = meta.getPersistentDataContainer().get(key, PersistentDataType.DOUBLE);
-        if (written != null && Math.abs(written - unit) < 0.0001) return false; // already right
+        Double written = pdc.get(valueKey, PersistentDataType.DOUBLE);
+        if (written != null && Math.abs(written - total) < 0.0001) return false;
 
         List<Component> lore = meta.lore();
         lore = lore == null ? new ArrayList<>() : new ArrayList<>(lore);
-        // Our line is always last, so refreshing means dropping the old one first.
-        if (written != null && !lore.isEmpty()) lore.remove(lore.size() - 1);
-        lore.add(Msg.lore("<#f9d423>" + plugin.msg().money(unit) + "</#f9d423>"));
+        int previous = pdc.getOrDefault(linesKey, PersistentDataType.INTEGER, 0);
+        for (int i = 0; i < previous && !lore.isEmpty(); i++) lore.remove(lore.size() - 1);
+
+        int added;
+        if (amount > 1) {
+            lore.add(Msg.lore("<#f9d423>" + plugin.msg().money(total) + "</#f9d423>"));
+            lore.add(Msg.lore("<dark_gray>" + plugin.msg().money(unit) + " each</dark_gray>"));
+            added = 2;
+        } else {
+            lore.add(Msg.lore("<#f9d423>" + plugin.msg().money(total) + "</#f9d423>"));
+            added = 1;
+        }
 
         meta.lore(lore);
-        meta.getPersistentDataContainer().set(key, PersistentDataType.DOUBLE, unit);
+        pdc.set(valueKey, PersistentDataType.DOUBLE, total);
+        pdc.set(linesKey, PersistentDataType.INTEGER, added);
         stack.setItemMeta(meta);
         return true;
     }
 
-    /** Take the price line back off. Returns true if the item changed. */
+    /** Take the price lines back off. Returns true if the item changed. */
     public boolean strip(ItemStack stack) {
         if (stack == null || stack.getType().isAir() || !stack.hasItemMeta()) return false;
         ItemMeta meta = stack.getItemMeta();
         if (meta == null) return false;
-        if (!meta.getPersistentDataContainer().has(key, PersistentDataType.DOUBLE)) return false;
+        PersistentDataContainer pdc = meta.getPersistentDataContainer();
+        if (!pdc.has(valueKey, PersistentDataType.DOUBLE)) return false;
 
+        int lines = pdc.getOrDefault(linesKey, PersistentDataType.INTEGER, 1);
         List<Component> lore = meta.lore();
         if (lore != null && !lore.isEmpty()) {
             List<Component> trimmed = new ArrayList<>(lore);
-            trimmed.remove(trimmed.size() - 1);
+            for (int i = 0; i < lines && !trimmed.isEmpty(); i++) trimmed.remove(trimmed.size() - 1);
             meta.lore(trimmed.isEmpty() ? null : trimmed);
         }
-        meta.getPersistentDataContainer().remove(key);
+        pdc.remove(valueKey);
+        pdc.remove(linesKey);
         stack.setItemMeta(meta);
         return true;
     }
 
-    // ---- keep the tag inside the player's own inventory ----
-    /** Tag on pickup so the incoming stack merges with what's already held. */
-    @EventHandler(ignoreCancelled = true)
-    public void onPickup(EntityPickupItemEvent event) {
-        if (!enabled()) return;
-        if (!(event.getEntity() instanceof Player)) return;
-        ItemStack stack = event.getItem().getItemStack();
-        if (mark(stack)) event.getItem().setItemStack(stack);
+    // ------------------------------------------------ bulk helpers
+    private boolean isOurMenu(Inventory inventory) {
+        return inventory != null && inventory.getHolder() instanceof Gui;
     }
 
-    /** Dropped items go back to normal. */
+    private void markAll(Inventory inventory) {
+        if (inventory == null || isOurMenu(inventory)) return;
+        ItemStack[] contents = inventory.getContents();
+        for (int i = 0; i < contents.length; i++) {
+            ItemStack stack = contents[i];
+            if (stack == null) continue;
+            if (mark(stack)) inventory.setItem(i, stack);
+        }
+    }
+
+    private void stripAll(Inventory inventory) {
+        if (inventory == null || isOurMenu(inventory)) return;
+        ItemStack[] contents = inventory.getContents();
+        for (int i = 0; i < contents.length; i++) {
+            ItemStack stack = contents[i];
+            if (stack == null) continue;
+            if (strip(stack)) inventory.setItem(i, stack);
+        }
+    }
+
+    /** Clear tags off stacks of one material so vanilla can merge them. */
+    private void stripMatching(Inventory inventory, Material material) {
+        if (inventory == null) return;
+        ItemStack[] contents = inventory.getContents();
+        for (int i = 0; i < contents.length; i++) {
+            ItemStack stack = contents[i];
+            if (stack == null || stack.getType() != material) continue;
+            if (strip(stack)) inventory.setItem(i, stack);
+        }
+    }
+
+    // ------------------------------------------------ the periodic pass
+    public void tick() {
+        for (Player player : plugin.getServer().getOnlinePlayers()) {
+            if (enabled()) markAll(player.getInventory());
+            else stripAll(player.getInventory());
+        }
+    }
+
+    // ------------------------------------------------ events
+    /** Strip before a pickup so the incoming stack merges, then re-tag. */
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void onPickup(EntityPickupItemEvent event) {
+        if (!enabled()) return;
+        if (!(event.getEntity() instanceof Player player)) return;
+
+        ItemStack ground = event.getItem().getItemStack();
+        if (strip(ground)) event.getItem().setItemStack(ground);
+        stripMatching(player.getInventory(), ground.getType());
+        retagLater(player);
+    }
+
     @EventHandler(ignoreCancelled = true)
     public void onDrop(PlayerDropItemEvent event) {
         ItemStack stack = event.getItemDrop().getItemStack();
@@ -121,37 +181,53 @@ public class WorthTags implements Listener {
         for (ItemStack stack : event.getDrops()) strip(stack);
     }
 
-    /** Anything moved into a chest, furnace or any other container gets cleaned. */
+    /** Chests show values while you're looking in them. */
     @EventHandler(ignoreCancelled = true)
+    public void onOpen(InventoryOpenEvent event) {
+        if (!enabled()) return;
+        Inventory top = event.getInventory();
+        if (top instanceof PlayerInventory || isOurMenu(top)) return;
+        plugin.getServer().getScheduler().runTask(plugin, () -> markAll(top));
+    }
+
+    /** ...and go back to normal when you close them. */
+    @EventHandler
+    public void onClose(InventoryCloseEvent event) {
+        Inventory top = event.getInventory();
+        if (top instanceof PlayerInventory || isOurMenu(top)) return;
+        stripAll(top);
+    }
+
+    /** Strip everything involved in a click so merges work, then re-tag. */
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onClick(InventoryClickEvent event) {
-        sweepLater(event.getView().getTopInventory());
+        if (isOurMenu(event.getView().getTopInventory())) return;
+        stripAll(event.getView().getTopInventory());
+        stripAll(event.getView().getBottomInventory());
+        retagViewLater(event.getView());
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onDrag(InventoryDragEvent event) {
-        sweepLater(event.getView().getTopInventory());
+        if (isOurMenu(event.getView().getTopInventory())) return;
+        stripAll(event.getView().getTopInventory());
+        stripAll(event.getView().getBottomInventory());
+        retagViewLater(event.getView());
     }
 
-    /** Clean a container a tick later, once the move has actually happened. */
-    private void sweepLater(Inventory inventory) {
-        if (inventory == null) return;
-        if (inventory instanceof PlayerInventory) return;
-        if (inventory.getHolder() instanceof Player) return;
-
+    private void retagLater(Player player) {
         plugin.getServer().getScheduler().runTask(plugin, () -> {
-            ItemStack[] contents = inventory.getContents();
-            boolean changed = false;
-            for (int i = 0; i < contents.length; i++) {
-                ItemStack stack = contents[i];
-                if (stack == null) continue;
-                if (strip(stack)) {
-                    inventory.setItem(i, stack);
-                    changed = true;
-                }
-            }
-            if (changed) inventory.getViewers().forEach(v -> {
-                if (v instanceof Player p) p.updateInventory();
-            });
+            if (enabled()) markAll(player.getInventory());
+        });
+    }
+
+    private void retagViewLater(InventoryView view) {
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            if (!enabled()) return;
+            markAll(view.getBottomInventory());
+            Inventory top = view.getTopInventory();
+            if (!(top instanceof PlayerInventory) && !isOurMenu(top)) markAll(top);
+            if (view.getPlayer() instanceof Player p) p.updateInventory();
         });
     }
 }

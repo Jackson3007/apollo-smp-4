@@ -41,9 +41,14 @@ sell:
   # Show each item's sell price on its tooltip while it's in your inventory.
   # The line is removed again as soon as the item leaves.
   worth-lore: true
+  # Anything without an explicit price below still sells for this much, so
+  # almost everything is worth something. Set to 0 to only allow listed items.
+  default-price: 0.25
+  # Never sellable, on top of the built-in blocks (spawners, bedrock, etc).
+  never-sell: []
   # Prices the SERVER pays you per item when using /sell.
   # Material names: https://jd.papermc.io/paper/1.21/org/bukkit/Material.html
-  # Anything not listed here cannot be sold to the server.
+  # Anything not listed here falls back to default-price above.
   prices:
     # Ores / minerals
     COAL: 2.0

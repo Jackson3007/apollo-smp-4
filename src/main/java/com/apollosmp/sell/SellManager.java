@@ -183,16 +183,63 @@ public class SellManager {
         }
     }
 
+    /** Fallback price for anything not in the table. 0 disables the fallback. */
+    public double defaultPrice() {
+        return Math.max(0, plugin.getConfig().getDouble("sell.default-price", 0.25));
+    }
+
+    /** Materials that must never be sellable, whatever else is configured. */
+    private boolean blocked(Material material) {
+        if (material.isAir() || !material.isItem()) return true;
+        String name = material.name();
+        if (name.equals("SPAWNER") || name.equals("BEDROCK") || name.equals("BARRIER")
+                || name.equals("STRUCTURE_BLOCK") || name.equals("STRUCTURE_VOID")
+                || name.equals("JIGSAW") || name.equals("LIGHT") || name.equals("DEBUG_STICK")
+                || name.equals("END_PORTAL_FRAME") || name.equals("COMMAND_BLOCK")
+                || name.equals("CHAIN_COMMAND_BLOCK") || name.equals("REPEATING_COMMAND_BLOCK")
+                || name.equals("BUNDLE") || name.endsWith("SHULKER_BOX")) {
+            return true;
+        }
+        for (String extra : plugin.getConfig().getStringList("sell.never-sell")) {
+            if (name.equalsIgnoreCase(extra)) return true;
+        }
+        return false;
+    }
+
     public boolean isSellable(Material material) {
-        return prices.containsKey(material);
+        if (blocked(material)) return false;
+        if (prices.containsKey(material)) return true;
+        return defaultPrice() > 0;
+    }
+
+    /**
+     * Plugin-made items (businesses, merchant tools, tagged spawners and so on)
+     * are never sellable - they'd be worth far more than any price we'd give.
+     */
+    private boolean isPluginItem(ItemStack stack) {
+        try {
+            if (plugin.businesses() != null && plugin.businesses().readBusinessId(stack) != null) return true;
+            if (plugin.specialBusinesses() != null && plugin.specialBusinesses().readId(stack) != null) return true;
+            if (plugin.merchant() != null && plugin.merchant().toolType(stack) != null) return true;
+            if (plugin.logistics() != null && plugin.logistics().readType(stack) != null) return true;
+            if (plugin.spawners() != null && plugin.spawners().readType(stack) != null) return true;
+            if (plugin.customItems() != null && plugin.customItems().readId(stack) != null) return true;
+        } catch (Exception ignored) {
+            // if anything isn't ready yet, fall through and treat it as normal
+        }
+        return false;
     }
 
     public boolean isSellable(ItemStack stack) {
-        return stack != null && !stack.getType().isAir() && isSellable(stack.getType());
+        if (stack == null || stack.getType().isAir()) return false;
+        if (isPluginItem(stack)) return false;
+        return isSellable(stack.getType());
     }
 
     public double priceOf(Material material) {
-        return prices.getOrDefault(material, 0.0);
+        Double listed = prices.get(material);
+        if (listed != null) return listed;
+        return blocked(material) ? 0.0 : defaultPrice();
     }
 
     /** Total value of a stack (price per item x amount), or 0 if unsellable. */
