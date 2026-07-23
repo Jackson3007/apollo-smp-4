@@ -51,7 +51,7 @@ public class SpawnerManager {
             this.stack = Math.max(1, stack);
         }
 
-        public String key() { return key(world, x, y, z); }
+        public String key() { return SpawnerManager.key(world, x, y, z); }
         public Location toLocation(World w) { return new Location(w, x, y, z); }
     }
 
