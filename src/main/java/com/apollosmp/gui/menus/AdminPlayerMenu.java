@@ -69,6 +69,24 @@ public class AdminPlayerMenu extends Gui {
                     .lore("<gray>Teleport to their town spawn.").hideAttributes().build());
         }
 
+        inventory.setItem(14, Items.of(Material.EMERALD)
+                .name("<green><bold>Give Money</bold>")
+                .lore("<gray>Add funds to their balance.",
+                        "", "<yellow>Click, then type an amount")
+                .build());
+
+        inventory.setItem(15, Items.of(Material.REDSTONE)
+                .name("<#ff4e50><bold>Take Money</bold>")
+                .lore("<gray>Remove funds from their balance.",
+                        "", "<yellow>Click, then type an amount")
+                .build());
+
+        inventory.setItem(16, Items.of(Material.GOLD_INGOT)
+                .name("<#f9d423><bold>Set Balance</bold>")
+                .lore("<gray>Set their balance exactly.",
+                        "", "<yellow>Click, then type an amount")
+                .build());
+
         homes.addAll(plugin.homes().getHomes(target));
         inventory.setItem(13, Items.of(Material.RED_BED)
                 .name("<#ff4e50><bold>Homes: " + homes.size() + "</bold>")
@@ -97,6 +115,60 @@ public class AdminPlayerMenu extends Gui {
         inventory.setItem(45, Items.of(Material.ARROW).name("<gray>Back to Players").build());
         inventory.setItem(49, Items.of(Material.BARRIER).name("<red>Close").build());
         fillEmpty(Items.filler(Material.GRAY_STAINED_GLASS_PANE));
+    }
+
+    /** Prompt for an amount, then apply it to the target's balance. */
+    private void askAmount(Player admin, String action) {
+        String name = plugin.economy().nameOf(target);
+        admin.closeInventory();
+        plugin.msg().send(admin, "<#f9d423>Type the amount to " + action
+                + " <white>" + name + "</white></#f9d423> <gray>(or 'cancel').");
+        plugin.prompts().await(admin, input -> {
+            double amount;
+            try {
+                amount = Double.parseDouble(input);
+            } catch (NumberFormatException ex) {
+                plugin.msg().send(admin, "<red>That's not a number.");
+                new AdminPlayerMenu(plugin, admin, target).open();
+                return;
+            }
+            if (amount < 0) {
+                plugin.msg().send(admin, "<red>Use a positive number.");
+                new AdminPlayerMenu(plugin, admin, target).open();
+                return;
+            }
+
+            switch (action) {
+                case "give" -> {
+                    plugin.economy().deposit(target, amount);
+                    plugin.msg().send(admin, "<green>Gave " + plugin.msg().money(amount)
+                            + " to <white>" + name + "</white>.");
+                    notifyTarget("<green>An admin gave you " + plugin.msg().money(amount) + ".");
+                }
+                case "take" -> {
+                    if (!plugin.economy().withdraw(target, amount)) {
+                        plugin.msg().send(admin, "<red>They don't have that much.");
+                    } else {
+                        plugin.msg().send(admin, "<yellow>Took " + plugin.msg().money(amount)
+                                + " from <white>" + name + "</white>.");
+                        notifyTarget("<yellow>An admin took " + plugin.msg().money(amount) + " from you.");
+                    }
+                }
+                case "set" -> {
+                    plugin.economy().set(target, amount);
+                    plugin.msg().send(admin, "<green>Set <white>" + name + "</white>'s balance to "
+                            + plugin.msg().money(amount) + ".");
+                    notifyTarget("<gray>An admin set your balance to " + plugin.msg().money(amount) + ".");
+                }
+                default -> { /* nothing */ }
+            }
+            new AdminPlayerMenu(plugin, admin, target).open();
+        });
+    }
+
+    private void notifyTarget(String message) {
+        Player online = plugin.getServer().getPlayer(target);
+        if (online != null) plugin.msg().send(online, message);
     }
 
     @Override
@@ -142,6 +214,9 @@ public class AdminPlayerMenu extends Gui {
                 plugin.msg().send(player, "<green>Teleported to <white>" + town.name() + "</white>.");
                 player.closeInventory();
             }
+            case 14 -> askAmount(player, "give");
+            case 15 -> askAmount(player, "take");
+            case 16 -> askAmount(player, "set");
             case 45 -> new AdminPlayersMenu(plugin, player, 0, false).open();
             case 49 -> player.closeInventory();
             default -> { /* no-op */ }

@@ -75,6 +75,19 @@ commands:
   discord:
     description: Get the Discord invite link
     usage: /discord
+  specialauction:
+    description: Bid on the daily mystery business
+    aliases: [sa, mysteryauction]
+    usage: /specialauction [claim]
+  merchant:
+    description: Visit the travelling merchant
+    aliases: [trader, wares]
+    usage: /merchant
+  announce:
+    description: Broadcast a server announcement
+    aliases: [broadcast, bc]
+    usage: /announce <message>
+    permission: apollo.admin
   admin:
     description: Open the Apollo admin panel
     aliases: [apanel, adminpanel]

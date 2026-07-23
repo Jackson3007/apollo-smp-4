@@ -60,6 +60,10 @@ public class ApolloSMP extends JavaPlugin {
     private com.apollosmp.board.NameTagManager nameTags;
     private com.apollosmp.town.BorderVisualizer borders;
     private com.apollosmp.invest.BusinessHolograms holograms;
+    private com.apollosmp.merchant.MerchantManager merchant;
+    private com.apollosmp.special.SpecialAuctionManager specialAuction;
+    private com.apollosmp.special.SpecialBusinessManager specialBusinesses;
+    private com.apollosmp.merchant.ToolExpiryTask toolExpiry;
 
     @Override
     public void onEnable() {
@@ -83,6 +87,10 @@ public class ApolloSMP extends JavaPlugin {
         this.prompts = new com.apollosmp.town.ChatPromptManager(this);
         this.nameTags = new com.apollosmp.board.NameTagManager(this);
         this.borders = new com.apollosmp.town.BorderVisualizer(this);
+        this.merchant = new com.apollosmp.merchant.MerchantManager(this);
+        this.specialAuction = new com.apollosmp.special.SpecialAuctionManager(this);
+        this.specialBusinesses = new com.apollosmp.special.SpecialBusinessManager(this);
+        this.toolExpiry = new com.apollosmp.merchant.ToolExpiryTask(this);
         this.holograms = new com.apollosmp.invest.BusinessHolograms(this);
         this.holograms.cleanupOrphans();
 
@@ -137,6 +145,9 @@ public class ApolloSMP extends JavaPlugin {
         reg("town", new com.apollosmp.commands.TownCommand(this));
         reg("discord", new com.apollosmp.commands.DiscordCommand(this));
         reg("admin", new com.apollosmp.commands.AdminPanelCommand(this));
+        reg("announce", new com.apollosmp.commands.AnnounceCommand(this));
+        reg("merchant", new com.apollosmp.commands.MerchantCommand(this));
+        reg("specialauction", new com.apollosmp.commands.SpecialAuctionCommand(this));
 
         TpaCommand tpaCommand = new TpaCommand(this);
         reg("tpa", tpaCommand);
@@ -178,6 +189,10 @@ public class ApolloSMP extends JavaPlugin {
                 new com.apollosmp.listeners.SleepListener(this), this);
         getServer().getPluginManager().registerEvents(
                 new com.apollosmp.listeners.SpawnerListener(this), this);
+        getServer().getPluginManager().registerEvents(
+                new com.apollosmp.listeners.MerchantToolListener(this), this);
+        getServer().getPluginManager().registerEvents(
+                new com.apollosmp.listeners.SpecialBusinessListener(this), this);
 
         long taxTicks = Math.max(1L, getConfig().getLong("towns.tax-interval-hours", 24)) * 3600L * 20L;
         getServer().getScheduler().runTaskTimer(this, () -> towns.collectTaxes(), taxTicks, taxTicks);
@@ -195,6 +210,9 @@ public class ApolloSMP extends JavaPlugin {
         getServer().getScheduler().runTaskTimer(this, () -> borders.tick(), 8L, 8L);
         getServer().getScheduler().runTaskTimer(this, () -> towns.applyUpgradeEffects(), 60L, 60L);
         getServer().getScheduler().runTaskTimer(this, () -> holograms.tick(), 40L, 20L);
+        getServer().getScheduler().runTaskTimer(this, () -> toolExpiry.tick(), 200L, 600L);
+        getServer().getScheduler().runTaskTimer(this, () -> merchant.refreshIfNeeded(), 1200L, 1200L);
+        getServer().getScheduler().runTaskTimer(this, () -> specialAuction.tick(), 100L, 20L);
     }
 
     // ---- world border ----
@@ -253,6 +271,8 @@ public class ApolloSMP extends JavaPlugin {
         skyCoins.save();
         towns.save();
         borders.save();
+        specialAuction.save();
+        specialBusinesses.save();
     }
 
     public void reloadAll() {
@@ -290,6 +310,9 @@ public class ApolloSMP extends JavaPlugin {
     public com.apollosmp.board.NameTagManager nameTags() { return nameTags; }
     public com.apollosmp.town.BorderVisualizer borders() { return borders; }
     public com.apollosmp.invest.BusinessHolograms holograms() { return holograms; }
+    public com.apollosmp.merchant.MerchantManager merchant() { return merchant; }
+    public com.apollosmp.special.SpecialAuctionManager specialAuction() { return specialAuction; }
+    public com.apollosmp.special.SpecialBusinessManager specialBusinesses() { return specialBusinesses; }
 
     /** Apply the "how many players must sleep" rule to every overworld. */
     public void applySleepRule() {

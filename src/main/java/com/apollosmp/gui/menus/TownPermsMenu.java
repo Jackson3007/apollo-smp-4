@@ -51,7 +51,7 @@ public class TownPermsMenu extends Gui {
 
     @Override
     public void onClick(Player player, int slot, ItemStack clicked, ClickType click) {
-        if (slot == 40) { new TownMenu(plugin, player).open(); return; }
+        if (slot == 40) { new TownSettingsMenu(plugin, player).open(); return; }
         if (slot == 4) {
             int idx = 0;
             for (int i = 0; i < EDITABLE.length; i++) if (EDITABLE[i] == rank) idx = i;

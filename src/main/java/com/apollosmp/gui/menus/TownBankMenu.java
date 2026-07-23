@@ -48,7 +48,7 @@ public class TownBankMenu extends Gui {
 
     @Override
     public void onClick(Player player, int slot, ItemStack clicked, ClickType click) {
-        if (slot == 31) { new TownMenu(plugin, player).open(); return; }
+        if (slot == 31) { new TownManageMenu(plugin, player).open(); return; }
 
         for (int i = 0; i < AMOUNTS.length; i++) {
             if (slot == DEPOSIT_SLOTS[i]) { plugin.towns().deposit(player, AMOUNTS[i]); redraw(); return; }

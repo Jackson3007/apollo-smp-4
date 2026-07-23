@@ -203,6 +203,25 @@ voting:
     - name: "Site 4"
       link: ""
 
+# ---- Special business auction ----
+# One mystery business goes under the hammer each cycle, ending at the
+# configured hour. Bids are held in escrow and refunded when outbid.
+special-auction:
+  enabled: true
+  starting-bid: 50000.0
+  min-increment: 2500.0
+  duration-hours: 24
+  end-hour: 12                     # 24-hour clock
+  timezone: "America/Los_Angeles"  # noon PST/PDT
+
+# ---- Travelling merchant ----
+# Three rare goods, rerolled every day at midnight. Prices are deliberately
+# brutal - these are meant to be a long-term money sink.
+merchant:
+  price-multiplier: 1.0   # scale every price at once
+  tool-hours: 48          # how long the drill and feller last
+  seed: 7                 # change this to reroll the whole schedule
+
 # ---- Businesses ----
 invest:
   # Floating text above business blocks showing income and the next payout.

@@ -112,6 +112,13 @@ public class MainMenu extends Gui {
                 .hideAttributes().build());
 
         // ---- Row 5: community ----
+        inventory.setItem(25, Items.of(Material.EMERALD_BLOCK)
+                .name("<gradient:#e94fd0:#5ad1e8><bold>Travelling Merchant</bold></gradient>")
+                .lore("<gray>Three rare goods, new every day.",
+                        "<gray>Very expensive, sometimes junk.",
+                        "<dark_gray>/merchant", "", "<yellow>Click to open")
+                .glow(true).hideAttributes().build());
+
         inventory.setItem(39, Items.of(Material.PAINTING)
                 .name("<gradient:#5ad1e8:#e94fd0><bold>Discord</bold></gradient>")
                 .lore("<gray>Updates, giveaways and chat.",
@@ -159,6 +166,7 @@ public class MainMenu extends Gui {
             }
             case 22 -> new TownListMenu(plugin, player, 0).open();
             case 24 -> new VoteMenu(plugin, player).open();
+            case 25 -> new MerchantMenu(plugin, player).open();
             case 39 -> {
                 player.closeInventory();
                 player.performCommand("discord");

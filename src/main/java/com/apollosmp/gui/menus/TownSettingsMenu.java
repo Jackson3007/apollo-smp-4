@@ -79,6 +79,15 @@ public class TownSettingsMenu extends Gui {
                         "<yellow>Click to toggle")
                 .glow(bordersOn).hideAttributes().build());
 
+        if (!isMayor) {
+            inventory.setItem(MOVE, Items.of(Material.IRON_DOOR)
+                    .name("<yellow><bold>Leave Town</bold>")
+                    .lore("<gray>You'd lose access to town land",
+                            "<gray>and any plots you own.",
+                            "", "<yellow>Click to leave")
+                    .build());
+        }
+
         if (isMayor) {
             inventory.setItem(MOVE, Items.of(Material.MINECART)
                     .name("<#ff4e50><bold>Move Town</bold>")
@@ -106,7 +115,7 @@ public class TownSettingsMenu extends Gui {
         if (town == null) { player.closeInventory(); return; }
 
         switch (slot) {
-            case BACK -> new TownMenu(plugin, player).open();
+            case BACK -> new TownManageMenu(plugin, player).open();
 
             case TAX -> {
                 player.closeInventory();
@@ -143,7 +152,20 @@ public class TownSettingsMenu extends Gui {
             }
 
             case MOVE -> {
-                if (!town.mayor().equals(player.getUniqueId())) return;
+                if (!town.mayor().equals(player.getUniqueId())) {
+                    String leaveName = town.name();
+                    new ConfirmMenu(plugin, player,
+                            "<yellow><bold>Leave " + leaveName + "?</bold>",
+                            "Leave " + leaveName + "?",
+                            List.of("<gray>You'll lose access to town land",
+                                    "<gray>and any plots you own here.",
+                                    "",
+                                    "<gray>You'd need a new invite to return."),
+                            () -> { plugin.towns().leave(player); new TownMenu(plugin, player).open(); },
+                            () -> new TownSettingsMenu(plugin, player).open()
+                    ).open();
+                    return;
+                }
                 String name = town.name();
                 new ConfirmMenu(plugin, player,
                         "<red><bold>Move " + name + "?</bold>",

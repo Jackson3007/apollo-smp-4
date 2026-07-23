@@ -114,7 +114,7 @@ public class TownPlotsMenu extends Gui {
         }
         switch (slot) {
             case 45 -> { if (page > 0) new TownPlotsMenu(plugin, player, page - 1).open(); }
-            case 49 -> new TownMenu(plugin, player).open();
+            case 49 -> new TownManageMenu(plugin, player).open();
             case 53 -> new TownPlotsMenu(plugin, player, page + 1).open();
             default -> { /* no-op */ }
         }
