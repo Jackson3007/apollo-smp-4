@@ -123,15 +123,15 @@ public class AdminPlayerMenu extends Gui {
                     .lore(lore.toArray(new String[0])).hideAttributes().build());
         }
 
-        com.apollosmp.staff.StaffRank rank = plugin.ranks().of(target);
-        inventory.setItem(17, Items.of(rank == null ? Material.GRAY_DYE : Material.NAME_TAG)
-                .name(rank == null
+        com.apollosmp.staff.StaffRank staffRank = plugin.ranks().of(target);
+        inventory.setItem(17, Items.of(staffRank == null ? Material.GRAY_DYE : Material.NAME_TAG)
+                .name(staffRank == null
                         ? "<gray><bold>Role: none</bold>"
-                        : "<#f9d423><bold>Role: " + rank.display() + "</bold>")
+                        : "<#f9d423><bold>Role: " + staffRank.display() + "</bold>")
                 .lore("<gray>Cycle through the server roles.",
                         "<dark_gray>Owner and Mod carry admin powers.",
                         "", "<yellow>Click to change")
-                .glow(rank != null).hideAttributes().build());
+                .glow(staffRank != null).hideAttributes().build());
 
         inventory.setItem(45, Items.of(Material.ARROW).name("<gray>Back to Players").build());
         inventory.setItem(49, Items.of(Material.BARRIER).name("<red>Close").build());
