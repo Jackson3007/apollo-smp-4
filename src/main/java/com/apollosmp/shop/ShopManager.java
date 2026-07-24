@@ -28,8 +28,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ShopManager {
 
-    public static final Material STALL_BLOCK = Material.CARTOGRAPHY_TABLE;
-    public static final int MAX_OFFERS = 7;
+    public static final Material STALL_BLOCK = Material.BARREL;
+    public static final int MAX_OFFERS = 27;
 
     /** One thing a stall is selling. */
     public static class Offer {
@@ -83,7 +83,7 @@ public class ShopManager {
         return key(loc.getWorld().getName(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
     }
 
-    public double stallPrice() { return plugin.getConfig().getDouble("towns.shop.block-price", 8000.0); }
+    public double stallPrice() { return plugin.getConfig().getDouble("towns.shop.stall-price", 500.0); }
 
     /** Allies pay less - one of the perks of an alliance. */
     public double allyDiscount() {
@@ -117,6 +117,51 @@ public class ShopManager {
     }
 
     public Stall at(Location loc) { return stalls.get(key(loc)); }
+
+    public List<Stall> allStalls() { return new ArrayList<>(stalls.values()); }
+
+    public int stockCount(Stall stall) {
+        int total = 0;
+        for (Offer o : stall.offers) total += o.stock;
+        return total;
+    }
+
+    /** A quiet shimmer so stalls are findable. */
+    public void spawnParticles() {
+        for (Stall stall : stalls.values()) {
+            org.bukkit.World world = plugin.getServer().getWorld(stall.world);
+            if (world == null) continue;
+            if (!world.isChunkLoaded(stall.x >> 4, stall.z >> 4)) continue;
+            Location loc = new Location(world, stall.x + 0.5, stall.y + 1.1, stall.z + 0.5);
+
+            org.bukkit.Particle glow = particle("WAX_ON", "HAPPY_VILLAGER");
+            if (glow != null) world.spawnParticle(glow, loc, 3, 0.25, 0.12, 0.25, 0.01);
+
+            if (!stall.offers.isEmpty()) {
+                org.bukkit.Particle ring = particle("ENCHANT", "ENCHANTMENT_TABLE");
+                if (ring != null) {
+                    double turn = (System.currentTimeMillis() % 5000L) / 5000.0 * Math.PI * 2;
+                    for (int i = 0; i < 3; i++) {
+                        double angle = turn + (Math.PI * 2 * i / 3);
+                        world.spawnParticle(ring,
+                                loc.clone().add(Math.cos(angle) * 0.6, -0.25, Math.sin(angle) * 0.6),
+                                1, 0, 0, 0, 0);
+                    }
+                }
+            }
+        }
+    }
+
+    private org.bukkit.Particle particle(String... names) {
+        for (String name : names) {
+            try {
+                return org.bukkit.Particle.valueOf(name);
+            } catch (IllegalArgumentException ignored) {
+                // try the next
+            }
+        }
+        return null;
+    }
 
     public boolean place(Location loc, Player player) {
         Town town = plugin.towns().getTownAtLoc(loc);

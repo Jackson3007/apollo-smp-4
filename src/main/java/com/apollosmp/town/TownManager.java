@@ -315,7 +315,24 @@ public class TownManager {
         playerTown.put(player.getUniqueId(), town.name().toLowerCase());
         touch();
         plugin.msg().send(player, "<green>Welcome to <#f9d423>" + town.name() + "</#f9d423>!");
+        announceToTown(town, player.getUniqueId(),
+                "<green>" + player.getName() + "</green> <gray>has joined <white>"
+                        + town.name() + "</white>. Residents: <white>"
+                        + town.memberCount() + "</white></gray>",
+                org.bukkit.Sound.ENTITY_PLAYER_LEVELUP);
         return true;
+    }
+
+    /** Tell everyone in a town something, optionally skipping one player. */
+    public void announceToTown(Town town, UUID except, String message, org.bukkit.Sound sound) {
+        if (town == null) return;
+        for (UUID member : town.members().keySet()) {
+            if (except != null && member.equals(except)) continue;
+            Player online = plugin.getServer().getPlayer(member);
+            if (online == null) continue;
+            plugin.msg().send(online, message);
+            if (sound != null) online.playSound(online.getLocation(), sound, 0.5f, 1.5f);
+        }
     }
 
     public boolean leave(Player player) {
@@ -328,6 +345,10 @@ public class TownManager {
         playerTown.remove(player.getUniqueId());
         touch();
         plugin.msg().send(player, "<yellow>You left " + town.name() + ".");
+        announceToTown(town, player.getUniqueId(),
+                "<gray>" + player.getName() + " has left <white>" + town.name()
+                        + "</white>. Residents: <white>" + town.memberCount() + "</white></gray>",
+                null);
         return true;
     }
 
@@ -350,6 +371,11 @@ public class TownManager {
         plugin.msg().send(actor, "<yellow>Resident removed from the town.");
         Player t = plugin.getServer().getPlayer(target);
         if (t != null) plugin.msg().send(t, "<red>You were removed from " + town.name() + ".");
+        String kickedName = t != null ? t.getName()
+                : plugin.getServer().getOfflinePlayer(target).getName();
+        announceToTown(town, actor.getUniqueId(),
+                "<gray>" + (kickedName == null ? "A resident" : kickedName)
+                        + " was removed from <white>" + town.name() + "</white>.</gray>", null);
         return true;
     }
 

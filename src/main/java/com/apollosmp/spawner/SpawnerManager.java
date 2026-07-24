@@ -33,7 +33,9 @@ import java.util.concurrent.ConcurrentHashMap;
 /** Player-placed spawners: stacking, pickup, and the label floating above them. */
 public class SpawnerManager {
 
-    private static final int VIEW_DISTANCE = 24;
+    private int viewDistance() {
+        return Math.max(4, plugin.getConfig().getInt("holograms.view-distance", 16));
+    }
 
     /** One placed spawner block. */
     public static class Placed {
@@ -156,7 +158,8 @@ public class SpawnerManager {
 
     // ---- floating labels ----
     private boolean labelsEnabled() {
-        return plugin.getConfig().getBoolean("spawners.holograms", true);
+        return plugin.getConfig().getBoolean("holograms.enabled", true)
+                && plugin.getConfig().getBoolean("spawners.holograms", true);
     }
 
     public void tick() {
@@ -203,7 +206,8 @@ public class SpawnerManager {
     private boolean anyoneNear(Location loc) {
         for (Player player : plugin.getServer().getOnlinePlayers()) {
             if (!player.getWorld().equals(loc.getWorld())) continue;
-            if (player.getLocation().distanceSquared(loc) <= VIEW_DISTANCE * VIEW_DISTANCE) return true;
+            int range = viewDistance();
+            if (player.getLocation().distanceSquared(loc) <= (double) range * range) return true;
         }
         return false;
     }

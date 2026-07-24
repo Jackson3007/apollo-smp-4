@@ -46,6 +46,8 @@ public class AdminPanelCommand implements CommandExecutor, TabCompleter {
             case "merchant" -> merchant(player, args);
             case "auction" -> auction(player, args);
             case "vote" -> vote(player, args);
+            case "entities" -> entities(player);
+            case "cleanup" -> cleanup(player);
             case "help" -> help(player);
             default -> help(player);
         }
@@ -266,6 +268,66 @@ public class AdminPanelCommand implements CommandExecutor, TabCompleter {
         }
     }
 
+    // ------------------------------------------------ performance
+    /** What's actually loaded right now, worst offenders first. */
+    private void entities(Player player) {
+        java.util.Map<String, Integer> counts = new java.util.HashMap<>();
+        int total = 0;
+        int displays = 0;
+        int items = 0;
+        int mobs = 0;
+
+        for (org.bukkit.World world : plugin.getServer().getWorlds()) {
+            for (org.bukkit.entity.Entity entity : world.getEntities()) {
+                total++;
+                String type = entity.getType().name();
+                counts.merge(type, 1, Integer::sum);
+                if (entity instanceof org.bukkit.entity.Display) displays++;
+                else if (entity instanceof org.bukkit.entity.Item) items++;
+                else if (entity instanceof org.bukkit.entity.LivingEntity) mobs++;
+            }
+        }
+
+        plugin.msg().sendRaw(player, "<#f9d423><bold>Loaded entities: " + total + "</bold>");
+        plugin.msg().sendRaw(player, " <gray>Floating labels: <white>" + displays + "</white>"
+                + " <dark_gray>(mine - /admin cleanup clears them)</dark_gray>");
+        plugin.msg().sendRaw(player, " <gray>Dropped items: <white>" + items + "</white>");
+        plugin.msg().sendRaw(player, " <gray>Mobs: <white>" + mobs + "</white>");
+        plugin.msg().sendRaw(player, "<gray>Most common:</gray>");
+
+        counts.entrySet().stream()
+                .sorted((a, b) -> b.getValue() - a.getValue())
+                .limit(8)
+                .forEach(e -> plugin.msg().sendRaw(player,
+                        "  <white>" + e.getValue() + "x</white> <gray>" + e.getKey() + "</gray>"));
+
+        if (displays > 200) {
+            plugin.msg().sendRaw(player, "<red>That's a lot of labels. Lower "
+                    + "holograms.view-distance, or set holograms.enabled to false.</red>");
+        }
+        if (items > 300) {
+            plugin.msg().sendRaw(player, "<red>Dropped items are the bigger problem here - "
+                    + "that's usually a farm or a full business.</red>");
+        }
+    }
+
+    /** Remove every floating label. They come back as players walk past. */
+    private void cleanup(Player player) {
+        int removed = 0;
+        for (org.bukkit.World world : plugin.getServer().getWorlds()) {
+            for (org.bukkit.entity.Entity entity : world.getEntities()) {
+                if (entity instanceof org.bukkit.entity.TextDisplay) {
+                    entity.remove();
+                    removed++;
+                }
+            }
+        }
+        plugin.holograms().removeAll();
+        plugin.spawners().removeAllLabels();
+        plugin.msg().send(player, "<green>Cleared <white>" + removed
+                + "</white> floating label(s). <gray>They'll rebuild as people walk around.");
+    }
+
     // ------------------------------------------------ help
     private void help(Player player) {
         var msg = plugin.msg();
@@ -289,12 +351,15 @@ public class AdminPanelCommand implements CommandExecutor, TabCompleter {
         msg.sendRaw(player, " <white>/admin vote status</white> <gray>- is Votifier hooked?</gray>");
         msg.sendRaw(player, " <white>/admin vote test</white> <gray>- fake a confirmed vote</gray>");
         msg.sendRaw(player, " <white>/admin vote pending</white> <gray>- unpaid vote rewards</gray>");
+        msg.sendRaw(player, "<#5ad1e8>Performance</#5ad1e8>");
+        msg.sendRaw(player, " <white>/admin entities</white> <gray>- what's loaded right now</gray>");
+        msg.sendRaw(player, " <white>/admin cleanup</white> <gray>- clear floating labels</gray>");
     }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (!sender.hasPermission("apollo.admin")) return List.of();
-        if (args.length == 1) return List.of("merchant", "auction", "vote", "help");
+        if (args.length == 1) return List.of("merchant", "auction", "vote", "entities", "cleanup", "help");
         if (args.length == 2) {
             if (args[0].equalsIgnoreCase("merchant")) {
                 return List.of("peek", "reroll", "reset", "give", "expire");

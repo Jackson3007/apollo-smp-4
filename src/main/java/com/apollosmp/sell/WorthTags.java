@@ -368,7 +368,7 @@ public class WorthTags implements Listener {
     public void onOpen(InventoryOpenEvent event) {
         if (!enabled()) return;
         Inventory top = event.getInventory();
-        if (top instanceof PlayerInventory || isOurMenu(top)) return;
+        if (!isStorage(top)) return;
         plugin.getServer().getScheduler().runTask(plugin, () -> {
             markAll(top);
             if (event.getPlayer() instanceof Player p) {
@@ -387,21 +387,47 @@ public class WorthTags implements Listener {
         if (event.getPlayer() instanceof Player p) forgetTitle(p);
     }
 
-    /** Strip everything involved in a click so merges work, then re-tag. */
+    /**
+     * Only the material actually being moved needs untagging - that's all a
+     * merge can involve. Touching every slot on every click was far too slow.
+     */
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onClick(InventoryClickEvent event) {
+        if (!enabled()) return;
         if (isOurMenu(event.getView().getTopInventory())) return;
-        stripAll(event.getView().getTopInventory());
-        stripAll(event.getView().getBottomInventory());
+
+        clearFor(event.getView(), event.getCurrentItem());
+        clearFor(event.getView(), event.getCursor());
+        if (event.getHotbarButton() >= 0 && event.getWhoClicked() instanceof Player p) {
+            clearFor(event.getView(), p.getInventory().getItem(event.getHotbarButton()));
+        }
         retagViewLater(event.getView());
     }
 
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onDrag(InventoryDragEvent event) {
+        if (!enabled()) return;
         if (isOurMenu(event.getView().getTopInventory())) return;
-        stripAll(event.getView().getTopInventory());
-        stripAll(event.getView().getBottomInventory());
+        clearFor(event.getView(), event.getOldCursor());
         retagViewLater(event.getView());
+    }
+
+    /** Untag this material on both sides of the view so vanilla can merge. */
+    private void clearFor(InventoryView view, ItemStack sample) {
+        if (sample == null || sample.getType().isAir()) return;
+        Material material = sample.getType();
+        Inventory top = view.getTopInventory();
+        if (!isOurMenu(top)) stripMatching(top, material);
+        stripMatching(view.getBottomInventory(), material);
+    }
+
+    /** Chests and barrels get labels; crafting tables and furnaces don't. */
+    private boolean isStorage(Inventory inventory) {
+        if (inventory == null || isOurMenu(inventory)) return false;
+        return switch (inventory.getType()) {
+            case CHEST, BARREL, SHULKER_BOX, ENDER_CHEST, HOPPER, DISPENSER, DROPPER -> true;
+            default -> false;
+        };
     }
 
     private void retagLater(Player player) {
@@ -415,7 +441,7 @@ public class WorthTags implements Listener {
             if (!enabled()) return;
             markAll(view.getBottomInventory());
             Inventory top = view.getTopInventory();
-            if (!(top instanceof PlayerInventory) && !isOurMenu(top)) markAll(top);
+            if (isStorage(top)) markAll(top);
             if (view.getPlayer() instanceof Player p) {
                 p.updateInventory();
                 updateTitle(p);

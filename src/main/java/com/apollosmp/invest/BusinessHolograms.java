@@ -24,7 +24,9 @@ import java.util.concurrent.ConcurrentHashMap;
 /** Floating labels above business blocks showing income and the next payout. */
 public class BusinessHolograms {
 
-    private static final int VIEW_DISTANCE = 24;
+    private int viewDistance() {
+        return Math.max(4, plugin.getConfig().getInt("holograms.view-distance", 16));
+    }
 
     private final ApolloSMP plugin;
     private final NamespacedKey tagKey;
@@ -36,7 +38,8 @@ public class BusinessHolograms {
     }
 
     private boolean enabled() {
-        return plugin.getConfig().getBoolean("invest.holograms", true);
+        return plugin.getConfig().getBoolean("holograms.enabled", true)
+                && plugin.getConfig().getBoolean("invest.holograms", true);
     }
 
     /** Refresh labels near players; remove the rest. */
@@ -104,6 +107,44 @@ public class BusinessHolograms {
             label.text(logisticsText(n));
         }
 
+        // Town banks.
+        for (com.apollosmp.bank.BankManager.BankBlock bank : plugin.bank().allBanks()) {
+            World world = plugin.getServer().getWorld(bank.world());
+            if (world == null) continue;
+            if (!world.isChunkLoaded(bank.x() >> 4, bank.z() >> 4)) continue;
+            Location loc = new Location(world, bank.x() + 0.5, bank.y() + 1.3, bank.z() + 0.5);
+            if (!anyoneNear(loc)) continue;
+
+            String key = "bank:" + bank.world() + "," + bank.x() + "," + bank.y() + "," + bank.z();
+            wanted.add(key);
+            TextDisplay label = labels.get(key);
+            if (label == null || !label.isValid()) {
+                label = spawn(loc);
+                if (label == null) continue;
+                labels.put(key, label);
+            }
+            label.text(bankText(bank.town()));
+        }
+
+        // Market stalls.
+        for (com.apollosmp.shop.ShopManager.Stall stall : plugin.shops().allStalls()) {
+            World world = plugin.getServer().getWorld(stall.world);
+            if (world == null) continue;
+            if (!world.isChunkLoaded(stall.x >> 4, stall.z >> 4)) continue;
+            Location loc = new Location(world, stall.x + 0.5, stall.y + 1.3, stall.z + 0.5);
+            if (!anyoneNear(loc)) continue;
+
+            String key = "stall:" + stall.key();
+            wanted.add(key);
+            TextDisplay label = labels.get(key);
+            if (label == null || !label.isValid()) {
+                label = spawn(loc);
+                if (label == null) continue;
+                labels.put(key, label);
+            }
+            label.text(stallText(stall));
+        }
+
         for (Map.Entry<String, TextDisplay> e : new ArrayList<>(labels.entrySet())) {
             if (wanted.contains(e.getKey())) continue;
             TextDisplay label = e.getValue();
@@ -115,7 +156,8 @@ public class BusinessHolograms {
     private boolean anyoneNear(Location loc) {
         for (Player player : plugin.getServer().getOnlinePlayers()) {
             if (!player.getWorld().equals(loc.getWorld())) continue;
-            if (player.getLocation().distanceSquared(loc) <= VIEW_DISTANCE * VIEW_DISTANCE) return true;
+            int range = viewDistance();
+            if (player.getLocation().distanceSquared(loc) <= (double) range * range) return true;
         }
         return false;
     }
@@ -333,6 +375,28 @@ public class BusinessHolograms {
                 + " held</gray>";
         else status = "<gray>\u23f3 Selling in "
                 + formatShort(logistics.secondsUntilSale(n)) + "</gray>";
+        return lines(header, body, status);
+    }
+
+    private Component bankText(String townName) {
+        com.apollosmp.town.Town town = plugin.towns().townByName(townName);
+        String header = "<#f9d423>\u2726</#f9d423> <gradient:#f9d423:#ff4e50><bold>TOWN BANK</bold></gradient>";
+        String body = "<gray>" + townName + "</gray>";
+        String status = town == null
+                ? "<red>\u26a0 Town missing</red>"
+                : "<gray>Holding</gray> <#f9d423>" + plugin.msg().money(town.bank()) + "</#f9d423>";
+        return lines(header, body, status);
+    }
+
+    private Component stallText(com.apollosmp.shop.ShopManager.Stall stall) {
+        int kinds = stall.offers.size();
+        int stock = plugin.shops().stockCount(stall);
+        String header = "<#5ad1e8>\u25c6</#5ad1e8> <gradient:#5ad1e8:#e94fd0><bold>MARKET STALL</bold></gradient>";
+        String body = "<gray>" + stall.town + "</gray>";
+        String status = kinds == 0
+                ? "<red>\u26a0 Nothing for sale</red>"
+                : "<gray>" + kinds + " item" + (kinds == 1 ? "" : "s") + ", "
+                        + stock + " in stock</gray>";
         return lines(header, body, status);
     }
 

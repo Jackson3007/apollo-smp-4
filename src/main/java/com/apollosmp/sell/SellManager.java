@@ -232,6 +232,9 @@ public class SellManager {
      * are never sellable - they'd be worth far more than any price we'd give.
      */
     private boolean isPluginItem(ItemStack stack) {
+        // Plugin items always carry metadata, so anything without it is ordinary.
+        // This shortcut matters: the check below is six NBT reads otherwise.
+        if (stack == null || !stack.hasItemMeta()) return false;
         try {
             if (plugin.businesses() != null && plugin.businesses().readBusinessId(stack) != null) return true;
             if (plugin.specialBusinesses() != null && plugin.specialBusinesses().readId(stack) != null) return true;

@@ -71,7 +71,7 @@ public class BankManager {
     }
 
     // ---- config ----
-    public double bankPrice() { return plugin.getConfig().getDouble("towns.bank.block-price", 15000.0); }
+    public double bankPrice() { return plugin.getConfig().getDouble("towns.bank.vault-price", 500.0); }
     public double interestPercent() {
         return Math.max(0, plugin.getConfig().getDouble("towns.bank.interest-percent", 10.0));
     }
@@ -118,6 +118,59 @@ public class BankManager {
     }
 
     public String bankTownAt(Location loc) { return banks.get(key(loc)); }
+
+    /** Where every bank block stands, for labels and particles. */
+    public record BankBlock(String world, int x, int y, int z, String town) {}
+
+    public List<BankBlock> allBanks() {
+        List<BankBlock> out = new ArrayList<>();
+        for (Map.Entry<String, String> e : banks.entrySet()) {
+            String[] parts = e.getKey().split(",");
+            if (parts.length != 4) continue;
+            try {
+                out.add(new BankBlock(parts[0], Integer.parseInt(parts[1]),
+                        Integer.parseInt(parts[2]), Integer.parseInt(parts[3]), e.getValue()));
+            } catch (NumberFormatException ignored) {
+                // skip malformed keys
+            }
+        }
+        return out;
+    }
+
+    /** Gold flecks and a slow ring, so a bank looks like one. */
+    public void spawnParticles() {
+        for (BankBlock bank : allBanks()) {
+            org.bukkit.World world = plugin.getServer().getWorld(bank.world());
+            if (world == null) continue;
+            if (!world.isChunkLoaded(bank.x() >> 4, bank.z() >> 4)) continue;
+            Location loc = new Location(world, bank.x() + 0.5, bank.y() + 1.1, bank.z() + 0.5);
+
+            org.bukkit.Particle gold = particle("WAX_ON", "HAPPY_VILLAGER");
+            if (gold != null) world.spawnParticle(gold, loc, 4, 0.24, 0.14, 0.24, 0.01);
+
+            org.bukkit.Particle crown = particle("END_ROD", "FLAME");
+            if (crown != null) {
+                double turn = (System.currentTimeMillis() % 4200L) / 4200.0 * Math.PI * 2;
+                for (int i = 0; i < 4; i++) {
+                    double angle = turn + (Math.PI * 2 * i / 4);
+                    world.spawnParticle(crown,
+                            loc.clone().add(Math.cos(angle) * 0.65, 0.15, Math.sin(angle) * 0.65),
+                            1, 0, 0, 0, 0);
+                }
+            }
+        }
+    }
+
+    private org.bukkit.Particle particle(String... names) {
+        for (String name : names) {
+            try {
+                return org.bukkit.Particle.valueOf(name);
+            } catch (IllegalArgumentException ignored) {
+                // try the next
+            }
+        }
+        return null;
+    }
 
     public boolean placeBank(Location loc, Player player) {
         Town town = plugin.towns().getTownAtLoc(loc);

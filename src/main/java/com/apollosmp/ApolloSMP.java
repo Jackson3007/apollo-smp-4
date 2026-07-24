@@ -278,7 +278,7 @@ public class ApolloSMP extends JavaPlugin {
         getServer().getScheduler().runTaskTimer(this, () -> specialAuction.tick(), 100L, 20L);
         getServer().getScheduler().runTaskTimer(this, () -> spawners.tick(), 60L, 20L);
         getServer().getScheduler().runTaskTimer(this, () -> logistics.tick(), 600L, 600L);
-        getServer().getScheduler().runTaskTimer(this, () -> worthTags.tick(), 40L, 20L);
+        getServer().getScheduler().runTaskTimer(this, () -> worthTags.tick(), 40L, 40L);
     }
 
     // ---- world border ----
@@ -316,6 +316,8 @@ public class ApolloSMP extends JavaPlugin {
         getServer().getScheduler().runTaskTimer(this, () -> businesses.spawnParticles(), 40L, 15L);
         getServer().getScheduler().runTaskTimer(this, () -> specialBusinesses.spawnParticles(), 45L, 15L);
         getServer().getScheduler().runTaskTimer(this, () -> logistics.spawnParticles(), 50L, 15L);
+        getServer().getScheduler().runTaskTimer(this, () -> bank.spawnParticles(), 55L, 15L);
+        getServer().getScheduler().runTaskTimer(this, () -> shops.spawnParticles(), 60L, 15L);
         // Live-refresh any open business panel (ticks the countdown + updates stored goods).
         getServer().getScheduler().runTaskTimer(this, this::refreshBusinessMenus, 20L, 20L);
     }

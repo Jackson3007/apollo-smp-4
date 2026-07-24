@@ -259,6 +259,13 @@ merchant:
   tool-hours: 48          # how long the drill and feller last
   seed: 7                 # change this to reroll the whole schedule
 
+# ---- Floating labels ----
+# Every label is a display entity, so these are the dials to turn if the
+# server feels heavy. Set enabled to false to remove them all at once.
+holograms:
+  enabled: true
+  view-distance: 16   # labels only exist this close to a player
+
 # ---- Logistics ----
 # Distribution blocks gather from nearby businesses; wholesale blocks sell it.
 logistics:
@@ -323,12 +330,12 @@ towns:
   # Players can't fight each other inside town land unless the towns are at war.
   pvp-protection: true
   bank:
-    block-price: 15000.0    # cost of a town bank block, paid from the town bank
+    vault-price: 500.0      # cost of a town bank block, paid from the town bank
     interest-percent: 10.0  # added to every loan
     limit-trusted: 100000.0 # most a Trusted borrower may take
     limit-fair: 25000.0     # most a Fair borrower may take
   shop:
-    block-price: 8000.0     # cost of a market stall
+    stall-price: 500.0      # cost of a market stall
     ally-discount: 10.0     # percent off for allied towns
   diplomacy:
     max-allies: 3        # how many towns one town can be allied with

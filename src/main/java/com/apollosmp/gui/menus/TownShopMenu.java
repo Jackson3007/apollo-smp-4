@@ -17,14 +17,16 @@ import java.util.List;
 /** A market stall: buy from it, or stock it if it's your town's. */
 public class TownShopMenu extends Gui {
 
-    private static final int[] OFFER_SLOTS = {10, 11, 12, 13, 14, 15, 16};
-    private static final int STOCK = 30;
-    private static final int CLOSE = 32;
+    private static final int OFFER_START = 0;   // slots 0-26
+    private static final int OFFER_COUNT = 27;
+    private static final int INFO = 49;
+    private static final int STOCK = 47;
+    private static final int CLOSE = 51;
 
     private final ShopManager.Stall stall;
 
     public TownShopMenu(ApolloSMP plugin, Player viewer, ShopManager.Stall stall) {
-        super(plugin, viewer, 4, "<#5ad1e8><bold>" + stall.town + " Market</bold>");
+        super(plugin, viewer, 6, "<#5ad1e8><bold>" + stall.town + " Market</bold>");
         this.stall = stall;
     }
 
@@ -37,16 +39,6 @@ public class TownShopMenu extends Gui {
         boolean allied = mine != null && plugin.diplomacy() != null
                 && plugin.diplomacy().allied(mine.name(), stall.town);
 
-        inventory.setItem(4, Items.of(Material.EMERALD)
-                .name("<#5ad1e8><bold>" + stall.town + "'s Market</bold>")
-                .lore("<gray>Everything here is sold by the town.",
-                        allied
-                                ? "<green>Ally discount: " + (int) shops.allyDiscount() + "% off</green>"
-                                : "<dark_gray>Allies of this town get a discount.",
-                        "",
-                        "<gray>Takings so far: <#f9d423>"
-                                + plugin.msg().money(stall.earned) + "</#f9d423>")
-                .glow(true).hideAttributes().build());
 
         if (stall.offers.isEmpty()) {
             inventory.setItem(13, Items.of(Material.BARRIER)
@@ -56,7 +48,7 @@ public class TownShopMenu extends Gui {
                             : "<gray>Come back when they've restocked.").build());
         }
 
-        for (int i = 0; i < stall.offers.size() && i < OFFER_SLOTS.length; i++) {
+        for (int i = 0; i < stall.offers.size() && i < OFFER_COUNT; i++) {
             ShopManager.Offer offer = stall.offers.get(i);
             double each = shops.priceFor(viewer, stall, offer);
             List<String> lore = new ArrayList<>();
@@ -70,7 +62,7 @@ public class TownShopMenu extends Gui {
             lore.add("<yellow>Right-click:</yellow> <gray>buy a stack</gray>");
             if (resident) lore.add("<red>Shift-click:</red> <gray>take it off the shelf</gray>");
 
-            inventory.setItem(OFFER_SLOTS[i],
+            inventory.setItem(OFFER_START + i,
                     Items.of(offer.material, Math.max(1, Math.min(64, offer.stock)))
                             .name("<white>" + Items.pretty(offer.material))
                             .lore(lore).hideAttributes().build());
@@ -87,6 +79,19 @@ public class TownShopMenu extends Gui {
                     .build());
         }
 
+        for (int s = 45; s < 54; s++) {
+            inventory.setItem(s, Items.filler(Material.BLACK_STAINED_GLASS_PANE));
+        }
+        inventory.setItem(INFO, Items.of(Material.EMERALD)
+                .name("<#5ad1e8><bold>" + stall.town + "'s Market</bold>")
+                .lore("<gray>Everything here is sold by the town.",
+                        allied
+                                ? "<green>Ally discount: " + (int) shops.allyDiscount() + "% off</green>"
+                                : "<dark_gray>Allies of this town get a discount.",
+                        "",
+                        "<gray>Takings so far: <#f9d423>"
+                                + plugin.msg().money(stall.earned) + "</#f9d423>")
+                .glow(true).hideAttributes().build());
         inventory.setItem(CLOSE, Items.of(Material.BARRIER).name("<red>Close").build());
         fillEmpty(Items.filler(Material.GRAY_STAINED_GLASS_PANE));
     }
@@ -118,8 +123,8 @@ public class TownShopMenu extends Gui {
             return;
         }
 
-        for (int i = 0; i < OFFER_SLOTS.length; i++) {
-            if (OFFER_SLOTS[i] != slot || i >= stall.offers.size()) continue;
+        for (int i = 0; i < OFFER_COUNT; i++) {
+            if (OFFER_START + i != slot || i >= stall.offers.size()) continue;
             if (click.isShiftClick() && resident) {
                 plugin.shops().unstock(player, stall, i);
             } else {
