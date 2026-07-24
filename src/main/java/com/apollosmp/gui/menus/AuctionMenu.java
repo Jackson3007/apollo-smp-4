@@ -54,6 +54,12 @@ public class AuctionMenu extends Gui {
                 ? plugin.auctions().bySeller(viewer.getUniqueId())
                 : plugin.auctions().active();
 
+        // Market stalls appear here automatically; their stock stays in the barrel.
+        if (!mine) {
+            all = new ArrayList<>(all);
+            all.addAll(plugin.shops().asListings());
+        }
+
         if (!mine && filtered()) {
             List<Listing> kept = new ArrayList<>();
             for (Listing l : all) {
@@ -88,6 +94,9 @@ public class AuctionMenu extends Gui {
             if (listing.town() != null) {
                 lore.add(com.apollosmp.util.Msg.lore("<#5ad1e8>Sold by " + listing.town()
                         + "</#5ad1e8>"));
+            }
+            if (listing.stallKey() != null) {
+                lore.add(com.apollosmp.util.Msg.lore("<dark_gray>From a market stall</dark_gray>"));
             }
             lore.add(com.apollosmp.util.Msg.lore("<gray>Price: <#f9d423>"
                     + plugin.msg().money(listing.price()) + "</#f9d423>"));
@@ -215,6 +224,12 @@ public class AuctionMenu extends Gui {
     }
 
     private void handleBuy(Player player, Listing listing) {
+        // Stall entries are live views - buying goes through the shop, not the AH store.
+        if (listing.stallKey() != null) {
+            plugin.shops().buyFromListing(player, listing);
+            redraw();
+            return;
+        }
         AuctionManager.BuyResult result = plugin.auctions().buy(player, listing.id());
         switch (result) {
             case SUCCESS -> {

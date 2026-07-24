@@ -31,6 +31,8 @@ public class DiplomacyManager {
     private final Map<String, Long> alliances = new ConcurrentHashMap<>();
     /** target town (lowercase) -> pending offer */
     private final Map<String, Offer> offers = new ConcurrentHashMap<>();
+    /** "granter>grantee" -> what the granter allows. Each side sets its own. */
+    private final Map<String, Set<AllyPerm>> grants = new ConcurrentHashMap<>();
 
     public DiplomacyManager(ApolloSMP plugin) {
         this.plugin = plugin;
@@ -73,6 +75,47 @@ public class DiplomacyManager {
     private String properName(String lower) {
         Town town = plugin.towns().townByName(lower);
         return town == null ? lower : town.name();
+    }
+
+    private String grantKey(String granter, String grantee) {
+        return granter.toLowerCase() + ">" + grantee.toLowerCase();
+    }
+
+    /** What {@code granter} lets {@code grantee} do on its land. */
+    public Set<AllyPerm> grantsFrom(String granter, String grantee) {
+        return grants.getOrDefault(grantKey(granter, grantee), java.util.EnumSet.noneOf(AllyPerm.class));
+    }
+
+    public boolean allows(String granter, String grantee, AllyPerm perm) {
+        if (granter == null || grantee == null) return false;
+        if (!allied(granter, grantee)) return false;
+        return grantsFrom(granter, grantee).contains(perm);
+    }
+
+    /** Flip one permission. Returns the new state. */
+    public boolean toggleGrant(String granter, String grantee, AllyPerm perm) {
+        String key = grantKey(granter, grantee);
+        Set<AllyPerm> set = grants.computeIfAbsent(key, k -> java.util.EnumSet.noneOf(AllyPerm.class));
+        boolean now;
+        if (set.contains(perm)) {
+            set.remove(perm);
+            now = false;
+        } else {
+            set.add(perm);
+            now = true;
+        }
+        if (set.isEmpty()) grants.remove(key);
+        save();
+        return now;
+    }
+
+    /** Is the player standing on allied land that permits this? */
+    public boolean playerAllowed(org.bukkit.entity.Player player, Town landOwner, AllyPerm perm) {
+        if (landOwner == null) return false;
+        Town theirs = plugin.towns().getTownOf(player.getUniqueId());
+        if (theirs == null) return false;
+        if (theirs.name().equalsIgnoreCase(landOwner.name())) return false; // own town, handled elsewhere
+        return allows(landOwner.name(), theirs.name(), perm);
     }
 
     public Offer offerFor(String town) {
@@ -185,6 +228,8 @@ public class DiplomacyManager {
             plugin.msg().send(player, "<red>You aren't allied with them."); return false;
         }
         alliances.remove(key(own.name(), otherName));
+        grants.remove(grantKey(own.name(), otherName));
+        grants.remove(grantKey(otherName, own.name()));
         save();
         broadcast("<gray>The alliance between <white>" + own.name() + "</white> and <white>"
                 + properName(otherName.toLowerCase()) + "</white> is over.</gray>");
@@ -200,6 +245,7 @@ public class DiplomacyManager {
         });
         offers.remove(lower);
         offers.entrySet().removeIf(e -> e.getValue().from().equalsIgnoreCase(town));
+        grants.keySet().removeIf(k -> k.startsWith(lower + ">") || k.endsWith(">" + lower));
         save();
     }
 
@@ -222,6 +268,11 @@ public class DiplomacyManager {
             cfg.set("offers." + e.getKey() + ".from", e.getValue().from());
             cfg.set("offers." + e.getKey() + ".expires", e.getValue().expires());
         }
+        for (Map.Entry<String, Set<AllyPerm>> e : grants.entrySet()) {
+            List<String> names = new ArrayList<>();
+            for (AllyPerm perm : e.getValue()) names.add(perm.name());
+            cfg.set("grants." + e.getKey().replace(">", "__"), names);
+        }
         try {
             cfg.save(file);
         } catch (IOException ex) {
@@ -236,6 +287,17 @@ public class DiplomacyManager {
         if (allied != null) {
             for (String k : allied.getKeys(false)) {
                 alliances.put(k.replace("__", "|"), cfg.getLong("alliances." + k));
+            }
+        }
+        ConfigurationSection grantSection = cfg.getConfigurationSection("grants");
+        if (grantSection != null) {
+            for (String k : grantSection.getKeys(false)) {
+                Set<AllyPerm> set = java.util.EnumSet.noneOf(AllyPerm.class);
+                for (String raw : cfg.getStringList("grants." + k)) {
+                    AllyPerm perm = AllyPerm.fromString(raw);
+                    if (perm != null) set.add(perm);
+                }
+                if (!set.isEmpty()) grants.put(k.replace("__", ">"), set);
             }
         }
         ConfigurationSection offerSection = cfg.getConfigurationSection("offers");

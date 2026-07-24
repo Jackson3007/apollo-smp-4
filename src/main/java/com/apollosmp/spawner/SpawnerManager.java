@@ -85,11 +85,11 @@ public class SpawnerManager {
 
     /** How close a player must be for a spawner to run. Vanilla is 16. */
     public int activationRange() {
-        return Math.max(1, Math.min(128, plugin.getConfig().getInt("spawners.activation-range", 30)));
+        return Math.max(1, Math.min(128, plugin.getConfig().getInt("spawners.activation-range", 64)));
     }
 
-    /** Spawners we've already widened this session. */
-    private final Set<String> ranged = ConcurrentHashMap.newKeySet();
+    /** Range we've already pushed onto each spawner, so a config change re-applies. */
+    private final Map<String, Integer> ranged = new ConcurrentHashMap<>();
 
     /** Push the configured range onto a spawner block. */
     public void applyRange(Block block) {
@@ -188,12 +188,14 @@ public class SpawnerManager {
 
     public void tick() {
         // Range is applied whether or not labels are switched on.
+        int range = activationRange();
         for (Placed p : new ArrayList<>(placed.values())) {
-            if (ranged.contains(p.key())) continue;
+            Integer applied = ranged.get(p.key());
+            if (applied != null && applied == range) continue;
             World world = plugin.getServer().getWorld(p.world);
             if (world == null) continue;
             if (!world.isChunkLoaded(p.x >> 4, p.z >> 4)) continue;
-            ranged.add(p.key());
+            ranged.put(p.key(), range);
             applyRange(world.getBlockAt(p.x, p.y, p.z));
         }
 

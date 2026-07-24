@@ -176,6 +176,42 @@ public class TownManager {
         return true;
     }
 
+    /** Set the message shown to anyone entering town land. */
+    public boolean setBoard(Player player, String message) {
+        Town town = getTownOf(player.getUniqueId());
+        if (town == null) { plugin.msg().send(player, "<red>You're not in a town."); return false; }
+        if (!town.mayor().equals(player.getUniqueId())
+                && !town.hasPerm(player.getUniqueId(), TownPerm.MANAGE_PERMS)) {
+            plugin.msg().send(player, "<red>You can't change the town board."); return false;
+        }
+        if (message == null || message.isBlank() || message.equalsIgnoreCase("clear")) {
+            town.setBoard(null);
+            touch();
+            plugin.msg().send(player, "<yellow>Town board cleared.");
+            return true;
+        }
+        // Strip formatting - everyone who walks in sees this.
+        String clean = message.replace("<", "").replace(">", "");
+        if (clean.length() > 60) clean = clean.substring(0, 60);
+        town.setBoard(clean);
+        touch();
+        plugin.msg().send(player, "<green>Town board set: <white>" + clean + "</white>");
+        announceToTown(town, player.getUniqueId(),
+                "<gray>The town board now reads: <white>" + clean + "</white>", null);
+        return true;
+    }
+
+    /** Towns ranked for the leaderboard. */
+    public List<Town> topTowns(String metric, int limit) {
+        List<Town> all = new ArrayList<>(towns.values());
+        switch (metric == null ? "bank" : metric) {
+            case "land" -> all.sort((a, b) -> Integer.compare(b.claims().size(), a.claims().size()));
+            case "residents" -> all.sort((a, b) -> Integer.compare(b.memberCount(), a.memberCount()));
+            default -> all.sort((a, b) -> Double.compare(b.bank(), a.bank()));
+        }
+        return all.size() > limit ? new ArrayList<>(all.subList(0, limit)) : all;
+    }
+
     /**
      * Pick the whole town up and drop it where the mayor is standing.
      * Members, ranks and the bank survive; land and plots are released.
@@ -715,7 +751,10 @@ public class TownManager {
         if (plotOwner != null) {
             return plotOwner.equals(player.getUniqueId()) || player.getUniqueId().equals(town.mayor());
         }
-        return town.hasPerm(player.getUniqueId(), TownPerm.BUILD);
+        if (town.hasPerm(player.getUniqueId(), TownPerm.BUILD)) return true;
+        // A trusted ally may build here if this town said so.
+        return plugin.diplomacy() != null
+                && plugin.diplomacy().playerAllowed(player, town, AllyPerm.BUILD);
     }
 
     // ---- taxes (called on a timer) ----
@@ -754,6 +793,7 @@ public class TownManager {
             cfg.set(base + ".bank", town.bank());
             cfg.set(base + ".tax", town.tax());
             cfg.set(base + ".public-spawn", town.publicSpawn());
+            if (town.board() != null) cfg.set(base + ".board", town.board());
             for (Map.Entry<TownUpgrade, Integer> e : town.upgrades().entrySet()) {
                 cfg.set(base + ".upgrades." + e.getKey().name(), e.getValue());
             }
@@ -802,6 +842,7 @@ public class TownManager {
                 town.setBank(cfg.getDouble(base + ".bank"));
                 town.setTax(cfg.getDouble(base + ".tax"));
                 town.setPublicSpawn(cfg.getBoolean(base + ".public-spawn", true));
+                town.setBoard(cfg.getString(base + ".board"));
                 ConfigurationSection ups = cfg.getConfigurationSection(base + ".upgrades");
                 if (ups != null) {
                     for (String upName : ups.getKeys(false)) {

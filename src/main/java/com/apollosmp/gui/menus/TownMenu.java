@@ -20,12 +20,13 @@ public class TownMenu extends Gui {
     private static final int YOUR_TOWN = 11;
     private static final int VISIT = 13;
     private static final int MAP = 15;
+    private static final int TOP = 16;
     private static final int CLOSE = 22;
 
     // no-town state
     private static final int CREATE = 10;
     private static final int INVITE_START = 12;
-    private static final int VISIT_ALT = 16;
+    private static final int VISIT_ALT = 15;
 
     private final List<String> inviteNames = new ArrayList<>();
 
@@ -74,6 +75,13 @@ public class TownMenu extends Gui {
             }
         }
 
+        inventory.setItem(TOP, Items.of(Material.GOLD_BLOCK)
+                .name("<#f9d423><bold>Top Towns</bold>")
+                .lore("<gray>See which towns are thriving",
+                        "<gray>before you pick one.",
+                        "", "<yellow>Click to view")
+                .hideAttributes().build());
+
         inventory.setItem(VISIT_ALT, Items.of(Material.COMPASS)
                 .name("<#5ad1e8><bold>Visit Towns</bold>")
                 .lore("<gray>Browse every town on the server",
@@ -116,6 +124,13 @@ public class TownMenu extends Gui {
                         "", "<yellow>Click to open")
                 .build());
 
+        inventory.setItem(TOP, Items.of(Material.GOLD_BLOCK)
+                .name("<#f9d423><bold>Top Towns</bold>")
+                .lore("<gray>Who's richest, biggest and",
+                        "<gray>most populated.",
+                        "", "<yellow>Click to view")
+                .hideAttributes().build());
+
         inventory.setItem(MAP, Items.of(Material.FILLED_MAP)
                 .name("<#5ad1e8><bold>Land Map</bold>")
                 .lore("<gray>A text map of the claims",
@@ -141,6 +156,7 @@ public class TownMenu extends Gui {
                 return;
             }
             if (slot == VISIT_ALT) { new TownListMenu(plugin, player, 0).open(); return; }
+            if (slot == TOP) { new TownTopMenu(plugin, player, "bank").open(); return; }
             if (slot >= INVITE_START && slot <= 14) {
                 int idx = slot - INVITE_START;
                 if (idx < inviteNames.size()
@@ -155,6 +171,7 @@ public class TownMenu extends Gui {
             case YOUR_TOWN -> new TownManageMenu(plugin, player).open();
             case VISIT -> new TownListMenu(plugin, player, 0).open();
             case MAP -> { player.closeInventory(); plugin.borders().sendMap(player); }
+            case TOP -> new TownTopMenu(plugin, player, "bank").open();
             default -> { /* no-op */ }
         }
     }

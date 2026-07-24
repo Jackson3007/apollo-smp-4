@@ -16,6 +16,7 @@ import java.util.List;
 /** Everything you set once and forget: tax, spawn, permissions, and the risky stuff. */
 public class TownSettingsMenu extends Gui {
 
+    private static final int BOARD = 10;
     private static final int SET_SPAWN = 11;
     private static final int VISITORS = 12;
     private static final int PERMS = 13;
@@ -39,6 +40,16 @@ public class TownSettingsMenu extends Gui {
                 .lore("<gray>Options only leaders usually touch.")
                 .glow(true).hideAttributes().build());
 
+
+        inventory.setItem(BOARD, Items.of(Material.OAK_SIGN)
+                .name("<#5ad1e8><bold>Town Board</bold>")
+                .lore(town.board() == null
+                                ? "<gray>Nothing set yet."
+                                : "<white>" + town.board() + "</white>",
+                        "<gray>Shown to anyone walking into town.",
+                        "", "<yellow>Click to write one",
+                        "<dark_gray>Type 'clear' to remove it")
+                .glow(town.board() != null).hideAttributes().build());
 
         inventory.setItem(SET_SPAWN, Items.of(Material.RED_BED)
                 .name("<#f9d423><bold>Set Town Spawn</bold>")
@@ -111,6 +122,15 @@ public class TownSettingsMenu extends Gui {
             case BACK -> new TownManageMenu(plugin, player).open();
 
 
+            case BOARD -> {
+                player.closeInventory();
+                plugin.msg().send(player, "<#5ad1e8>Type your town board message</#5ad1e8> "
+                        + "<gray>('clear' to remove it, or 'cancel').");
+                plugin.prompts().await(player, s -> {
+                    plugin.towns().setBoard(player, s);
+                    new TownSettingsMenu(plugin, player).open();
+                });
+            }
             case SET_SPAWN -> { plugin.towns().setSpawnHere(player); redraw(); }
 
             case VISITORS -> {

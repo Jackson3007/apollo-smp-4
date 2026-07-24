@@ -1,7 +1,6 @@
 package com.apollosmp.listeners;
 
 import com.apollosmp.ApolloSMP;
-import com.apollosmp.gui.menus.TownBankBlockMenu;
 import com.apollosmp.gui.menus.TownShopMenu;
 import com.apollosmp.shop.ShopManager;
 import com.apollosmp.town.Town;
@@ -27,12 +26,6 @@ public class TownBlockListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onPlace(BlockPlaceEvent event) {
-        if (plugin.bank().isBankItem(event.getItemInHand())) {
-            if (!plugin.bank().placeBank(event.getBlockPlaced().getLocation(), event.getPlayer())) {
-                event.setCancelled(true);
-            }
-            return;
-        }
         if (plugin.shops().isStallItem(event.getItemInHand())) {
             if (!plugin.shops().place(event.getBlockPlaced().getLocation(), event.getPlayer())) {
                 event.setCancelled(true);
@@ -44,21 +37,6 @@ public class TownBlockListener implements Listener {
     public void onBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
 
-        String bankTown = plugin.bank().bankTownAt(event.getBlock().getLocation());
-        if (bankTown != null) {
-            Town town = plugin.towns().townByName(bankTown);
-            if (town != null && !town.mayor().equals(player.getUniqueId())
-                    && !player.hasPermission("apollo.admin")) {
-                event.setCancelled(true);
-                plugin.msg().send(player, "<red>Only the mayor can move the town bank.");
-                return;
-            }
-            event.setDropItems(false);
-            plugin.bank().removeBank(event.getBlock().getLocation());
-            Items.give(player, plugin.bank().createBlock());
-            plugin.msg().send(player, "<yellow>Town bank packed up.");
-            return;
-        }
 
         ShopManager.Stall stall = plugin.shops().at(event.getBlock().getLocation());
         if (stall != null) {
@@ -66,7 +44,7 @@ public class TownBlockListener implements Listener {
             if (town != null && !town.isMember(player.getUniqueId())
                     && !player.hasPermission("apollo.admin")) {
                 event.setCancelled(true);
-                plugin.msg().send(player, "<red>That stall belongs to <white>" + stall.town + "</white>.");
+                plugin.msg().send(player, "<red>That auction barrel belongs to <white>" + stall.town + "</white>.");
                 return;
             }
             // Hand back anything left on the shelves.
@@ -74,7 +52,7 @@ public class TownBlockListener implements Listener {
             event.setDropItems(false);
             plugin.shops().remove(event.getBlock().getLocation());
             Items.give(player, plugin.shops().createBlock());
-            plugin.msg().send(player, "<yellow>Stall packed up.");
+            plugin.msg().send(player, "<yellow>Auction barrel packed up.");
         }
     }
 
@@ -83,12 +61,6 @@ public class TownBlockListener implements Listener {
         if (event.getHand() != EquipmentSlot.HAND) return;
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK || event.getClickedBlock() == null) return;
 
-        String bankTown = plugin.bank().bankTownAt(event.getClickedBlock().getLocation());
-        if (bankTown != null) {
-            event.setCancelled(true);
-            new TownBankBlockMenu(plugin, event.getPlayer(), bankTown).open();
-            return;
-        }
 
         ShopManager.Stall stall = plugin.shops().at(event.getClickedBlock().getLocation());
         if (stall != null) {

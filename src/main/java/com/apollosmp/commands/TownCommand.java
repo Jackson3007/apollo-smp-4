@@ -160,6 +160,24 @@ public class TownCommand implements CommandExecutor, TabCompleter {
                         : "<yellow>Claim borders hidden.");
             }
             case "upgrades", "upgrade" -> new com.apollosmp.gui.menus.TownUpgradesMenu(plugin, player).open();
+            case "top", "leaderboard" -> {
+                String metric = args.length > 1 ? args[1].toLowerCase() : "bank";
+                new com.apollosmp.gui.menus.TownTopMenu(plugin, player, metric).open();
+            }
+            case "board" -> {
+                if (args.length < 2) {
+                    Town own = plugin.towns().getTownOf(player.getUniqueId());
+                    if (own == null || own.board() == null) {
+                        plugin.msg().send(player, "<gray>No board set. Use <white>/town board <message></white>.");
+                    } else {
+                        plugin.msg().send(player, "<gray>Board: <white>" + own.board() + "</white>");
+                    }
+                    return true;
+                }
+                StringBuilder sb = new StringBuilder(args[1]);
+                for (int i = 2; i < args.length; i++) sb.append(" ").append(args[i]);
+                plugin.towns().setBoard(player, sb.toString());
+            }
             case "map" -> plugin.borders().sendMap(player);
             case "plot", "plotinfo" -> {
                 Town here = plugin.towns().getTownAtLoc(player.getLocation());
@@ -250,6 +268,8 @@ public class TownCommand implements CommandExecutor, TabCompleter {
         plugin.msg().send(player, "<gray>/town plot <white>- who owns the chunk you're on");
         plugin.msg().send(player, "<gray>/town move <white>- relocate the whole town");
         plugin.msg().send(player, "<gray>/town upgrades <white>- spend the bank on perks");
+        plugin.msg().send(player, "<gray>/town board <msg> <white>- greet visitors");
+        plugin.msg().send(player, "<gray>/town top <white>- richest and biggest towns");
         plugin.msg().send(player, "<gray>/town war <town> <mins> <white>- declare war");
         plugin.msg().send(player, "<gray>/town peace <white>- sue for peace");
         plugin.msg().send(player, "<gray>/town ally <town> <white>- propose an alliance");
@@ -291,7 +311,7 @@ public class TownCommand implements CommandExecutor, TabCompleter {
             return List.of("create", "claim", "unclaim", "home", "invite", "join", "kick", "rank",
                     "deposit", "withdraw", "tax", "sellplot", "rentoutplot", "buyplot",
                     "rentplot", "endrent", "unlistplot",
-                    "spawn", "setspawn", "list", "tp", "visitors", "border", "map", "plot", "move", "upgrades", "war", "peace", "ally",
+                    "spawn", "setspawn", "list", "tp", "visitors", "border", "map", "plot", "move", "upgrades", "war", "peace", "ally", "board", "top",
                     "leave", "disband", "help");
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("kick") || args[0].equalsIgnoreCase("rank"))
@@ -305,6 +325,9 @@ public class TownCommand implements CommandExecutor, TabCompleter {
                 }
             }
             return names;
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("top")) {
+            return List.of("bank", "land", "residents");
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("ally")) {
             List<String> out = new ArrayList<>(List.of("accept", "decline", "break"));

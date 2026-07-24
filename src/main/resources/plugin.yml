@@ -100,6 +100,11 @@ commands:
     aliases: [vault, pvault]
     usage: /pv [number]
     permission: apollo.admin
+  rank:
+    description: Give a player a server role
+    aliases: [ranks, setrank]
+    usage: /rank set <player> <owner|mod|youtuber|none>
+    permission: apollo.admin
   staff:
     description: Toggle staff mode
     aliases: [adminmode, am, sm]

@@ -107,24 +107,6 @@ public class BusinessHolograms {
             label.text(logisticsText(n));
         }
 
-        // Town banks.
-        for (com.apollosmp.bank.BankManager.BankBlock bank : plugin.bank().allBanks()) {
-            World world = plugin.getServer().getWorld(bank.world());
-            if (world == null) continue;
-            if (!world.isChunkLoaded(bank.x() >> 4, bank.z() >> 4)) continue;
-            Location loc = new Location(world, bank.x() + 0.5, bank.y() + 1.3, bank.z() + 0.5);
-            if (!anyoneNear(loc)) continue;
-
-            String key = "bank:" + bank.world() + "," + bank.x() + "," + bank.y() + "," + bank.z();
-            wanted.add(key);
-            TextDisplay label = labels.get(key);
-            if (label == null || !label.isValid()) {
-                label = spawn(loc);
-                if (label == null) continue;
-                labels.put(key, label);
-            }
-            label.text(bankText(bank.town()));
-        }
 
         // Market stalls.
         for (com.apollosmp.shop.ShopManager.Stall stall : plugin.shops().allStalls()) {
@@ -378,20 +360,11 @@ public class BusinessHolograms {
         return lines(header, body, status);
     }
 
-    private Component bankText(String townName) {
-        com.apollosmp.town.Town town = plugin.towns().townByName(townName);
-        String header = "<#f9d423>\u2726</#f9d423> <gradient:#f9d423:#ff4e50><bold>TOWN BANK</bold></gradient>";
-        String body = "<gray>" + townName + "</gray>";
-        String status = town == null
-                ? "<red>\u26a0 Town missing</red>"
-                : "<gray>Holding</gray> <#f9d423>" + plugin.msg().money(town.bank()) + "</#f9d423>";
-        return lines(header, body, status);
-    }
 
     private Component stallText(com.apollosmp.shop.ShopManager.Stall stall) {
         int kinds = stall.offers.size();
         int stock = plugin.shops().stockCount(stall);
-        String header = "<#5ad1e8>\u25c6</#5ad1e8> <gradient:#5ad1e8:#e94fd0><bold>MARKET STALL</bold></gradient>";
+        String header = "<#5ad1e8>\u25c6</#5ad1e8> <gradient:#5ad1e8:#e94fd0><bold>AUCTION BARREL</bold></gradient>";
         String body = "<gray>" + stall.town + "</gray>";
         String status = kinds == 0
                 ? "<red>\u26a0 Nothing for sale</red>"

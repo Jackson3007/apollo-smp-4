@@ -21,13 +21,12 @@ public class TownShopMenu extends Gui {
     private static final int OFFER_COUNT = 27;
     private static final int INFO = 49;
     private static final int STOCK = 47;
-    private static final int LIST_AH = 45;
     private static final int CLOSE = 51;
 
     private final ShopManager.Stall stall;
 
     public TownShopMenu(ApolloSMP plugin, Player viewer, ShopManager.Stall stall) {
-        super(plugin, viewer, 6, "<#5ad1e8><bold>" + stall.town + " Market</bold>");
+        super(plugin, viewer, 6, "<#5ad1e8><bold>" + stall.town + " Auction Barrel</bold>");
         this.stall = stall;
     }
 
@@ -61,10 +60,7 @@ public class TownShopMenu extends Gui {
             lore.add("");
             lore.add("<yellow>Left-click:</yellow> <gray>buy one</gray>");
             lore.add("<yellow>Right-click:</yellow> <gray>buy a stack</gray>");
-            if (resident) {
-                lore.add("<red>Shift-click:</red> <gray>take it off the shelf</gray>");
-                lore.add("<#f9d423>Shift-right-click:</#f9d423> <gray>list it on the AH</gray>");
-            }
+            if (resident) lore.add("<red>Shift-click:</red> <gray>take it off the shelf</gray>");
 
             inventory.setItem(OFFER_START + i,
                     Items.of(offer.material, Math.max(1, Math.min(64, offer.stock)))
@@ -79,28 +75,19 @@ public class TownShopMenu extends Gui {
 
         if (resident && town != null && town.hasPerm(viewer.getUniqueId(), TownPerm.SELL_PLOT)) {
             inventory.setItem(STOCK, Items.of(Material.CHEST)
-                    .name("<green><bold>Stock the Stall</bold>")
-                    .lore("<gray>Hold what you want to sell, then",
-                            "<gray>click here and name your price.",
+                    .name("<green><bold>Stock the Barrel</bold>")
+                    .lore("<gray>Hold what you want to sell and click.",
+                            "<gray>Everything here shows on the auction",
+                            "<gray>house too, automatically.",
                             "<gray>Slots used: <white>" + stall.offers.size()
                                     + " / " + ShopManager.MAX_OFFERS + "</white>",
                             "", "<yellow>Click to add stock")
                     .build());
         }
 
-        if (resident) {
-            inventory.setItem(LIST_AH, Items.of(Material.GOLD_INGOT)
-                    .name("<#f9d423><bold>List on Auction House</bold>")
-                    .lore("<gray>Move an item from this stall onto",
-                            "<gray>the auction house as a town listing.",
-                            "<gray>Sales pay into the town bank.",
-                            "",
-                            "<yellow>Shift-right-click an item above")
-                    .hideAttributes().build());
-        }
         inventory.setItem(INFO, Items.of(Material.EMERALD)
-                .name("<#5ad1e8><bold>" + stall.town + "'s Market</bold>")
-                .lore("<gray>Everything here is sold by the town.",
+                .name("<#5ad1e8><bold>" + stall.town + "'s Auction Barrel</bold>")
+                .lore("<gray>Everything here is listed on /ah",
                         allied
                                 ? "<green>Ally discount: " + (int) shops.allyDiscount() + "% off</green>"
                                 : "<dark_gray>Allies of this town get a discount.",
@@ -126,24 +113,13 @@ public class TownShopMenu extends Gui {
                 plugin.msg().send(player, "<red>Hold what you want to sell first.");
                 return;
             }
-            player.closeInventory();
-            plugin.msg().send(player, "<#f9d423>Type the price per item</#f9d423> <gray>(or 'cancel').");
-            plugin.prompts().await(player, s -> {
-                try {
-                    plugin.shops().stock(player, stall, Double.parseDouble(s));
-                } catch (NumberFormatException e) {
-                    plugin.msg().send(player, "<red>That's not a number.");
-                }
-                new TownShopMenu(plugin, player, stall).open();
-            });
+            new ShopPriceMenu(plugin, player, stall).open();
             return;
         }
 
         for (int i = 0; i < OFFER_COUNT; i++) {
             if (OFFER_START + i != slot || i >= stall.offers.size()) continue;
-            if (click.isShiftClick() && click.isRightClick() && resident) {
-                plugin.shops().listOnAuction(player, stall, i);
-            } else if (click.isShiftClick() && resident) {
+            if (click.isShiftClick() && resident) {
                 plugin.shops().unstock(player, stall, i);
             } else {
                 plugin.shops().buy(player, stall, i, click.isRightClick() ? 64 : 1);

@@ -23,6 +23,7 @@ public class PlayerListener implements Listener {
         plugin.economy().ensureAccount(player.getUniqueId(), player.getName());
         plugin.board().create(player);
         plugin.nameTags().invalidate();
+        plugin.ranks().applyPermissions(player);
         plugin.staffMode().applyVanishTo(player);
         plugin.staffMode().restoreOnJoin(player);
         sendWelcome(player);
@@ -76,6 +77,7 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
+        plugin.ranks().clearAttachment(event.getPlayer());
         plugin.snapshots().capture(event.getPlayer());
         plugin.board().remove(event.getPlayer());
         plugin.nameTags().remove(event.getPlayer());

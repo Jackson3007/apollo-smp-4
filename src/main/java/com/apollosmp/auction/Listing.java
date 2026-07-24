@@ -14,6 +14,8 @@ public class Listing {
     private final long expiresAt;
     /** Set when a town is selling this, so the money goes to its bank. */
     private String town;
+    /** Set when this is a live view of a market stall rather than stored stock. */
+    private String stallKey;
 
     public Listing(UUID id, UUID seller, String sellerName, ItemStack item,
                    double price, long createdAt, long expiresAt) {
@@ -31,6 +33,8 @@ public class Listing {
     public String sellerName() { return sellerName; }
     public String town() { return town; }
     public void setTown(String town) { this.town = (town == null || town.isBlank()) ? null : town; }
+    public String stallKey() { return stallKey; }
+    public void setStallKey(String stallKey) { this.stallKey = stallKey; }
     public ItemStack item() { return item.clone(); }
     public double price() { return price; }
     public long createdAt() { return createdAt; }

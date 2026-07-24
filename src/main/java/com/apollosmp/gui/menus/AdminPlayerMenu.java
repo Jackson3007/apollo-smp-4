@@ -123,6 +123,16 @@ public class AdminPlayerMenu extends Gui {
                     .lore(lore.toArray(new String[0])).hideAttributes().build());
         }
 
+        com.apollosmp.staff.StaffRank rank = plugin.ranks().of(target);
+        inventory.setItem(17, Items.of(rank == null ? Material.GRAY_DYE : Material.NAME_TAG)
+                .name(rank == null
+                        ? "<gray><bold>Role: none</bold>"
+                        : "<#f9d423><bold>Role: " + rank.display() + "</bold>")
+                .lore("<gray>Cycle through the server roles.",
+                        "<dark_gray>Owner and Mod carry admin powers.",
+                        "", "<yellow>Click to change")
+                .glow(rank != null).hideAttributes().build());
+
         inventory.setItem(45, Items.of(Material.ARROW).name("<gray>Back to Players").build());
         inventory.setItem(49, Items.of(Material.BARRIER).name("<red>Close").build());
         fillEmpty(Items.filler(Material.GRAY_STAINED_GLASS_PANE));
@@ -239,6 +249,21 @@ public class AdminPlayerMenu extends Gui {
             case 14 -> askAmount(player, "give");
             case 15 -> askAmount(player, "take");
             case 16 -> askAmount(player, "set");
+            case 17 -> {
+                com.apollosmp.staff.StaffRank current = plugin.ranks().of(target);
+                com.apollosmp.staff.StaffRank next;
+                if (current == null) next = com.apollosmp.staff.StaffRank.MOD;
+                else if (current == com.apollosmp.staff.StaffRank.MOD) {
+                    next = com.apollosmp.staff.StaffRank.OWNER;
+                } else if (current == com.apollosmp.staff.StaffRank.OWNER) {
+                    next = com.apollosmp.staff.StaffRank.YOUTUBER;
+                } else next = null;
+                plugin.ranks().set(target, next);
+                plugin.msg().send(player, next == null
+                        ? "<yellow>Role cleared."
+                        : "<green>Role set to " + next.tag() + "<green>.");
+                redraw();
+            }
             case 45 -> new AdminPlayersMenu(plugin, player, 0, false).open();
             case 49 -> player.closeInventory();
             default -> { /* no-op */ }

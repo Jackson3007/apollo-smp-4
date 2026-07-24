@@ -64,8 +64,11 @@ public class TownDiplomacyMenu extends Gui {
                                     + (ally == null ? "?" : ally.memberCount()) + "</white>",
                             "<gray>Land: <white>"
                                     + (ally == null ? "?" : ally.claims().size()) + "</white> chunks",
+                            "<gray>Trusted with: <white>"
+                                    + plugin.diplomacy().grantsFrom(town.name(), name).size()
+                                    + "</white> permission(s)",
                             "",
-                            isMayor ? "<red>Shift-click to break the alliance"
+                            isMayor ? "<yellow>Click to manage trust"
                                     : "<dark_gray>Mayor only")
                     .hideAttributes().build());
             allies.add(name);
@@ -109,12 +112,7 @@ public class TownDiplomacyMenu extends Gui {
 
         for (int i = 0; i < ALLY_SLOTS.length; i++) {
             if (ALLY_SLOTS[i] == slot && i < allies.size()) {
-                if (click.isShiftClick()) {
-                    plugin.diplomacy().breakAlliance(player, allies.get(i));
-                    redraw();
-                } else {
-                    plugin.msg().send(player, "<gray>Shift-click to break this alliance.");
-                }
+                new TownAllyPermsMenu(plugin, player, allies.get(i)).open();
                 return;
             }
         }

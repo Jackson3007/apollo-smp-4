@@ -47,9 +47,10 @@ public class TownProtectionListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onInteract(PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK || event.getClickedBlock() == null) return;
-        if (!isProtectedInteract(event.getClickedBlock().getType())) return;
-        // At war, enemy containers are open to you.
-        if (canLoot(event.getPlayer(), event.getClickedBlock().getLocation())) return;
+        Material clicked = event.getClickedBlock().getType();
+        if (!isProtectedInteract(clicked)) return;
+        // At war, or trusted by an ally, this is allowed.
+        if (canUse(event.getPlayer(), event.getClickedBlock().getLocation(), clicked)) return;
         if (!plugin.towns().canBuild(event.getPlayer(), event.getClickedBlock().getLocation())) {
             event.setCancelled(true);
             warn(event.getPlayer(), event.getClickedBlock().getLocation());
@@ -83,13 +84,23 @@ public class TownProtectionListener implements Listener {
                 || n.equals("GRINDSTONE") || n.contains("ANVIL") || n.equals("DECORATED_POT");
     }
 
-    /** True when the player's town is at war with whoever owns this land. */
-    private boolean canLoot(Player player, Location loc) {
+    /** True when war, or an ally's trust setting, allows this interaction. */
+    private boolean canUse(Player player, Location loc, Material material) {
         com.apollosmp.town.Town here = plugin.towns().getTownAtLoc(loc);
         if (here == null) return false;
         com.apollosmp.town.Town mine = plugin.towns().getTownOf(player.getUniqueId());
         if (mine == null) return false;
-        return plugin.wars().atWar(mine.name(), here.name());
+        if (plugin.wars().atWar(mine.name(), here.name())) return true;
+
+        // Doors and switches are trusted separately from storage.
+        String name = material.name();
+        boolean opening = name.endsWith("_DOOR") || name.endsWith("_TRAPDOOR")
+                || name.endsWith("_FENCE_GATE") || name.endsWith("_BUTTON")
+                || name.endsWith("_PRESSURE_PLATE") || name.equals("LEVER");
+        com.apollosmp.town.AllyPerm perm = opening
+                ? com.apollosmp.town.AllyPerm.DOORS
+                : com.apollosmp.town.AllyPerm.CONTAINERS;
+        return plugin.diplomacy().playerAllowed(player, here, perm);
     }
 
     private void warn(Player player, Location loc) {

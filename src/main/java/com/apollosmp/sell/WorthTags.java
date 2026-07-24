@@ -76,6 +76,18 @@ public class WorthTags implements Listener {
         return plugin.getConfig().getBoolean("sell.worth-lore", true);
     }
 
+    /**
+     * Whether to show the whole stack's value as well as the unit price.
+     *
+     * Off by default, and deliberately so: the total depends on how many you're
+     * holding, which means two stacks of the same item carry different tooltips
+     * and Minecraft refuses to merge them. Unit price alone is identical for
+     * every stack, so items behave exactly as they do in vanilla.
+     */
+    private boolean showTotal() {
+        return plugin.getConfig().getBoolean("sell.worth-lore-total", false);
+    }
+
     // ------------------------------------------------ tagging
     /** Add or refresh the price lines. Returns true if the item changed. */
     public boolean mark(ItemStack stack) {
@@ -86,21 +98,24 @@ public class WorthTags implements Listener {
         double total = plugin.sell().valueOf(stack);
         if (total <= 0) return strip(stack);
         double unit = total / amount;
+        // In unit mode the written value must not depend on stack size,
+        // otherwise identical items stop stacking.
+        double written = showTotal() ? total : unit;
 
         ItemMeta meta = stack.getItemMeta();
         if (meta == null) return false;
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
 
-        Double written = pdc.get(valueKey, PersistentDataType.DOUBLE);
+        Double stored = pdc.get(valueKey, PersistentDataType.DOUBLE);
         int version = pdc.getOrDefault(versionKey, PersistentDataType.INTEGER, 1);
         boolean current = version == VERSION;
-        if (current && written != null && Math.abs(written - total) < 0.0001) return false;
+        if (current && stored != null && Math.abs(stored - written) < 0.0001) return false;
 
         List<Component> lore = meta.lore();
         lore = lore == null ? new ArrayList<>() : new ArrayList<>(lore);
 
         int previous;
-        if (written == null) {
+        if (stored == null) {
             previous = 0;
         } else if (current) {
             previous = pdc.getOrDefault(linesKey, PersistentDataType.INTEGER, 1);
@@ -111,17 +126,17 @@ public class WorthTags implements Listener {
         for (int i = 0; i < previous && !lore.isEmpty(); i++) lore.remove(lore.size() - 1);
 
         int added;
-        if (amount > 1) {
+        if (showTotal() && amount > 1) {
             lore.add(Msg.lore("<#f9d423>" + plugin.msg().money(total) + "</#f9d423>"));
             lore.add(Msg.lore("<dark_gray>" + plugin.msg().money(unit) + " each</dark_gray>"));
             added = 2;
         } else {
-            lore.add(Msg.lore("<#f9d423>" + plugin.msg().money(total) + "</#f9d423>"));
+            lore.add(Msg.lore("<#f9d423>" + plugin.msg().money(unit) + "</#f9d423>"));
             added = 1;
         }
 
         meta.lore(lore);
-        pdc.set(valueKey, PersistentDataType.DOUBLE, total);
+        pdc.set(valueKey, PersistentDataType.DOUBLE, written);
         pdc.set(linesKey, PersistentDataType.INTEGER, added);
         pdc.set(versionKey, PersistentDataType.INTEGER, VERSION);
         stack.setItemMeta(meta);
@@ -344,6 +359,8 @@ public class WorthTags implements Listener {
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onPickup(EntityPickupItemEvent event) {
         if (!enabled()) return;
+        // Unit-price tags are identical on every stack, so merges need no help.
+        if (!showTotal()) return;
         if (!(event.getEntity() instanceof Player player)) return;
 
         ItemStack ground = event.getItem().getItemStack();
@@ -393,7 +410,7 @@ public class WorthTags implements Listener {
      */
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onClick(InventoryClickEvent event) {
-        if (!enabled()) return;
+        if (!enabled() || !showTotal()) return;
         if (isOurMenu(event.getView().getTopInventory())) return;
 
         clearFor(event.getView(), event.getCurrentItem());
@@ -406,7 +423,7 @@ public class WorthTags implements Listener {
 
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onDrag(InventoryDragEvent event) {
-        if (!enabled()) return;
+        if (!enabled() || !showTotal()) return;
         if (isOurMenu(event.getView().getTopInventory())) return;
         clearFor(event.getView(), event.getOldCursor());
         retagViewLater(event.getView());

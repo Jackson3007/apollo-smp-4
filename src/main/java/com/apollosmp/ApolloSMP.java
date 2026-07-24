@@ -62,7 +62,6 @@ public class ApolloSMP extends JavaPlugin {
     private com.apollosmp.town.WarManager wars;
     private com.apollosmp.town.DiplomacyManager diplomacy;
     private com.apollosmp.town.ChatChannels channels;
-    private com.apollosmp.bank.BankManager bank;
     private com.apollosmp.shop.ShopManager shops;
     private com.apollosmp.listeners.WarListener warListener;
     private com.apollosmp.invest.BusinessHolograms holograms;
@@ -73,6 +72,7 @@ public class ApolloSMP extends JavaPlugin {
     private com.apollosmp.vault.VaultManager vaults;
     private com.apollosmp.admin.InventorySnapshots snapshots;
     private com.apollosmp.admin.StaffMode staffMode;
+    private com.apollosmp.staff.StaffRanks ranks;
     private com.apollosmp.sell.WorthTags worthTags;
     private com.apollosmp.logistics.LogisticsManager logistics;
     private com.apollosmp.merchant.ToolExpiryTask toolExpiry;
@@ -102,7 +102,6 @@ public class ApolloSMP extends JavaPlugin {
         this.wars = new com.apollosmp.town.WarManager(this);
         this.diplomacy = new com.apollosmp.town.DiplomacyManager(this);
         this.channels = new com.apollosmp.town.ChatChannels(this);
-        this.bank = new com.apollosmp.bank.BankManager(this);
         this.shops = new com.apollosmp.shop.ShopManager(this);
         this.merchant = new com.apollosmp.merchant.MerchantManager(this);
         this.specialAuction = new com.apollosmp.special.SpecialAuctionManager(this);
@@ -111,6 +110,7 @@ public class ApolloSMP extends JavaPlugin {
         this.vaults = new com.apollosmp.vault.VaultManager(this);
         this.snapshots = new com.apollosmp.admin.InventorySnapshots(this);
         this.staffMode = new com.apollosmp.admin.StaffMode(this);
+        this.ranks = new com.apollosmp.staff.StaffRanks(this);
         this.worthTags = new com.apollosmp.sell.WorthTags(this);
         this.logistics = new com.apollosmp.logistics.LogisticsManager(this);
         this.spawners.cleanupOrphans();
@@ -180,6 +180,7 @@ public class ApolloSMP extends JavaPlugin {
         reg("pv", new com.apollosmp.commands.VaultCommand(this));
         reg("items", new com.apollosmp.commands.ItemsCommand(this));
         reg("staff", new com.apollosmp.commands.StaffCommand(this));
+        reg("rank", new com.apollosmp.commands.RankCommand(this));
         reg("worth", new com.apollosmp.commands.WorthCommand(this));
 
         TpaCommand tpaCommand = new TpaCommand(this);
@@ -271,7 +272,6 @@ public class ApolloSMP extends JavaPlugin {
         getServer().getScheduler().runTaskTimer(this, () -> towns.collectRent(), 1200L, 6000L);
         getServer().getScheduler().runTaskTimer(this, () -> wars.tick(), 100L, 100L);
         getServer().getScheduler().runTaskTimer(this, () -> diplomacy.tick(), 600L, 600L);
-        getServer().getScheduler().runTaskTimer(this, () -> bank.tick(), 1200L, 1200L);
         getServer().getScheduler().runTaskTimer(this, () -> holograms.tick(), 40L, 20L);
         getServer().getScheduler().runTaskTimer(this, () -> toolExpiry.tick(), 200L, 600L);
         getServer().getScheduler().runTaskTimer(this, () -> merchant.refreshIfNeeded(), 1200L, 1200L);
@@ -316,7 +316,6 @@ public class ApolloSMP extends JavaPlugin {
         getServer().getScheduler().runTaskTimer(this, () -> businesses.spawnParticles(), 40L, 15L);
         getServer().getScheduler().runTaskTimer(this, () -> specialBusinesses.spawnParticles(), 45L, 15L);
         getServer().getScheduler().runTaskTimer(this, () -> logistics.spawnParticles(), 50L, 15L);
-        getServer().getScheduler().runTaskTimer(this, () -> bank.spawnParticles(), 55L, 15L);
         getServer().getScheduler().runTaskTimer(this, () -> shops.spawnParticles(), 60L, 15L);
         // Live-refresh any open business panel (ticks the countdown + updates stored goods).
         getServer().getScheduler().runTaskTimer(this, this::refreshBusinessMenus, 20L, 20L);
@@ -344,7 +343,6 @@ public class ApolloSMP extends JavaPlugin {
         borders.save();
         wars.save();
         diplomacy.save();
-        bank.save();
         shops.save();
         specialAuction.save();
         specialBusinesses.save();
@@ -353,6 +351,7 @@ public class ApolloSMP extends JavaPlugin {
         snapshots.captureAll();
         snapshots.save();
         staffMode.save();
+        ranks.save();
         logistics.save();
     }
 
@@ -393,7 +392,6 @@ public class ApolloSMP extends JavaPlugin {
     public com.apollosmp.town.WarManager wars() { return wars; }
     public com.apollosmp.town.DiplomacyManager diplomacy() { return diplomacy; }
     public com.apollosmp.town.ChatChannels channels() { return channels; }
-    public com.apollosmp.bank.BankManager bank() { return bank; }
     public com.apollosmp.shop.ShopManager shops() { return shops; }
     public com.apollosmp.listeners.WarListener warListener() { return warListener; }
     public com.apollosmp.invest.BusinessHolograms holograms() { return holograms; }
@@ -404,6 +402,7 @@ public class ApolloSMP extends JavaPlugin {
     public com.apollosmp.vault.VaultManager vaults() { return vaults; }
     public com.apollosmp.admin.InventorySnapshots snapshots() { return snapshots; }
     public com.apollosmp.admin.StaffMode staffMode() { return staffMode; }
+    public com.apollosmp.staff.StaffRanks ranks() { return ranks; }
     public com.apollosmp.sell.WorthTags worthTags() { return worthTags; }
     public com.apollosmp.logistics.LogisticsManager logistics() { return logistics; }
 

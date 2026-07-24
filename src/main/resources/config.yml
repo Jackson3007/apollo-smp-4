@@ -41,6 +41,9 @@ sell:
   # Show each item's sell price on its tooltip while it's in your inventory.
   # The line is removed again as soon as the item leaves.
   worth-lore: true
+  # Also show the whole stack's value. Leave this off: the total changes with
+  # stack size, which stops identical items merging together.
+  worth-lore-total: false
   # Total value in a chest's title bar. Most servers can't retitle real
   # containers, so this is off by default.
   chest-total: false
@@ -291,7 +294,7 @@ spawners:
   silk-touch-pickup: true
   holograms: true    # floating label showing the mob and stack size
   # How close a player must be for a spawner to run. Vanilla is 16.
-  activation-range: 30
+  activation-range: 64
   max-stack: 64      # how many spawners can sit on one block
 
 # ---- Mob stacking ----
@@ -331,11 +334,6 @@ towns:
   upgrade-cost-multiplier: 1.0  # scale every town upgrade price at once
   # Players can't fight each other inside town land unless the towns are at war.
   pvp-protection: true
-  bank:
-    vault-price: 500.0      # cost of a town bank block, paid from the town bank
-    interest-percent: 10.0  # added to every loan
-    limit-trusted: 100000.0 # most a Trusted borrower may take
-    limit-fair: 25000.0     # most a Fair borrower may take
   shop:
     stall-price: 500.0      # cost of a market stall
     ally-discount: 10.0     # percent off for allied towns

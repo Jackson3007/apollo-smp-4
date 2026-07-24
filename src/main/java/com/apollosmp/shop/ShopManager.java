@@ -95,11 +95,11 @@ public class ShopManager {
         ItemStack item = new ItemStack(STALL_BLOCK);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(Msg.lore("<#5ad1e8><bold>Market Stall</bold>"));
+            meta.displayName(Msg.lore("<#5ad1e8><bold>Town Auction Barrel</bold>"));
             List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
             lore.add(Msg.lore("<gray>Place it in your town and stock it."));
-            lore.add(Msg.lore("<gray>Anyone can buy; the money goes"));
-            lore.add(Msg.lore("<gray>into your town bank."));
+            lore.add(Msg.lore("<gray>Everything inside is listed on /ah"));
+            lore.add(Msg.lore("<gray>under your town name. Sales pay the town."));
             lore.add(Msg.lore(""));
             lore.add(Msg.lore("<yellow>Right-click once placed."));
             meta.lore(lore);
@@ -167,14 +167,14 @@ public class ShopManager {
         Town town = plugin.towns().getTownAtLoc(loc);
         Town mine = plugin.towns().getTownOf(player.getUniqueId());
         if (town == null || mine == null || !town.name().equalsIgnoreCase(mine.name())) {
-            plugin.msg().send(player, "<red>A stall has to stand on your own town's land.");
+            plugin.msg().send(player, "<red>An auction barrel has to stand on your own town's land.");
             return false;
         }
         Stall stall = new Stall(loc.getWorld().getName(), loc.getBlockX(), loc.getBlockY(),
                 loc.getBlockZ(), town.name());
         stalls.put(stall.key(), stall);
         save();
-        plugin.msg().send(player, "<green>Stall opened. Right-click it to stock the shelves.");
+        plugin.msg().send(player, "<green>Auction barrel placed. Stock it and it sells on /ah.");
         return true;
     }
 
@@ -198,7 +198,7 @@ public class ShopManager {
             if (o.material == held.getType()) { existing = o; break; }
         }
         if (existing == null && stall.offers.size() >= MAX_OFFERS) {
-            plugin.msg().send(player, "<red>This stall is already selling " + MAX_OFFERS + " things.");
+            plugin.msg().send(player, "<red>This barrel is already selling " + MAX_OFFERS + " things.");
             return false;
         }
 
@@ -234,42 +234,68 @@ public class ShopManager {
         return true;
     }
 
+    public Stall byKey(String key) { return stalls.get(key); }
+
+    public int indexOf(Stall stall, Material material) {
+        for (int i = 0; i < stall.offers.size(); i++) {
+            if (stall.offers.get(i).material == material) return i;
+        }
+        return -1;
+    }
+
     /**
-     * Move an offer off the shelf and onto the auction house as a town listing.
-     * Stock lives in one place at a time, so nothing can be sold twice.
+     * Live views of everything on every stall, for the auction house. These are
+     * built fresh each time and never saved - the barrel holds the real stock,
+     * so the same item can never be sold twice.
      */
-    public boolean listOnAuction(Player player, Stall stall, int index) {
-        if (index < 0 || index >= stall.offers.size()) return false;
-        Town town = plugin.towns().townByName(stall.town);
-        if (town == null || !town.isMember(player.getUniqueId())) {
-            plugin.msg().send(player, "<red>Only residents can list this town's goods.");
+    public List<com.apollosmp.auction.Listing> asListings() {
+        List<com.apollosmp.auction.Listing> out = new ArrayList<>();
+        long now = System.currentTimeMillis();
+        for (Stall stall : stalls.values()) {
+            Town town = plugin.towns().townByName(stall.town);
+            if (town == null) continue;
+            for (Offer offer : stall.offers) {
+                if (offer.stock <= 0) continue;
+                int bundle = Math.min(offer.stock, offer.material.getMaxStackSize());
+                com.apollosmp.auction.Listing listing = new com.apollosmp.auction.Listing(
+                        java.util.UUID.randomUUID(), town.mayor(), stall.town,
+                        new ItemStack(offer.material, bundle), offer.price * bundle,
+                        now, Long.MAX_VALUE);
+                listing.setTown(stall.town);
+                listing.setStallKey(stall.key());
+                out.add(listing);
+            }
+        }
+        return out;
+    }
+
+    /** Buy a stall's goods through the auction house. */
+    public boolean buyFromListing(Player buyer, com.apollosmp.auction.Listing listing) {
+        Stall stall = byKey(listing.stallKey());
+        if (stall == null) {
+            plugin.msg().send(buyer, "<red>That stall is gone.");
             return false;
         }
-        Offer offer = stall.offers.get(index);
-        if (offer.stock <= 0) return false;
-
-        int bundle = Math.min(offer.stock, offer.material.getMaxStackSize());
-        double price = offer.price * bundle;
-
-        ItemStack listed = new ItemStack(offer.material, bundle);
-        if (!plugin.auctions().listForTown(player, town.name(), listed, price)) return false;
-
-        offer.stock -= bundle;
-        if (offer.stock <= 0) stall.offers.remove(index);
-        save();
-
-        plugin.msg().send(player, "<gray>Taken from the shelf and put on the auction house.");
-        return true;
+        int index = indexOf(stall, listing.item().getType());
+        if (index < 0) {
+            plugin.msg().send(buyer, "<gray>That's sold out.");
+            return false;
+        }
+        return buy(buyer, stall, index, listing.item().getAmount());
     }
 
     /** What this player pays per item, after any ally discount. */
     public double priceFor(Player buyer, Stall stall, Offer offer) {
         Town theirs = plugin.towns().getTownOf(buyer.getUniqueId());
-        if (theirs != null && plugin.diplomacy() != null
-                && plugin.diplomacy().allied(theirs.name(), stall.town)) {
-            return offer.price * (1 - allyDiscount() / 100.0);
+        if (theirs == null || plugin.diplomacy() == null) return offer.price;
+        if (theirs.name().equalsIgnoreCase(stall.town)) return offer.price;
+        if (!plugin.diplomacy().allied(theirs.name(), stall.town)) return offer.price;
+        // Some towns waive the price for their allies entirely.
+        if (plugin.diplomacy().allows(stall.town, theirs.name(),
+                com.apollosmp.town.AllyPerm.SHOP_FREE)) {
+            return 0;
         }
-        return offer.price;
+        return offer.price * (1 - allyDiscount() / 100.0);
     }
 
     /** Buy some of an offer. */

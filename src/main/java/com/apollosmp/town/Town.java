@@ -31,6 +31,8 @@ public class Town {
     private final Map<String, Long> rentDue = new HashMap<>();      // chunkKey -> next payment time
     private final Map<TownRank, EnumSet<TownPerm>> rankPerms = new EnumMap<>(TownRank.class);
     private final Map<TownUpgrade, Integer> upgrades = new EnumMap<>(TownUpgrade.class);
+    /** A short message the mayor sets, shown to anyone walking in. */
+    private String board;
 
     public Town(String name, UUID mayor, long founded) {
         this.name = name;
@@ -127,6 +129,11 @@ public class Town {
     public void clearListing(String chunkKey) {
         plotSale.remove(chunkKey);
         plotRent.remove(chunkKey);
+    }
+
+    public String board() { return board; }
+    public void setBoard(String board) {
+        this.board = (board == null || board.isBlank()) ? null : board;
     }
 
     // ---- upgrades ----
