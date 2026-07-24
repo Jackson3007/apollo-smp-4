@@ -5,6 +5,10 @@ import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.EnchantmentStorageMeta;
+import org.bukkit.inventory.meta.Damageable;
+import org.bukkit.enchantments.Enchantment;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -242,10 +246,127 @@ public class SellManager {
         return blocked(material) ? 0.0 : defaultPrice();
     }
 
-    /** Total value of a stack (price per item x amount), or 0 if unsellable. */
+    /** Total value of a stack, accounting for gear, enchantments and wear. */
     public double valueOf(ItemStack stack) {
         if (!isSellable(stack)) return 0;
-        return priceOf(stack.getType()) * stack.getAmount();
+
+        double each = priceOf(stack.getType());
+        if (plugin.getConfig().getBoolean("sell.gear-pricing", true)) {
+            double crafted = craftValue(stack.getType());
+            if (crafted > 0) each = crafted;
+            each += enchantValue(stack);
+            each *= condition(stack);
+        }
+        return each * stack.getAmount();
+    }
+
+    /** What the raw materials for a tool, weapon or armour piece are worth. */
+    public double craftValue(Material material) {
+        String name = material.name();
+        Material base = tierMaterial(name);
+        if (base != null) {
+            int units = pieceCount(name);
+            if (units > 0) {
+                double stickCost = priceOf(Material.STICK) * stickCount(name);
+                return priceOf(base) * units + stickCost;
+            }
+        }
+        // A few things aren't made from a simple tier material.
+        return switch (name) {
+            case "BOW" -> priceOf(Material.STICK) * 3 + priceOf(Material.STRING) * 3;
+            case "CROSSBOW" -> priceOf(Material.STICK) * 3 + priceOf(Material.STRING) * 2
+                    + priceOf(Material.IRON_INGOT) + priceOf(Material.TRIPWIRE_HOOK);
+            case "SHIELD" -> priceOf(Material.IRON_INGOT) + priceOf(Material.OAK_PLANKS) * 6;
+            case "SHEARS" -> priceOf(Material.IRON_INGOT) * 2;
+            case "FISHING_ROD" -> priceOf(Material.STICK) * 3 + priceOf(Material.STRING) * 2;
+            case "FLINT_AND_STEEL" -> priceOf(Material.IRON_INGOT) + priceOf(Material.FLINT);
+            case "TRIDENT" -> priceOf(Material.DIAMOND) * 6;
+            case "ELYTRA" -> priceOf(Material.DIAMOND) * 12;
+            default -> 0;
+        };
+    }
+
+    /** The metal or mineral a piece of gear is made from. */
+    private Material tierMaterial(String name) {
+        if (name.startsWith("WOODEN_")) return Material.OAK_PLANKS;
+        if (name.startsWith("STONE_")) return Material.COBBLESTONE;
+        if (name.startsWith("IRON_") || name.startsWith("CHAINMAIL_")) return Material.IRON_INGOT;
+        if (name.startsWith("GOLDEN_")) return Material.GOLD_INGOT;
+        if (name.startsWith("DIAMOND_")) return Material.DIAMOND;
+        if (name.startsWith("NETHERITE_")) return Material.NETHERITE_INGOT;
+        if (name.startsWith("LEATHER_")) return Material.LEATHER;
+        if (name.startsWith("TURTLE_")) return Material.SCUTE;
+        return null;
+    }
+
+    /** How many units of the tier material the recipe uses. */
+    private int pieceCount(String name) {
+        if (name.endsWith("_SWORD")) return 2;
+        if (name.endsWith("_PICKAXE") || name.endsWith("_AXE")) return 3;
+        if (name.endsWith("_SHOVEL")) return 1;
+        if (name.endsWith("_HOE")) return 2;
+        if (name.endsWith("_HELMET")) return 5;
+        if (name.endsWith("_CHESTPLATE")) return 8;
+        if (name.endsWith("_LEGGINGS")) return 7;
+        if (name.endsWith("_BOOTS")) return 4;
+        return 0;
+    }
+
+    private int stickCount(String name) {
+        if (name.endsWith("_SWORD") || name.endsWith("_SHOVEL")) return 1;
+        if (name.endsWith("_PICKAXE") || name.endsWith("_AXE") || name.endsWith("_HOE")) return 2;
+        return 0;
+    }
+
+    /** Enchantments are where the real money is. */
+    public double enchantValue(ItemStack stack) {
+        if (stack == null || !stack.hasItemMeta()) return 0;
+        ItemMeta meta = stack.getItemMeta();
+        if (meta == null) return 0;
+
+        double perLevel = plugin.getConfig().getDouble("sell.enchant-value", 250.0);
+        double total = 0;
+
+        for (Map.Entry<Enchantment, Integer> e : meta.getEnchants().entrySet()) {
+            total += perLevel * e.getValue() * enchantMultiplier(e.getKey());
+        }
+        // Enchanted books keep their value in a separate place.
+        if (meta instanceof EnchantmentStorageMeta book) {
+            for (Map.Entry<Enchantment, Integer> e : book.getStoredEnchants().entrySet()) {
+                total += perLevel * e.getValue() * enchantMultiplier(e.getKey());
+            }
+        }
+        return total;
+    }
+
+    /** The sought-after enchantments are worth a good deal more. */
+    private double enchantMultiplier(Enchantment enchantment) {
+        String key;
+        try {
+            key = enchantment.getKey().getKey().toLowerCase();
+        } catch (Throwable ex) {
+            return 1.0;
+        }
+        return switch (key) {
+            case "mending" -> 4.0;
+            case "silk_touch", "infinity" -> 3.0;
+            case "fortune", "looting" -> 2.5;
+            case "sharpness", "efficiency", "protection", "unbreaking", "power" -> 1.5;
+            case "feather_falling", "depth_strider", "thorns", "riptide", "channeling" -> 1.4;
+            case "fire_aspect", "flame", "knockback", "punch", "smite", "bane_of_arthropods" -> 0.8;
+            default -> 1.0;
+        };
+    }
+
+    /** Worn gear is worth less, but never worthless. */
+    private double condition(ItemStack stack) {
+        short max = stack.getType().getMaxDurability();
+        if (max <= 0) return 1.0;
+        if (!(stack.getItemMeta() instanceof Damageable damageable)) return 1.0;
+        if (!damageable.hasDamage()) return 1.0;
+        double remaining = Math.max(0, 1.0 - ((double) damageable.getDamage() / max));
+        // Keep a floor so a battered but enchanted tool still sells.
+        return 0.4 + (0.6 * remaining);
     }
 
     public Map<Material, Double> allPrices() {

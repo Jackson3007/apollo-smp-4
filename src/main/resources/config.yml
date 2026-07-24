@@ -47,6 +47,10 @@ sell:
   # Anything without an explicit price below still sells for this much, so
   # almost everything is worth something. Set to 0 to only allow listed items.
   default-price: 0.25
+  # Price tools, weapons and armour from what they're made of, plus a premium
+  # for enchantments and a discount for wear.
+  gear-pricing: true
+  enchant-value: 250.0    # per enchantment level, scaled by how good it is
   # Never sellable, on top of the built-in blocks (spawners, bedrock, etc).
   never-sell: []
   # Prices the SERVER pays you per item when using /sell.
@@ -67,6 +71,16 @@ sell:
     REDSTONE: 2.0
     QUARTZ: 2.5
     NETHERITE_SCRAP: 120.0
+    # 4 scrap + 4 gold, so priced accordingly
+    NETHERITE_INGOT: 530.0
+    # Common crafting components, so gear prices come out sensibly
+    COBBLESTONE: 0.15
+    OAK_PLANKS: 0.4
+    STICK: 0.2
+    LEATHER: 3.0
+    FLINT: 1.0
+    SCUTE: 20.0
+    TRIPWIRE_HOOK: 5.0
     ANCIENT_DEBRIS: 150.0
     # Farming
     WHEAT: 1.0
@@ -231,7 +245,7 @@ vaults:
 # configured hour. Bids are held in escrow and refunded when outbid.
 special-auction:
   enabled: true
-  starting-bid: 50000.0
+  opening-bid: 20000.0
   min-increment: 2500.0
   duration-hours: 24
   end-hour: 12                     # 24-hour clock
@@ -306,6 +320,16 @@ towns:
   move-cost: 0.0           # price for a mayor to relocate the whole town
   rent-period-hours: 24    # how often plot rent is charged
   upgrade-cost-multiplier: 1.0  # scale every town upgrade price at once
+  # Players can't fight each other inside town land unless the towns are at war.
+  pvp-protection: true
+  diplomacy:
+    max-allies: 3        # how many towns one town can be allied with
+    offer-minutes: 10    # how long an alliance offer waits for an answer
+  war:
+    enabled: true
+    offer-minutes: 5          # how long a declaration waits for an answer
+    raid-share: 0.5           # share of a business's stock a raider takes
+    raid-cooldown-minutes: 5  # before the same business can be raided again
   name-tag: true           # show [Town] above heads and in the tab list
   border-flash-on-enter: true  # briefly outline the claim when you walk into a town
   # Border look. spacing and radius are the performance dials - lower spacing
@@ -315,5 +339,7 @@ towns:
     spacing: 1.0        # blocks between particles along an edge (lower = denser)
     height: 2.0         # how tall the wall is, in blocks
     corner-height: 6.0  # taller pillars at chunk corners
+    plot-height: 1.0    # owned plots get a low box instead of a full wall
+    plot-spacing: 2.0   # and fewer particles along it
     size: 2.0           # particle size (1.0 = vanilla redstone dust)
     radius: 2           # how many chunks around you get drawn (1-6)

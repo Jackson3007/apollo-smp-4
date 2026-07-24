@@ -169,6 +169,8 @@ public class TownManager {
         for (String ck : new ArrayList<>(town.claims())) chunkIndex.remove(ck);
         for (UUID m : new ArrayList<>(town.members().keySet())) playerTown.remove(m);
         towns.remove(town.name().toLowerCase());
+        if (plugin.wars() != null) plugin.wars().forgetTown(town.name());
+        if (plugin.diplomacy() != null) plugin.diplomacy().forgetTown(town.name());
         touch();
         plugin.msg().send(player, "<yellow>Town <white>" + town.name() + "</white> has been disbanded.");
         return true;
@@ -470,7 +472,10 @@ public class TownManager {
                 plugin.msg().send(player, "<red>Teleporting to towns is disabled on this server.");
                 return false;
             }
-            if (!town.publicSpawn()) {
+            Town mine = getTownOf(player.getUniqueId());
+            boolean allied = mine != null && plugin.diplomacy() != null
+                    && plugin.diplomacy().allied(mine.name(), town.name());
+            if (!town.publicSpawn() && !allied) {
                 plugin.msg().send(player, "<red><white>" + town.name()
                         + "</white> doesn't allow visitors to teleport in.");
                 return false;

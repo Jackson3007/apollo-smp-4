@@ -25,6 +25,17 @@ public class TownChatListener implements Listener {
         Town town = plugin.towns().getTownOf(event.getPlayer().getUniqueId());
         if (town == null) return;
 
+        // If they're in a town or ally channel, this never reaches public chat.
+        var channel = plugin.channels().of(event.getPlayer());
+        if (channel != com.apollosmp.town.ChatChannels.Channel.PUBLIC) {
+            String text = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
+                    .plainText().serialize(event.message());
+            event.setCancelled(true);
+            plugin.getServer().getScheduler().runTask(plugin,
+                    () -> plugin.channels().send(event.getPlayer(), channel, text));
+            return;
+        }
+
         final String tag = town.name();
         TownRank rank = town.rankOf(event.getPlayer().getUniqueId());
         final String rankName = rank == null ? TownRank.RESIDENT.display() : rank.display();

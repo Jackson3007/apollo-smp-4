@@ -82,10 +82,10 @@ public class WorthTags implements Listener {
         if (stack == null || stack.getType().isAir()) return false;
         if (!enabled() || !plugin.sell().isSellable(stack)) return strip(stack);
 
-        double unit = plugin.sell().priceOf(stack.getType());
-        if (unit <= 0) return strip(stack);
-        int amount = stack.getAmount();
-        double total = unit * amount;
+        int amount = Math.max(1, stack.getAmount());
+        double total = plugin.sell().valueOf(stack);
+        if (total <= 0) return strip(stack);
+        double unit = total / amount;
 
         ItemMeta meta = stack.getItemMeta();
         if (meta == null) return false;

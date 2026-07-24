@@ -77,6 +77,14 @@ commands:
     description: Create and manage your town
     aliases: [t, towns]
     usage: /town
+  tc:
+    description: Talk to your town
+    aliases: [townchat]
+    usage: /tc [message]
+  ac:
+    description: Talk to your alliance
+    aliases: [allychat]
+    usage: /ac [message]
   discord:
     description: Get the Discord invite link
     usage: /discord

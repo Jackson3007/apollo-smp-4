@@ -52,7 +52,7 @@ public class SpecialAuctionManager {
 
     // ---- config ----
     public double startingBid() {
-        return plugin.getConfig().getDouble("special-auction.starting-bid", 50000.0);
+        return plugin.getConfig().getDouble("special-auction.opening-bid", 20000.0);
     }
 
     public double minIncrement() {

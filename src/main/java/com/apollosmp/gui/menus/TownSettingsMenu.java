@@ -16,7 +16,6 @@ import java.util.List;
 /** Everything you set once and forget: tax, spawn, permissions, and the risky stuff. */
 public class TownSettingsMenu extends Gui {
 
-    private static final int TAX = 10;
     private static final int SET_SPAWN = 11;
     private static final int VISITORS = 12;
     private static final int PERMS = 13;
@@ -40,12 +39,6 @@ public class TownSettingsMenu extends Gui {
                 .lore("<gray>Options only leaders usually touch.")
                 .glow(true).hideAttributes().build());
 
-        inventory.setItem(TAX, Items.of(Material.EMERALD)
-                .name("<#f9d423><bold>Daily Tax</bold>")
-                .lore("<gray>Currently: <white>" + plugin.msg().money(town.tax()) + "</white> per resident",
-                        "<gray>Collected into the town bank.",
-                        "", "<yellow>Click to change")
-                .build());
 
         inventory.setItem(SET_SPAWN, Items.of(Material.RED_BED)
                 .name("<#f9d423><bold>Set Town Spawn</bold>")
@@ -117,16 +110,6 @@ public class TownSettingsMenu extends Gui {
         switch (slot) {
             case BACK -> new TownManageMenu(plugin, player).open();
 
-            case TAX -> {
-                player.closeInventory();
-                plugin.msg().send(player, "<#f9d423>Type the daily tax amount</#f9d423> <gray>(or 'cancel').");
-                plugin.msg().send(player, "<dark_gray>Or use <white>/town tax <amount></white>.");
-                plugin.prompts().await(player, s -> {
-                    try { plugin.towns().setTax(player, Double.parseDouble(s)); }
-                    catch (NumberFormatException e) { plugin.msg().send(player, "<red>That's not a number."); }
-                    new TownSettingsMenu(plugin, player).open();
-                });
-            }
 
             case SET_SPAWN -> { plugin.towns().setSpawnHere(player); redraw(); }
 

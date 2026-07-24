@@ -48,6 +48,8 @@ public class TownProtectionListener implements Listener {
     public void onInteract(PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK || event.getClickedBlock() == null) return;
         if (!isProtectedInteract(event.getClickedBlock().getType())) return;
+        // At war, enemy containers are open to you.
+        if (canLoot(event.getPlayer(), event.getClickedBlock().getLocation())) return;
         if (!plugin.towns().canBuild(event.getPlayer(), event.getClickedBlock().getLocation())) {
             event.setCancelled(true);
             warn(event.getPlayer(), event.getClickedBlock().getLocation());
@@ -79,6 +81,15 @@ public class TownProtectionListener implements Listener {
                 || n.equals("HOPPER") || n.equals("DISPENSER") || n.equals("DROPPER")
                 || n.equals("LEVER") || n.equals("BREWING_STAND") || n.equals("BEACON")
                 || n.equals("GRINDSTONE") || n.contains("ANVIL") || n.equals("DECORATED_POT");
+    }
+
+    /** True when the player's town is at war with whoever owns this land. */
+    private boolean canLoot(Player player, Location loc) {
+        com.apollosmp.town.Town here = plugin.towns().getTownAtLoc(loc);
+        if (here == null) return false;
+        com.apollosmp.town.Town mine = plugin.towns().getTownOf(player.getUniqueId());
+        if (mine == null) return false;
+        return plugin.wars().atWar(mine.name(), here.name());
     }
 
     private void warn(Player player, Location loc) {

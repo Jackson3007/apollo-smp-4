@@ -183,6 +183,47 @@ public class TownCommand implements CommandExecutor, TabCompleter {
                     }
                 }
             }
+            case "war" -> {
+                if (args.length < 2) {
+                    plugin.msg().send(player, "<gray>Usage: <white>/town war <town> <10|30|60|120></white>");
+                    plugin.msg().send(player, "<gray>Or: <white>/town war accept|decline [town]</white>");
+                    return true;
+                }
+                String sub = args[1].toLowerCase();
+                if (sub.equals("accept")) {
+                    plugin.wars().accept(player, args.length > 2 ? args[2] : null);
+                } else if (sub.equals("decline") || sub.equals("refuse")) {
+                    plugin.wars().decline(player);
+                } else {
+                    int minutes = 30;
+                    if (args.length > 2) {
+                        try {
+                            minutes = Integer.parseInt(args[2]);
+                        } catch (NumberFormatException ex) {
+                            plugin.msg().send(player, "<red>Pick 10, 30, 60 or 120 minutes.");
+                            return true;
+                        }
+                    }
+                    plugin.wars().declare(player, args[1], minutes);
+                }
+            }
+            case "peace" -> plugin.wars().offerPeace(player, args.length > 1 ? args[1] : null);
+            case "ally", "alliance" -> {
+                if (args.length < 2) {
+                    new com.apollosmp.gui.menus.TownDiplomacyMenu(plugin, player).open();
+                    return true;
+                }
+                String sub = args[1].toLowerCase();
+                if (sub.equals("accept")) {
+                    plugin.diplomacy().accept(player, args.length > 2 ? args[2] : null);
+                } else if (sub.equals("decline") || sub.equals("refuse")) {
+                    plugin.diplomacy().decline(player);
+                } else if (sub.equals("break") && args.length > 2) {
+                    plugin.diplomacy().breakAlliance(player, args[2]);
+                } else {
+                    plugin.diplomacy().propose(player, args[1]);
+                }
+            }
             case "help" -> sendHelp(player);
             default -> new TownMenu(plugin, player).open();
         }
@@ -209,6 +250,10 @@ public class TownCommand implements CommandExecutor, TabCompleter {
         plugin.msg().send(player, "<gray>/town plot <white>- who owns the chunk you're on");
         plugin.msg().send(player, "<gray>/town move <white>- relocate the whole town");
         plugin.msg().send(player, "<gray>/town upgrades <white>- spend the bank on perks");
+        plugin.msg().send(player, "<gray>/town war <town> <mins> <white>- declare war");
+        plugin.msg().send(player, "<gray>/town peace <white>- sue for peace");
+        plugin.msg().send(player, "<gray>/town ally <town> <white>- propose an alliance");
+        plugin.msg().send(player, "<gray>/tc <white>| <gray>/ac <white>- town and ally chat");
         plugin.msg().send(player, "<gray>/town leave <white>| <gray>/town disband");
     }
 
@@ -246,7 +291,7 @@ public class TownCommand implements CommandExecutor, TabCompleter {
             return List.of("create", "claim", "unclaim", "home", "invite", "join", "kick", "rank",
                     "deposit", "withdraw", "tax", "sellplot", "rentoutplot", "buyplot",
                     "rentplot", "endrent", "unlistplot",
-                    "spawn", "setspawn", "list", "tp", "visitors", "border", "map", "plot", "move", "upgrades",
+                    "spawn", "setspawn", "list", "tp", "visitors", "border", "map", "plot", "move", "upgrades", "war", "peace", "ally",
                     "leave", "disband", "help");
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("kick") || args[0].equalsIgnoreCase("rank"))
@@ -260,6 +305,19 @@ public class TownCommand implements CommandExecutor, TabCompleter {
                 }
             }
             return names;
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("ally")) {
+            List<String> out = new ArrayList<>(List.of("accept", "decline", "break"));
+            for (Town t : plugin.towns().allTowns()) out.add(t.name());
+            return out;
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("war")) {
+            List<String> out = new ArrayList<>(List.of("accept", "decline"));
+            for (Town t : plugin.towns().allTowns()) out.add(t.name());
+            return out;
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("war")) {
+            return List.of("10", "30", "60", "120");
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("tp") || args[0].equalsIgnoreCase("join"))) {
             List<String> names = new ArrayList<>();

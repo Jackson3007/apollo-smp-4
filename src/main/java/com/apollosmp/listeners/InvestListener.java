@@ -107,6 +107,10 @@ public class InvestListener implements Listener {
         event.setCancelled(true);
         Player player = event.getPlayer();
         plugin.businesses().updateProduction(block);
+        if (!player.getUniqueId().equals(block.owner())
+                && plugin.warListener().tryRaid(player, block)) {
+            return; // raided instead of opened
+        }
         new BusinessMenu(plugin, player, block).open();
     }
 

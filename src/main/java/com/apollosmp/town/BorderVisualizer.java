@@ -114,6 +114,9 @@ public class BorderVisualizer {
     private float dotSize() { return (float) Math.max(0.5, plugin.getConfig().getDouble("towns.border.size", 2.0)); }
     private int radius() { return Math.max(1, Math.min(6, plugin.getConfig().getInt("towns.border.radius", 2))); }
     private double cornerHeight() { return Math.max(height(), plugin.getConfig().getDouble("towns.border.corner-height", 6.0)); }
+    /** Plot boxes sit inside town land, so they're kept low and sparse. */
+    private double plotHeight() { return Math.max(0, plugin.getConfig().getDouble("towns.border.plot-height", 1.0)); }
+    private double plotSpacing() { return Math.max(0.25, plugin.getConfig().getDouble("towns.border.plot-spacing", 2.0)); }
 
     /** Briefly show the outline, e.g. when walking into a town. */
     public void flash(Player player, long millis) {
@@ -179,16 +182,18 @@ public class BorderVisualizer {
                     east = !sameTown(world, cx + 1, cz, town);
                 }
 
+                boolean isPlot = plotOwner != null;
                 double minX = cx * 16.0;
                 double minZ = cz * 16.0;
-                double gap = spacing();
+                double gap = isPlot ? plotSpacing() : spacing();
                 for (double step = 0; step <= 16; step += gap) {
-                    // Chunk corners get a tall pillar so the outline reads from a distance.
-                    boolean corner = step < 0.01 || step > 15.99;
-                    if (north) column(player, minX + step, baseY, minZ, color, corner);
-                    if (south) column(player, minX + step, baseY, minZ + 16, color, corner);
-                    if (west) column(player, minX, baseY, minZ + step, color, corner);
-                    if (east) column(player, minX + 16, baseY, minZ + step, color, corner);
+                    // Town corners get a tall pillar; plot boxes stay low and even.
+                    boolean corner = !isPlot && (step < 0.01 || step > 15.99);
+                    double top = isPlot ? plotHeight() : (corner ? cornerHeight() : height());
+                    if (north) column(player, minX + step, baseY, minZ, color, top);
+                    if (south) column(player, minX + step, baseY, minZ + 16, color, top);
+                    if (west) column(player, minX, baseY, minZ + step, color, top);
+                    if (east) column(player, minX + 16, baseY, minZ + step, color, top);
                 }
             }
         }
@@ -207,10 +212,9 @@ public class BorderVisualizer {
         return other != null && other.name().equalsIgnoreCase(town.name());
     }
 
-    /** A vertical stack of particles so the edge reads as a solid wall. */
-    private void column(Player player, double x, double baseY, double z, Color color, boolean corner) {
+    /** A vertical stack of particles so the edge reads as a wall. */
+    private void column(Player player, double x, double baseY, double z, Color color, double top) {
         Particle.DustOptions options = new Particle.DustOptions(color, dotSize());
-        double top = corner ? cornerHeight() : height();
         for (double dy = 0; dy <= top; dy += 1.0) {
             player.spawnParticle(DUST, new Location(player.getWorld(), x, baseY + dy + 0.2, z),
                     1, 0, 0, 0, 0, options);
