@@ -244,6 +244,7 @@ public class AdminPanelCommand implements CommandExecutor, TabCompleter {
                     plugin.msg().sendRaw(player, "   <dark_gray>- " + s.name() + "</dark_gray>");
                 }
             }
+            case "setup" -> voteSetup(player);
             case "pending" -> {
                 var owed = plugin.voting().pendingPayouts();
                 if (owed.isEmpty()) {
@@ -266,6 +267,52 @@ public class AdminPanelCommand implements CommandExecutor, TabCompleter {
             default -> plugin.msg().send(player,
                     "<gray>Usage: <white>/admin vote <status|test [player]></white>");
         }
+    }
+
+    /** Read NuVotifier's own config and print exactly what the sites need. */
+    private void voteSetup(Player player) {
+        var msg = plugin.msg();
+        java.io.File votifierDir = new java.io.File(
+                plugin.getDataFolder().getParentFile(), "Votifier");
+        java.io.File configFile = new java.io.File(votifierDir, "config.yml");
+
+        msg.sendRaw(player, "<#f9d423>\u2501\u2501\u2501 Vote setup \u2501\u2501\u2501</#f9d423>");
+
+        if (!configFile.exists()) {
+            msg.sendRaw(player, "<red>Can't find plugins/Votifier/config.yml.");
+            msg.sendRaw(player, "<gray>Is NuVotifier installed?");
+            return;
+        }
+
+        org.bukkit.configuration.file.FileConfiguration cfg =
+                org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(configFile);
+        String host = cfg.getString("host", "0.0.0.0");
+        int port = cfg.getInt("port", 8192);
+        String token = cfg.getString("tokens.default", "(none)");
+        boolean v1Disabled = cfg.getBoolean("disable-v1-protocol", false);
+
+        String ip = plugin.serverIp();
+        msg.sendRaw(player, "<gray>IP for the sites: <white>" + ip + "</white>");
+        msg.sendRaw(player, "<gray>Port: <white>" + port + "</white>");
+        msg.sendRaw(player, "<gray>Token: <white>" + token + "</white>");
+        msg.sendRaw(player, "<gray>Listening on: <white>" + host + "</white>");
+        msg.sendRaw(player, v1Disabled
+                ? "<red>Old protocol is disabled - sites needing a public key will fail.</red>"
+                : "<green>Both protocols accepted.</green>");
+
+        java.io.File keyFile = new java.io.File(new java.io.File(votifierDir, "rsa"), "public.key");
+        if (keyFile.exists()) {
+            msg.sendRaw(player, "<gray>Public key: <white>plugins/Votifier/rsa/public.key</white>"
+                    + " <dark_gray>(" + keyFile.length() + " chars)</dark_gray>");
+        } else {
+            msg.sendRaw(player, "<red>No public key file found.");
+        }
+
+        msg.sendRaw(player, "");
+        msg.sendRaw(player, "<gray>If a site's field says <white>token</white>, paste the token.");
+        msg.sendRaw(player, "<gray>If it says <white>public key</white>, paste the key file.");
+        msg.sendRaw(player, "<gray>Hooked: " + (plugin.voting().votifierActive()
+                ? "<green>yes</green>" : "<red>no</red>"));
     }
 
     // ------------------------------------------------ performance
@@ -349,6 +396,7 @@ public class AdminPanelCommand implements CommandExecutor, TabCompleter {
         msg.sendRaw(player, " <white>/admin auction fill</white> <gray>- fast-forward a day</gray>");
         msg.sendRaw(player, "<#5ad1e8>Voting</#5ad1e8>");
         msg.sendRaw(player, " <white>/admin vote status</white> <gray>- is Votifier hooked?</gray>");
+        msg.sendRaw(player, " <white>/admin vote setup</white> <gray>- what to paste on the sites</gray>");
         msg.sendRaw(player, " <white>/admin vote test</white> <gray>- fake a confirmed vote</gray>");
         msg.sendRaw(player, " <white>/admin vote pending</white> <gray>- unpaid vote rewards</gray>");
         msg.sendRaw(player, "<#5ad1e8>Performance</#5ad1e8>");
@@ -368,7 +416,7 @@ public class AdminPanelCommand implements CommandExecutor, TabCompleter {
                 return List.of("info", "reroll", "end", "time", "bid", "give", "fill");
             }
             if (args[0].equalsIgnoreCase("vote")) {
-                return List.of("status", "test", "pending");
+                return List.of("status", "setup", "test", "pending");
             }
         }
         if (args.length == 3) {

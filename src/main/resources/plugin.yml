@@ -29,7 +29,6 @@ commands:
     usage: /worth [hand]
   sell:
     description: Sell items to the server
-    aliases: [shop]
     usage: /sell [hand|all]
   ah:
     description: Open the Apollo auction house
