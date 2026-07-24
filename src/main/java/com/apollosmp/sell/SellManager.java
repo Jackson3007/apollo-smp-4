@@ -207,11 +207,15 @@ public class SellManager {
     private boolean blocked(Material material) {
         if (material.isAir() || !material.isItem()) return true;
         String name = material.name();
+        // Trial/ominous keys must stay byte-for-byte vanilla: a vault refuses any
+        // key carrying non-standard data (MC-268183), so tagging them with worth
+        // lore silently breaks vault opening. Never treat them as sellable.
         if (name.equals("SPAWNER") || name.equals("BEDROCK") || name.equals("BARRIER")
                 || name.equals("STRUCTURE_BLOCK") || name.equals("STRUCTURE_VOID")
                 || name.equals("JIGSAW") || name.equals("LIGHT") || name.equals("DEBUG_STICK")
                 || name.equals("END_PORTAL_FRAME") || name.equals("COMMAND_BLOCK")
                 || name.equals("CHAIN_COMMAND_BLOCK") || name.equals("REPEATING_COMMAND_BLOCK")
+                || name.equals("TRIAL_KEY") || name.equals("OMINOUS_TRIAL_KEY")
                 || name.equals("BUNDLE") || name.endsWith("SHULKER_BOX")) {
             return true;
         }
