@@ -62,6 +62,8 @@ public class ApolloSMP extends JavaPlugin {
     private com.apollosmp.town.WarManager wars;
     private com.apollosmp.town.DiplomacyManager diplomacy;
     private com.apollosmp.town.ChatChannels channels;
+    private com.apollosmp.bank.BankManager bank;
+    private com.apollosmp.shop.ShopManager shops;
     private com.apollosmp.listeners.WarListener warListener;
     private com.apollosmp.invest.BusinessHolograms holograms;
     private com.apollosmp.merchant.MerchantManager merchant;
@@ -100,6 +102,8 @@ public class ApolloSMP extends JavaPlugin {
         this.wars = new com.apollosmp.town.WarManager(this);
         this.diplomacy = new com.apollosmp.town.DiplomacyManager(this);
         this.channels = new com.apollosmp.town.ChatChannels(this);
+        this.bank = new com.apollosmp.bank.BankManager(this);
+        this.shops = new com.apollosmp.shop.ShopManager(this);
         this.merchant = new com.apollosmp.merchant.MerchantManager(this);
         this.specialAuction = new com.apollosmp.special.SpecialAuctionManager(this);
         this.specialBusinesses = new com.apollosmp.special.SpecialBusinessManager(this);
@@ -217,6 +221,8 @@ public class ApolloSMP extends JavaPlugin {
         this.warListener = new com.apollosmp.listeners.WarListener(this);
         getServer().getPluginManager().registerEvents(warListener, this);
         getServer().getPluginManager().registerEvents(
+                new com.apollosmp.listeners.TownBlockListener(this), this);
+        getServer().getPluginManager().registerEvents(
                 new com.apollosmp.listeners.SleepListener(this), this);
         getServer().getPluginManager().registerEvents(
                 new com.apollosmp.listeners.SpawnerListener(this), this);
@@ -265,6 +271,7 @@ public class ApolloSMP extends JavaPlugin {
         getServer().getScheduler().runTaskTimer(this, () -> towns.collectRent(), 1200L, 6000L);
         getServer().getScheduler().runTaskTimer(this, () -> wars.tick(), 100L, 100L);
         getServer().getScheduler().runTaskTimer(this, () -> diplomacy.tick(), 600L, 600L);
+        getServer().getScheduler().runTaskTimer(this, () -> bank.tick(), 1200L, 1200L);
         getServer().getScheduler().runTaskTimer(this, () -> holograms.tick(), 40L, 20L);
         getServer().getScheduler().runTaskTimer(this, () -> toolExpiry.tick(), 200L, 600L);
         getServer().getScheduler().runTaskTimer(this, () -> merchant.refreshIfNeeded(), 1200L, 1200L);
@@ -335,6 +342,8 @@ public class ApolloSMP extends JavaPlugin {
         borders.save();
         wars.save();
         diplomacy.save();
+        bank.save();
+        shops.save();
         specialAuction.save();
         specialBusinesses.save();
         spawners.save();
@@ -382,6 +391,8 @@ public class ApolloSMP extends JavaPlugin {
     public com.apollosmp.town.WarManager wars() { return wars; }
     public com.apollosmp.town.DiplomacyManager diplomacy() { return diplomacy; }
     public com.apollosmp.town.ChatChannels channels() { return channels; }
+    public com.apollosmp.bank.BankManager bank() { return bank; }
+    public com.apollosmp.shop.ShopManager shops() { return shops; }
     public com.apollosmp.listeners.WarListener warListener() { return warListener; }
     public com.apollosmp.invest.BusinessHolograms holograms() { return holograms; }
     public com.apollosmp.merchant.MerchantManager merchant() { return merchant; }

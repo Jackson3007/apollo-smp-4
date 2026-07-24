@@ -322,6 +322,14 @@ towns:
   upgrade-cost-multiplier: 1.0  # scale every town upgrade price at once
   # Players can't fight each other inside town land unless the towns are at war.
   pvp-protection: true
+  bank:
+    block-price: 15000.0    # cost of a town bank block, paid from the town bank
+    interest-percent: 10.0  # added to every loan
+    limit-trusted: 100000.0 # most a Trusted borrower may take
+    limit-fair: 25000.0     # most a Fair borrower may take
+  shop:
+    block-price: 8000.0     # cost of a market stall
+    ally-discount: 10.0     # percent off for allied towns
   diplomacy:
     max-allies: 3        # how many towns one town can be allied with
     offer-minutes: 10    # how long an alliance offer waits for an answer
