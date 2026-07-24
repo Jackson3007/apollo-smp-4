@@ -161,10 +161,23 @@ public class BorderVisualizer {
                 else if (town.isMember(player.getUniqueId())) color = OWN;
                 else color = OTHER;
 
-                boolean north = !sameTown(world, cx, cz - 1, town);
-                boolean south = !sameTown(world, cx, cz + 1, town);
-                boolean west = !sameTown(world, cx - 1, cz, town);
-                boolean east = !sameTown(world, cx + 1, cz, town);
+                boolean north;
+                boolean south;
+                boolean west;
+                boolean east;
+                if (plotOwner != null) {
+                    // Owned plots get boxed in completely, so each one reads as
+                    // its own square even in the middle of a town.
+                    north = !samePlot(world, town, cx, cz - 1, plotOwner);
+                    south = !samePlot(world, town, cx, cz + 1, plotOwner);
+                    west = !samePlot(world, town, cx - 1, cz, plotOwner);
+                    east = !samePlot(world, town, cx + 1, cz, plotOwner);
+                } else {
+                    north = !sameTown(world, cx, cz - 1, town);
+                    south = !sameTown(world, cx, cz + 1, town);
+                    west = !sameTown(world, cx - 1, cz, town);
+                    east = !sameTown(world, cx + 1, cz, town);
+                }
 
                 double minX = cx * 16.0;
                 double minZ = cz * 16.0;
@@ -179,6 +192,14 @@ public class BorderVisualizer {
                 }
             }
         }
+    }
+
+    /** True when the neighbouring chunk is part of the same person's plot. */
+    private boolean samePlot(World world, Town town, int cx, int cz, UUID owner) {
+        String key = TownManager.chunkKey(world, cx, cz);
+        Town other = plugin.towns().getTownAt(key);
+        if (other == null || !other.name().equalsIgnoreCase(town.name())) return false;
+        return owner.equals(other.plotOwner(key));
     }
 
     private boolean sameTown(World world, int cx, int cz, Town town) {

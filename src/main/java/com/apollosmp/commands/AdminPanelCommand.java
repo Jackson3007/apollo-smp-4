@@ -242,6 +242,19 @@ public class AdminPanelCommand implements CommandExecutor, TabCompleter {
                     plugin.msg().sendRaw(player, "   <dark_gray>- " + s.name() + "</dark_gray>");
                 }
             }
+            case "pending" -> {
+                var owed = plugin.voting().pendingPayouts();
+                if (owed.isEmpty()) {
+                    plugin.msg().send(player, "<gray>Nothing queued - every vote has been paid.");
+                    return;
+                }
+                plugin.msg().sendRaw(player, "<#f9d423><bold>Waiting to be paid</bold>");
+                for (var e : owed.entrySet()) {
+                    plugin.msg().sendRaw(player, " <white>" + e.getKey() + "</white> <gray>-</gray> "
+                            + plugin.msg().money(e.getValue()));
+                }
+                plugin.msg().sendRaw(player, "<dark_gray>Paid automatically when they next join.");
+            }
             case "test" -> {
                 String target = args.length > 2 ? args[2] : player.getName();
                 plugin.msg().send(player, "<gray>Simulating a confirmed vote for <white>"
@@ -275,6 +288,7 @@ public class AdminPanelCommand implements CommandExecutor, TabCompleter {
         msg.sendRaw(player, "<#5ad1e8>Voting</#5ad1e8>");
         msg.sendRaw(player, " <white>/admin vote status</white> <gray>- is Votifier hooked?</gray>");
         msg.sendRaw(player, " <white>/admin vote test</white> <gray>- fake a confirmed vote</gray>");
+        msg.sendRaw(player, " <white>/admin vote pending</white> <gray>- unpaid vote rewards</gray>");
     }
 
     @Override
@@ -289,7 +303,7 @@ public class AdminPanelCommand implements CommandExecutor, TabCompleter {
                 return List.of("info", "reroll", "end", "time", "bid", "give", "fill");
             }
             if (args[0].equalsIgnoreCase("vote")) {
-                return List.of("status", "test");
+                return List.of("status", "test", "pending");
             }
         }
         if (args.length == 3) {

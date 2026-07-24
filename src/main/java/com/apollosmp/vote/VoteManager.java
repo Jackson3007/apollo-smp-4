@@ -79,7 +79,7 @@ public class VoteManager {
         }
 
         double amount = reward();
-        Player online = plugin.getServer().getPlayerExact(username);
+        Player online = findOnline(username);
         if (online != null) {
             plugin.economy().deposit(online.getUniqueId(), amount);
             plugin.getLogger().info("[Vote] Paid " + amount + " to " + online.getName() + ".");
@@ -97,11 +97,34 @@ public class VoteManager {
         save();
     }
 
+    /**
+     * Vote sites often send the name in a different case to the one in game,
+     * so match without caring about case.
+     */
+    private Player findOnline(String username) {
+        for (Player p : plugin.getServer().getOnlinePlayers()) {
+            if (p.getName().equalsIgnoreCase(username)) return p;
+        }
+        return null;
+    }
+
+    /** Queued payouts, for the admin readout. */
+    public Map<String, Double> pendingPayouts() {
+        return new java.util.LinkedHashMap<>(pending);
+    }
+
     private void announce(String name) {
         if (!plugin.getConfig().getBoolean("voting.announce", true)) return;
         for (Player p : plugin.getServer().getOnlinePlayers()) {
-            plugin.msg().sendRaw(p, "<gray>" + name
-                    + " voted for the server. <dark_gray>(/vote)</dark_gray>");
+            plugin.msg().sendRaw(p, "");
+            plugin.msg().sendRaw(p, "<gradient:#f9d423:#ff4e50><bold>\u2600 "
+                    + name + " voted for Apollo!</bold></gradient>");
+            plugin.msg().sendRaw(p, "<gray>They earned <#f9d423>" + plugin.msg().money(reward())
+                    + "</#f9d423><gray>. "
+                    + "<click:run_command:'/vote'><hover:show_text:'Click to open the vote menu'>"
+                    + "<#5ad1e8><u>Vote too</u></#5ad1e8></hover></click><gray>.</gray>");
+            plugin.msg().sendRaw(p, "");
+            p.playSound(p.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 0.5f, 1.6f);
         }
     }
 
@@ -113,6 +136,7 @@ public class VoteManager {
         save();
         plugin.msg().send(player, "<green>Welcome back! Your votes earned you <#f9d423>"
                 + plugin.msg().money(owed) + "</#f9d423> while you were offline.");
+        plugin.getLogger().info("[Vote] Paid " + owed + " owed to " + player.getName() + " on join.");
     }
 
     // ---- persistence ----
