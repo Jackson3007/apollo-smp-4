@@ -26,14 +26,14 @@ public class TownTopMenu extends Gui {
 
     public TownTopMenu(ApolloSMP plugin, Player viewer, String metric) {
         super(plugin, viewer, 5, "<#f9d423><bold>Top Towns</bold>");
-        this.metric = metric == null ? "bank" : metric;
+        this.metric = metric == null ? "wealth" : metric;
     }
 
     private String label() {
         return switch (metric) {
             case "land" -> "Most Land";
             case "residents" -> "Most Residents";
-            default -> "Richest";
+            default -> "Wealthiest";
         };
     }
 
@@ -41,8 +41,18 @@ public class TownTopMenu extends Gui {
         return switch (metric) {
             case "land" -> town.claims().size() + " chunks";
             case "residents" -> town.memberCount() + " resident" + (town.memberCount() == 1 ? "" : "s");
-            default -> plugin.msg().money(town.bank());
+            default -> plugin.msg().money(plugin.towns().wealthOf(town));
         };
+    }
+
+    /** Where a town's money actually sits. */
+    private List<String> wealthLines(Town town) {
+        List<String> out = new ArrayList<>();
+        if (!metric.equals("land") && !metric.equals("residents")) {
+            out.add("<dark_gray>  bank " + plugin.msg().money(town.bank())
+                    + " + residents " + plugin.msg().money(plugin.towns().memberWealth(town)) + "</dark_gray>");
+        }
+        return out;
     }
 
     @Override
@@ -56,8 +66,10 @@ public class TownTopMenu extends Gui {
                 .lore("<gray>Towns on the server: <white>"
                                 + plugin.towns().allTowns().size() + "</white>",
                         "",
-                        "<gray>Click the button below to rank by",
-                        "<gray>money, land, or population.")
+                        "<gray>Wealth counts the town bank plus",
+                        "<gray>every resident's own balance.",
+                        "",
+                        "<gray>Click below to rank by land or population.")
                 .glow(true).hideAttributes().build());
 
         if (top.isEmpty()) {
@@ -71,27 +83,36 @@ public class TownTopMenu extends Gui {
         String[] places = {"<#f9d423>1st", "<white>2nd", "<#c8873c>3rd"};
         for (int i = 0; i < 3 && i < top.size(); i++) {
             Town town = top.get(i);
+            List<String> lore = new ArrayList<>();
+            lore.add("<gray>" + label() + ": <white>" + valueOf(town) + "</white>");
+            lore.addAll(wealthLines(town));
+            lore.add("<gray>Residents: <white>" + town.memberCount() + "</white>");
+            lore.add("<gray>Land: <white>" + town.claims().size() + "</white> chunks");
+            if (mine != null && mine.name().equalsIgnoreCase(town.name())) {
+                lore.add("<green>That's your town");
+            }
+            lore.add("");
+            lore.add("<yellow>Click to visit");
+
             inventory.setItem(PODIUM[i], Items.of(medals[i])
                     .name(places[i] + " <bold>" + town.name() + "</bold>")
-                    .lore("<gray>" + label() + ": <white>" + valueOf(town) + "</white>",
-                            "<gray>Residents: <white>" + town.memberCount() + "</white>",
-                            "<gray>Land: <white>" + town.claims().size() + "</white> chunks",
-                            mine != null && mine.name().equalsIgnoreCase(town.name())
-                                    ? "<green>That's your town" : "",
-                            "", "<yellow>Click to visit")
-                    .glow(true).hideAttributes().build());
+                    .lore(lore).glow(true).hideAttributes().build());
             shown.add(town.name());
         }
 
         // The rest in a plain list.
         for (int i = 3; i < top.size() && LIST_START + (i - 3) < 36; i++) {
             Town town = top.get(i);
+            List<String> lore = new ArrayList<>();
+            lore.add("<gray>" + label() + ": <white>" + valueOf(town) + "</white>");
+            lore.addAll(wealthLines(town));
+            lore.add("<gray>Residents: <white>" + town.memberCount() + "</white>");
+            lore.add("");
+            lore.add("<yellow>Click to visit");
+
             inventory.setItem(LIST_START + (i - 3), Items.of(Material.WHITE_BANNER)
                     .name("<gray>" + (i + 1) + ". <white>" + town.name() + "</white>")
-                    .lore("<gray>" + label() + ": <white>" + valueOf(town) + "</white>",
-                            "<gray>Residents: <white>" + town.memberCount() + "</white>",
-                            "", "<yellow>Click to visit")
-                    .hideAttributes().build());
+                    .lore(lore).hideAttributes().build());
             shown.add(town.name());
         }
 
@@ -107,9 +128,9 @@ public class TownTopMenu extends Gui {
 
     private String nextMetric() {
         return switch (metric) {
-            case "bank" -> "land";
             case "land" -> "residents";
-            default -> "bank";
+            case "residents" -> "wealth";
+            default -> "land";
         };
     }
 

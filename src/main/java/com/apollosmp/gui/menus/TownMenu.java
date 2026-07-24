@@ -156,7 +156,7 @@ public class TownMenu extends Gui {
                 return;
             }
             if (slot == VISIT_ALT) { new TownListMenu(plugin, player, 0).open(); return; }
-            if (slot == TOP) { new TownTopMenu(plugin, player, "bank").open(); return; }
+            if (slot == TOP) { new TownTopMenu(plugin, player, "wealth").open(); return; }
             if (slot >= INVITE_START && slot <= 14) {
                 int idx = slot - INVITE_START;
                 if (idx < inviteNames.size()
@@ -171,7 +171,7 @@ public class TownMenu extends Gui {
             case YOUR_TOWN -> new TownManageMenu(plugin, player).open();
             case VISIT -> new TownListMenu(plugin, player, 0).open();
             case MAP -> { player.closeInventory(); plugin.borders().sendMap(player); }
-            case TOP -> new TownTopMenu(plugin, player, "bank").open();
+            case TOP -> new TownTopMenu(plugin, player, "wealth").open();
             default -> { /* no-op */ }
         }
     }

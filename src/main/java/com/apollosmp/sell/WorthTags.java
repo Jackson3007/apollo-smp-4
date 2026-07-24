@@ -73,13 +73,16 @@ public class WorthTags implements Listener {
     }
 
     /**
-     * Off by default. Writing prices onto real items means an item that carries
-     * the tag will not stack with one that doesn't - and items on the ground,
-     * in hoppers, or freshly pulled from a chest never carry it. Vanilla
-     * stacking matters more than a tooltip, so use /worth instead.
+     * Prices on item tooltips.
+     *
+     * The trick to not breaking stacking is consistency: the tag holds the
+     * price of ONE item, so it's identical for every stack of that material,
+     * and we tag items at every point they reach a player - picked up off the
+     * ground, pulled from a chest, or already in the bag. Two stacks of the
+     * same thing therefore always carry the same tooltip and merge normally.
      */
     public boolean enabled() {
-        return plugin.getConfig().getBoolean("sell.worth-lore", false);
+        return plugin.getConfig().getBoolean("sell.worth-lore", true);
     }
 
     /**
@@ -196,6 +199,17 @@ public class WorthTags implements Listener {
             ItemStack stack = contents[i];
             if (stack == null) continue;
             if (strip(stack)) inventory.setItem(i, stack);
+        }
+    }
+
+    /** Tag stacks of one material so an incoming item merges with them. */
+    private void markMatching(Inventory inventory, Material material) {
+        if (inventory == null || isOurMenu(inventory)) return;
+        ItemStack[] contents = inventory.getContents();
+        for (int i = 0; i < contents.length; i++) {
+            ItemStack stack = contents[i];
+            if (stack == null || stack.getType() != material) continue;
+            if (mark(stack)) inventory.setItem(i, stack);
         }
     }
 
@@ -365,20 +379,29 @@ public class WorthTags implements Listener {
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onPickup(EntityPickupItemEvent event) {
         if (!enabled()) return;
-        // Unit-price tags are identical on every stack, so merges need no help.
-        if (!showTotal()) return;
         if (!(event.getEntity() instanceof Player player)) return;
-
         ItemStack ground = event.getItem().getItemStack();
-        if (strip(ground)) event.getItem().setItemStack(ground);
-        stripMatching(player.getInventory(), ground.getType());
-        retagLater(player);
+
+        if (showTotal()) {
+            // Totals differ per stack, so everything has to come off first.
+            if (strip(ground)) event.getItem().setItemStack(ground);
+            stripMatching(player.getInventory(), ground.getType());
+            retagLater(player);
+            return;
+        }
+
+        // Tag the incoming stack so it matches what's already in the bag.
+        if (mark(ground)) event.getItem().setItemStack(ground);
+        markMatching(player.getInventory(), ground.getType());
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onDrop(PlayerDropItemEvent event) {
         ItemStack stack = event.getItemDrop().getItemStack();
-        if (strip(stack)) event.getItemDrop().setItemStack(stack);
+        // Keep the tag on while the feature is on - a dropped item that still
+        // matches will merge straight back into the stack it came from.
+        boolean changed = (enabled() && !showTotal()) ? mark(stack) : strip(stack);
+        if (changed) event.getItemDrop().setItemStack(stack);
     }
 
     @EventHandler
@@ -409,7 +432,9 @@ public class WorthTags implements Listener {
     public void onClose(InventoryCloseEvent event) {
         Inventory top = event.getInventory();
         if (top instanceof PlayerInventory || isOurMenu(top)) return;
-        stripAll(top);
+        // Only clean up when the feature is off; otherwise leave chests tagged
+        // so pulling items out of them merges with a tagged inventory.
+        if (!enabled()) stripAll(top);
         if (event.getPlayer() instanceof Player p) forgetTitle(p);
     }
 
@@ -419,23 +444,42 @@ public class WorthTags implements Listener {
      */
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onClick(InventoryClickEvent event) {
-        if (!enabled() || !showTotal()) return;
+        if (!enabled()) return;
         if (isOurMenu(event.getView().getTopInventory())) return;
 
-        clearFor(event.getView(), event.getCurrentItem());
-        clearFor(event.getView(), event.getCursor());
-        if (event.getHotbarButton() >= 0 && event.getWhoClicked() instanceof Player p) {
-            clearFor(event.getView(), p.getInventory().getItem(event.getHotbarButton()));
+        if (showTotal()) {
+            clearFor(event.getView(), event.getCurrentItem());
+            clearFor(event.getView(), event.getCursor());
+            if (event.getHotbarButton() >= 0 && event.getWhoClicked() instanceof Player p) {
+                clearFor(event.getView(), p.getInventory().getItem(event.getHotbarButton()));
+            }
+            retagViewLater(event.getView());
+            return;
         }
-        retagViewLater(event.getView());
+        // Make sure both sides carry the tag before the move happens.
+        syncFor(event.getView(), event.getCurrentItem());
+        syncFor(event.getView(), event.getCursor());
     }
 
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onDrag(InventoryDragEvent event) {
-        if (!enabled() || !showTotal()) return;
+        if (!enabled()) return;
         if (isOurMenu(event.getView().getTopInventory())) return;
-        clearFor(event.getView(), event.getOldCursor());
-        retagViewLater(event.getView());
+        if (showTotal()) {
+            clearFor(event.getView(), event.getOldCursor());
+            retagViewLater(event.getView());
+            return;
+        }
+        syncFor(event.getView(), event.getOldCursor());
+    }
+
+    /** Tag this material on both sides of the view so the two can merge. */
+    private void syncFor(InventoryView view, ItemStack sample) {
+        if (sample == null || sample.getType().isAir()) return;
+        Material material = sample.getType();
+        Inventory top = view.getTopInventory();
+        if (isStorage(top)) markMatching(top, material);
+        markMatching(view.getBottomInventory(), material);
     }
 
     /** Untag this material on both sides of the view so vanilla can merge. */

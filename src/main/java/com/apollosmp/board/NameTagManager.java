@@ -75,9 +75,15 @@ public class NameTagManager {
             if (!team.hasEntry(name)) team.addEntry(name);
 
             String tag = entry.getValue();
-            team.prefix(tag.isEmpty()
-                    ? Component.empty()
-                    : Msg.mm("<gray>[</gray><#f9d423>" + tag + "</#f9d423><gray>] </gray>"));
+            if (tag.isEmpty()) {
+                team.prefix(Component.empty());
+                continue;
+            }
+            // Use whatever colour the town picked, falling back to gold.
+            Town town = plugin.towns().townByName(tag);
+            String colour = town == null ? "#f9d423" : town.tagColour();
+            team.prefix(Msg.mm("<gray>[</gray><" + colour + ">" + tag
+                    + "</" + colour + "><gray>] </gray>"));
         }
     }
 

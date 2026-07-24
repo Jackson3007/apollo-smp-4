@@ -199,6 +199,8 @@ public class TownManager {
         }
         town.setTagColour(clean);
         touch();
+        // The tag text is the same, so nudge the name tags to redraw.
+        if (plugin.nameTags() != null) plugin.nameTags().invalidate();
         plugin.msg().send(player, "<green>Town colour set: <" + clean + ">"
                 + town.name() + "</" + clean + ">");
         return true;
@@ -229,13 +231,27 @@ public class TownManager {
         return true;
     }
 
+    /** Everything the residents hold, added to the town's own funds. */
+    public double memberWealth(Town town) {
+        double total = 0;
+        for (UUID member : town.members().keySet()) {
+            total += plugin.economy().getBalance(member);
+        }
+        return total;
+    }
+
+    /** A town's total worth: its bank plus every resident's balance. */
+    public double wealthOf(Town town) {
+        return town.bank() + memberWealth(town);
+    }
+
     /** Towns ranked for the leaderboard. */
     public List<Town> topTowns(String metric, int limit) {
         List<Town> all = new ArrayList<>(towns.values());
-        switch (metric == null ? "bank" : metric) {
+        switch (metric == null ? "wealth" : metric) {
             case "land" -> all.sort((a, b) -> Integer.compare(b.claims().size(), a.claims().size()));
             case "residents" -> all.sort((a, b) -> Integer.compare(b.memberCount(), a.memberCount()));
-            default -> all.sort((a, b) -> Double.compare(b.bank(), a.bank()));
+            default -> all.sort((a, b) -> Double.compare(wealthOf(b), wealthOf(a)));
         }
         return all.size() > limit ? new ArrayList<>(all.subList(0, limit)) : all;
     }

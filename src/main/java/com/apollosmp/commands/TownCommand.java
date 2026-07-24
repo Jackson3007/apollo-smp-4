@@ -161,7 +161,7 @@ public class TownCommand implements CommandExecutor, TabCompleter {
             }
             case "upgrades", "upgrade" -> new com.apollosmp.gui.menus.TownUpgradesMenu(plugin, player).open();
             case "top", "leaderboard" -> {
-                String metric = args.length > 1 ? args[1].toLowerCase() : "bank";
+                String metric = args.length > 1 ? args[1].toLowerCase() : "wealth";
                 new com.apollosmp.gui.menus.TownTopMenu(plugin, player, metric).open();
             }
             case "colour", "color" -> {
@@ -335,7 +335,7 @@ public class TownCommand implements CommandExecutor, TabCompleter {
             return names;
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("top")) {
-            return List.of("bank", "land", "residents");
+            return List.of("wealth", "land", "residents");
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("ally")) {
             List<String> out = new ArrayList<>(List.of("accept", "decline", "break"));

@@ -196,6 +196,13 @@ public class BusinessMenu extends Gui {
 
     @Override
     public void onClick(Player player, int slot, ItemStack clicked, ClickType click) {
+        // Only the owner (or staff) can act on a business, whatever route they took here.
+        if (slot != CLOSE && !player.getUniqueId().equals(block.owner())
+                && !player.hasPermission("apollo.admin")) {
+            plugin.msg().send(player, "<red>This isn't your business.");
+            player.closeInventory();
+            return;
+        }
         switch (slot) {
             case CLOSE -> player.closeInventory();
             case COLLECT_ALL -> { collectAll(player); redraw(); }

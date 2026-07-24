@@ -103,13 +103,19 @@ public class InvestListener implements Listener {
         ItemStack hand = event.getPlayer().getInventory().getItemInMainHand();
         if ("votekey".equals(plugin.customItems().readId(hand))) return;
 
-        // Anyone can open a business panel (they're not locked to one person).
         event.setCancelled(true);
         Player player = event.getPlayer();
         plugin.businesses().updateProduction(block);
-        if (!player.getUniqueId().equals(block.owner())
-                && plugin.warListener().tryRaid(player, block)) {
-            return; // raided instead of opened
+
+        if (!player.getUniqueId().equals(block.owner())) {
+            // At war you can raid it, but you still can't manage it.
+            if (plugin.warListener().tryRaid(player, block)) return;
+            if (!player.hasPermission("apollo.admin")) {
+                plugin.msg().send(player, "<red>This is <white>"
+                        + (block.ownerName() == null ? "someone else" : block.ownerName())
+                        + "</white>'s business.");
+                return;
+            }
         }
         new BusinessMenu(plugin, player, block).open();
     }

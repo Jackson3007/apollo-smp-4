@@ -63,7 +63,12 @@ public class LogisticsListener implements Listener {
         if (node == null) return;
 
         event.setCancelled(true);
+        Player player = event.getPlayer();
+        if (!player.getUniqueId().equals(node.owner) && !player.hasPermission("apollo.admin")) {
+            plugin.msg().send(player, "<red>That belongs to <white>" + node.ownerName + "</white>.");
+            return;
+        }
         boolean distributor = plugin.logistics().isDistributor(event.getClickedBlock().getLocation());
-        new LogisticsMenu(plugin, event.getPlayer(), node, !distributor).open();
+        new LogisticsMenu(plugin, player, node, !distributor).open();
     }
 }
