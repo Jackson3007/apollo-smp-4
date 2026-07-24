@@ -83,6 +83,28 @@ public class SpawnerManager {
         return key(loc.getWorld().getName(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
     }
 
+    /** How close a player must be for a spawner to run. Vanilla is 16. */
+    public int activationRange() {
+        return Math.max(1, Math.min(128, plugin.getConfig().getInt("spawners.activation-range", 30)));
+    }
+
+    /** Spawners we've already widened this session. */
+    private final Set<String> ranged = ConcurrentHashMap.newKeySet();
+
+    /** Push the configured range onto a spawner block. */
+    public void applyRange(Block block) {
+        if (block == null || block.getType() != Material.SPAWNER) return;
+        if (!(block.getState() instanceof CreatureSpawner spawner)) return;
+        int range = activationRange();
+        try {
+            if (spawner.getRequiredPlayerRange() == range) return;
+            spawner.setRequiredPlayerRange(range);
+            spawner.update(true, false);
+        } catch (Throwable ignored) {
+            // older builds may not expose this; vanilla range still applies
+        }
+    }
+
     public int maxStack() {
         return Math.max(1, plugin.getConfig().getInt("spawners.max-stack", 64));
     }
@@ -133,6 +155,7 @@ public class SpawnerManager {
 
     public void unregister(Placed p) {
         placed.remove(p.key());
+        ranged.remove(p.key());
         TextDisplay label = labels.remove(p.key());
         if (label != null && label.isValid()) label.remove();
         save();
@@ -144,6 +167,7 @@ public class SpawnerManager {
         if (block.getState() instanceof CreatureSpawner spawner) {
             try {
                 spawner.setSpawnedType(type);
+                spawner.setRequiredPlayerRange(activationRange());
                 spawner.update(true, false);
             } catch (Exception ignored) {
                 // some types can't be set; leave it alone
@@ -163,6 +187,16 @@ public class SpawnerManager {
     }
 
     public void tick() {
+        // Range is applied whether or not labels are switched on.
+        for (Placed p : new ArrayList<>(placed.values())) {
+            if (ranged.contains(p.key())) continue;
+            World world = plugin.getServer().getWorld(p.world);
+            if (world == null) continue;
+            if (!world.isChunkLoaded(p.x >> 4, p.z >> 4)) continue;
+            ranged.add(p.key());
+            applyRange(world.getBlockAt(p.x, p.y, p.z));
+        }
+
         if (!labelsEnabled()) {
             removeAllLabels();
             return;

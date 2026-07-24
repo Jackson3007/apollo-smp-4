@@ -290,6 +290,8 @@ spawners:
   # Natural spawners still need Silk Touch. Player-placed ones always drop.
   silk-touch-pickup: true
   holograms: true    # floating label showing the mob and stack size
+  # How close a player must be for a spawner to run. Vanilla is 16.
+  activation-range: 30
   max-stack: 64      # how many spawners can sit on one block
 
 # ---- Mob stacking ----

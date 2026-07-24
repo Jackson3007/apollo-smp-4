@@ -85,9 +85,15 @@ public class AuctionMenu extends Gui {
             ItemMeta meta = icon.getItemMeta();
             List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
             lore.add(com.apollosmp.util.Msg.lore("<dark_gray>―――――――――――"));
+            if (listing.town() != null) {
+                lore.add(com.apollosmp.util.Msg.lore("<#5ad1e8>Sold by " + listing.town()
+                        + "</#5ad1e8>"));
+            }
             lore.add(com.apollosmp.util.Msg.lore("<gray>Price: <#f9d423>"
                     + plugin.msg().money(listing.price()) + "</#f9d423>"));
-            lore.add(com.apollosmp.util.Msg.lore("<gray>Time left: <white>" + formatDuration(listing.millisLeft()) + "</white>"));
+            lore.add(com.apollosmp.util.Msg.lore(listing.town() != null
+                    ? "<gray>Listed until sold</gray>"
+                    : "<gray>Time left: <white>" + formatDuration(listing.millisLeft()) + "</white>"));
             lore.add(com.apollosmp.util.Msg.lore(""));
             if (mine) {
                 lore.add(com.apollosmp.util.Msg.lore("<red>Click to cancel & reclaim"));

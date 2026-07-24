@@ -234,6 +234,34 @@ public class ShopManager {
         return true;
     }
 
+    /**
+     * Move an offer off the shelf and onto the auction house as a town listing.
+     * Stock lives in one place at a time, so nothing can be sold twice.
+     */
+    public boolean listOnAuction(Player player, Stall stall, int index) {
+        if (index < 0 || index >= stall.offers.size()) return false;
+        Town town = plugin.towns().townByName(stall.town);
+        if (town == null || !town.isMember(player.getUniqueId())) {
+            plugin.msg().send(player, "<red>Only residents can list this town's goods.");
+            return false;
+        }
+        Offer offer = stall.offers.get(index);
+        if (offer.stock <= 0) return false;
+
+        int bundle = Math.min(offer.stock, offer.material.getMaxStackSize());
+        double price = offer.price * bundle;
+
+        ItemStack listed = new ItemStack(offer.material, bundle);
+        if (!plugin.auctions().listForTown(player, town.name(), listed, price)) return false;
+
+        offer.stock -= bundle;
+        if (offer.stock <= 0) stall.offers.remove(index);
+        save();
+
+        plugin.msg().send(player, "<gray>Taken from the shelf and put on the auction house.");
+        return true;
+    }
+
     /** What this player pays per item, after any ally discount. */
     public double priceFor(Player buyer, Stall stall, Offer offer) {
         Town theirs = plugin.towns().getTownOf(buyer.getUniqueId());
