@@ -75,6 +75,8 @@ public class TownBankMenu extends Gui {
     public void onClick(Player player, int slot, ItemStack clicked, ClickType click) {
         if (slot == 31) { new TownManageMenu(plugin, player).open(); return; }
         if (slot == 33 || slot == 34) {
+            com.apollosmp.town.Town town = plugin.towns().getTownOf(player.getUniqueId());
+            if (town == null) { player.closeInventory(); return; }
             boolean isBank = slot == 33;
             double cost = isBank ? plugin.bank().bankPrice() : plugin.shops().stallPrice();
             if (!town.hasPerm(player.getUniqueId(), com.apollosmp.town.TownPerm.WITHDRAW)) {
