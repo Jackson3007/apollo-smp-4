@@ -187,6 +187,17 @@ public class SellManager {
         }
     }
 
+    /** Renamed in 1.20.5, so look it up rather than hard-coding either name. */
+    private static final Material SCUTE = firstMaterial("TURTLE_SCUTE", "SCUTE");
+
+    private static Material firstMaterial(String... names) {
+        for (String name : names) {
+            Material m = Material.matchMaterial(name);
+            if (m != null) return m;
+        }
+        return null;
+    }
+
     /** Fallback price for anything not in the table. 0 disables the fallback. */
     public double defaultPrice() {
         return Math.max(0, plugin.getConfig().getDouble("sell.default-price", 0.25));
@@ -241,6 +252,7 @@ public class SellManager {
     }
 
     public double priceOf(Material material) {
+        if (material == null) return 0.0;
         Double listed = prices.get(material);
         if (listed != null) return listed;
         return blocked(material) ? 0.0 : defaultPrice();
@@ -295,7 +307,7 @@ public class SellManager {
         if (name.startsWith("DIAMOND_")) return Material.DIAMOND;
         if (name.startsWith("NETHERITE_")) return Material.NETHERITE_INGOT;
         if (name.startsWith("LEATHER_")) return Material.LEATHER;
-        if (name.startsWith("TURTLE_")) return Material.SCUTE;
+        if (name.startsWith("TURTLE_")) return SCUTE;
         return null;
     }
 

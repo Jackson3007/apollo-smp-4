@@ -79,7 +79,7 @@ sell:
     STICK: 0.2
     LEATHER: 3.0
     FLINT: 1.0
-    SCUTE: 20.0
+    TURTLE_SCUTE: 20.0
     TRIPWIRE_HOOK: 5.0
     ANCIENT_DEBRIS: 150.0
     # Farming
