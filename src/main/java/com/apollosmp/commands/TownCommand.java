@@ -164,6 +164,13 @@ public class TownCommand implements CommandExecutor, TabCompleter {
                 String metric = args.length > 1 ? args[1].toLowerCase() : "bank";
                 new com.apollosmp.gui.menus.TownTopMenu(plugin, player, metric).open();
             }
+            case "colour", "color" -> {
+                if (args.length < 2) {
+                    new com.apollosmp.gui.menus.TownColourMenu(plugin, player).open();
+                    return true;
+                }
+                plugin.towns().setTagColour(player, args[1]);
+            }
             case "board" -> {
                 if (args.length < 2) {
                     Town own = plugin.towns().getTownOf(player.getUniqueId());
@@ -269,6 +276,7 @@ public class TownCommand implements CommandExecutor, TabCompleter {
         plugin.msg().send(player, "<gray>/town move <white>- relocate the whole town");
         plugin.msg().send(player, "<gray>/town upgrades <white>- spend the bank on perks");
         plugin.msg().send(player, "<gray>/town board <msg> <white>- greet visitors");
+        plugin.msg().send(player, "<gray>/town color <white>- pick your chat tag colour");
         plugin.msg().send(player, "<gray>/town top <white>- richest and biggest towns");
         plugin.msg().send(player, "<gray>/town war <town> <mins> <white>- declare war");
         plugin.msg().send(player, "<gray>/town peace <white>- sue for peace");
@@ -311,7 +319,7 @@ public class TownCommand implements CommandExecutor, TabCompleter {
             return List.of("create", "claim", "unclaim", "home", "invite", "join", "kick", "rank",
                     "deposit", "withdraw", "tax", "sellplot", "rentoutplot", "buyplot",
                     "rentplot", "endrent", "unlistplot",
-                    "spawn", "setspawn", "list", "tp", "visitors", "border", "map", "plot", "move", "upgrades", "war", "peace", "ally", "board", "top",
+                    "spawn", "setspawn", "list", "tp", "visitors", "border", "map", "plot", "move", "upgrades", "war", "peace", "ally", "board", "top", "color",
                     "leave", "disband", "help");
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("kick") || args[0].equalsIgnoreCase("rank"))

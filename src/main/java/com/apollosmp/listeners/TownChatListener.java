@@ -55,12 +55,15 @@ public class TownChatListener implements Listener {
         }
 
         final String tag = town.name();
+        TextColor tagColour = TextColor.fromHexString(town.tagColour());
+        final TextColor townColour = tagColour == null
+                ? TextColor.fromHexString("#f9d423") : tagColour;
         TownRank townRank = town.rankOf(event.getPlayer().getUniqueId());
         final String rankName = townRank == null ? TownRank.RESIDENT.display() : townRank.display();
 
         event.renderer((source, sourceName, message, viewer) ->
                 badge.append(Component.text("[", NamedTextColor.GRAY))
-                        .append(Component.text(tag, TextColor.fromHexString("#f9d423")))
+                        .append(Component.text(tag, townColour))
                         .append(Component.text(" | ", NamedTextColor.DARK_GRAY))
                         .append(Component.text(rankName, TextColor.fromHexString("#5ad1e8")))
                         .append(Component.text("] ", NamedTextColor.GRAY))

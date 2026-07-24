@@ -56,7 +56,13 @@ public class TownShopMenu extends Gui {
             if (each < offer.price) {
                 lore.add("<dark_gray>Normally " + plugin.msg().money(offer.price) + "</dark_gray>");
             }
-            lore.add("<gray>In stock: <white>" + offer.stock + "</white>");
+            lore.add("<gray>In stock: <white>" + offer.stock + "</white>"
+                    + " <dark_gray>(worth " + plugin.msg().money(each * offer.stock) + ")</dark_gray>");
+            int bundle = Math.min(offer.stock, offer.material.getMaxStackSize());
+            if (bundle > 1) {
+                lore.add("<gray>A stack of <white>" + bundle + "</white>: <#f9d423>"
+                        + plugin.msg().money(each * bundle) + "</#f9d423>");
+            }
             lore.add("");
             lore.add("<yellow>Left-click:</yellow> <gray>buy one</gray>");
             lore.add("<yellow>Right-click:</yellow> <gray>buy a stack</gray>");

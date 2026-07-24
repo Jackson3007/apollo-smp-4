@@ -33,6 +33,8 @@ public class Town {
     private final Map<TownUpgrade, Integer> upgrades = new EnumMap<>(TownUpgrade.class);
     /** A short message the mayor sets, shown to anyone walking in. */
     private String board;
+    /** Hex colour for the town's chat tag. */
+    private String tagColour = "#f9d423";
 
     public Town(String name, UUID mayor, long founded) {
         this.name = name;
@@ -129,6 +131,14 @@ public class Town {
     public void clearListing(String chunkKey) {
         plotSale.remove(chunkKey);
         plotRent.remove(chunkKey);
+    }
+
+    public String tagColour() {
+        return (tagColour == null || tagColour.isBlank()) ? "#f9d423" : tagColour;
+    }
+
+    public void setTagColour(String hex) {
+        this.tagColour = (hex == null || hex.isBlank()) ? "#f9d423" : hex;
     }
 
     public String board() { return board; }

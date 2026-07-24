@@ -72,8 +72,14 @@ public class WorthTags implements Listener {
         return count;
     }
 
+    /**
+     * Off by default. Writing prices onto real items means an item that carries
+     * the tag will not stack with one that doesn't - and items on the ground,
+     * in hoppers, or freshly pulled from a chest never carry it. Vanilla
+     * stacking matters more than a tooltip, so use /worth instead.
+     */
     public boolean enabled() {
-        return plugin.getConfig().getBoolean("sell.worth-lore", true);
+        return plugin.getConfig().getBoolean("sell.worth-lore", false);
     }
 
     /**
@@ -383,9 +389,12 @@ public class WorthTags implements Listener {
     /** Chests show values while you're looking in them. */
     @EventHandler(ignoreCancelled = true)
     public void onOpen(InventoryOpenEvent event) {
-        if (!enabled()) return;
         Inventory top = event.getInventory();
         if (!isStorage(top)) return;
+        if (!enabled()) {
+            plugin.getServer().getScheduler().runTask(plugin, () -> stripAll(top));
+            return;
+        }
         plugin.getServer().getScheduler().runTask(plugin, () -> {
             markAll(top);
             if (event.getPlayer() instanceof Player p) {

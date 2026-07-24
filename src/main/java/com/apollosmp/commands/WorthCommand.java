@@ -32,10 +32,18 @@ public class WorthCommand implements CommandExecutor {
             plugin.msg().send(player, "<red>The server won't buy that.");
             return true;
         }
-        plugin.msg().send(player, "<white>" + held.getAmount() + "x "
-                + Items.pretty(held.getType()) + "</white> <gray>is worth <#f9d423>"
-                + plugin.msg().money(plugin.sell().valueOf(held)) + "</#f9d423> <dark_gray>("
-                + plugin.msg().money(plugin.sell().priceOf(held.getType())) + " each)</dark_gray>");
+        double total = plugin.sell().valueOf(held);
+        int amount = Math.max(1, held.getAmount());
+        double each = total / amount;
+
+        plugin.msg().sendRaw(player, "<white>" + amount + "x "
+                + Items.pretty(held.getType()) + "</white>");
+        plugin.msg().sendRaw(player, "  <gray>Whole stack:</gray> <#f9d423><bold>"
+                + plugin.msg().money(total) + "</bold></#f9d423>");
+        if (amount > 1) {
+            plugin.msg().sendRaw(player, "  <gray>Each:</gray> <white>"
+                    + plugin.msg().money(each) + "</white>");
+        }
         return true;
     }
 }

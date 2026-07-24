@@ -16,6 +16,7 @@ import java.util.List;
 /** Everything you set once and forget: tax, spawn, permissions, and the risky stuff. */
 public class TownSettingsMenu extends Gui {
 
+    private static final int COLOUR = 9;
     private static final int BOARD = 10;
     private static final int SET_SPAWN = 11;
     private static final int VISITORS = 12;
@@ -40,6 +41,14 @@ public class TownSettingsMenu extends Gui {
                 .lore("<gray>Options only leaders usually touch.")
                 .glow(true).hideAttributes().build());
 
+
+        inventory.setItem(COLOUR, Items.of(Material.NAME_TAG)
+                .name("<" + town.tagColour() + "><bold>Town Colour</bold></" + town.tagColour() + ">")
+                .lore("<gray>How your town name looks in chat.",
+                        "<dark_gray>[</dark_gray><" + town.tagColour() + ">" + town.name()
+                                + "</" + town.tagColour() + "><dark_gray> | Mayor]</dark_gray>",
+                        "", "<yellow>Click to change")
+                .hideAttributes().build());
 
         inventory.setItem(BOARD, Items.of(Material.OAK_SIGN)
                 .name("<#5ad1e8><bold>Town Board</bold>")
@@ -122,6 +131,7 @@ public class TownSettingsMenu extends Gui {
             case BACK -> new TownManageMenu(plugin, player).open();
 
 
+            case COLOUR -> new TownColourMenu(plugin, player).open();
             case BOARD -> {
                 player.closeInventory();
                 plugin.msg().send(player, "<#5ad1e8>Type your town board message</#5ad1e8> "

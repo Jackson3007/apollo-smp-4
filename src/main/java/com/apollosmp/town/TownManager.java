@@ -176,6 +176,34 @@ public class TownManager {
         return true;
     }
 
+    /** Colours a town may pick for its chat tag. */
+    public static final String[][] TAG_COLOURS = {
+            {"Gold", "#f9d423"}, {"Crimson", "#ff4e50"}, {"Sky", "#5ad1e8"},
+            {"Rose", "#e94fd0"}, {"Emerald", "#57d977"}, {"Violet", "#9b6cff"},
+            {"Amber", "#ff9a3c"}, {"Ice", "#c9f2ff"}, {"Lime", "#a4e857"},
+            {"Ocean", "#3c8cff"}, {"Ash", "#b0b0b0"}, {"Blood", "#a3232b"}
+    };
+
+    /** Set the town's chat tag colour. */
+    public boolean setTagColour(Player player, String hex) {
+        Town town = getTownOf(player.getUniqueId());
+        if (town == null) { plugin.msg().send(player, "<red>You're not in a town."); return false; }
+        if (!town.mayor().equals(player.getUniqueId())) {
+            plugin.msg().send(player, "<red>Only the mayor can change the town colour."); return false;
+        }
+        String clean = hex == null ? "" : hex.trim();
+        if (!clean.startsWith("#")) clean = "#" + clean;
+        if (!clean.matches("#[0-9a-fA-F]{6}")) {
+            plugin.msg().send(player, "<red>That isn't a colour. Try something like <white>#5ad1e8</white>.");
+            return false;
+        }
+        town.setTagColour(clean);
+        touch();
+        plugin.msg().send(player, "<green>Town colour set: <" + clean + ">"
+                + town.name() + "</" + clean + ">");
+        return true;
+    }
+
     /** Set the message shown to anyone entering town land. */
     public boolean setBoard(Player player, String message) {
         Town town = getTownOf(player.getUniqueId());
@@ -794,6 +822,7 @@ public class TownManager {
             cfg.set(base + ".tax", town.tax());
             cfg.set(base + ".public-spawn", town.publicSpawn());
             if (town.board() != null) cfg.set(base + ".board", town.board());
+            cfg.set(base + ".tagColour", town.tagColour());
             for (Map.Entry<TownUpgrade, Integer> e : town.upgrades().entrySet()) {
                 cfg.set(base + ".upgrades." + e.getKey().name(), e.getValue());
             }
@@ -843,6 +872,7 @@ public class TownManager {
                 town.setTax(cfg.getDouble(base + ".tax"));
                 town.setPublicSpawn(cfg.getBoolean(base + ".public-spawn", true));
                 town.setBoard(cfg.getString(base + ".board"));
+                town.setTagColour(cfg.getString(base + ".tagColour", "#f9d423"));
                 ConfigurationSection ups = cfg.getConfigurationSection(base + ".upgrades");
                 if (ups != null) {
                     for (String upName : ups.getKeys(false)) {
