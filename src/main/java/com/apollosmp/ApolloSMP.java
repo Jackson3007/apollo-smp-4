@@ -79,6 +79,7 @@ public class ApolloSMP extends JavaPlugin {
     private boolean worthPacketsActive = false;
     private com.apollosmp.staff.NickManager nicks;
     private com.apollosmp.cosmetic.ParticleTrail trails;
+    private com.apollosmp.onboarding.OnboardingManager onboarding;
     private com.apollosmp.logistics.LogisticsManager logistics;
     private com.apollosmp.merchant.ToolExpiryTask toolExpiry;
 
@@ -119,6 +120,7 @@ public class ApolloSMP extends JavaPlugin {
         this.worthTags = new com.apollosmp.sell.WorthTags(this);
         this.nicks = new com.apollosmp.staff.NickManager(this);
         this.trails = new com.apollosmp.cosmetic.ParticleTrail(this);
+        this.onboarding = new com.apollosmp.onboarding.OnboardingManager(this);
         this.logistics = new com.apollosmp.logistics.LogisticsManager(this);
         // Needs sell() + auctions() ready, so it's created after the core managers.
         this.fakeAuctions = new com.apollosmp.auction.FakeAuctionManager(this);
@@ -198,6 +200,8 @@ public class ApolloSMP extends JavaPlugin {
         reg("rank", new com.apollosmp.commands.RankCommand(this));
         reg("worth", new com.apollosmp.commands.WorthCommand(this));
         reg("nick", new com.apollosmp.commands.NickCommand(this));
+        reg("buy", new com.apollosmp.commands.BuyCommand(this));
+        reg("guide", new com.apollosmp.commands.GuideCommand(this));
         com.apollosmp.commands.PerkCommands perks = new com.apollosmp.commands.PerkCommands(this);
         reg("craft", perks);
         reg("ec", perks);
@@ -300,6 +304,12 @@ public class ApolloSMP extends JavaPlugin {
         getServer().getScheduler().runTaskTimer(this, () -> logistics.tick(), 600L, 600L);
         getServer().getScheduler().runTaskTimer(this, () -> worthTags.tick(), 40L, 40L);
         getServer().getScheduler().runTaskTimer(this, () -> trails.tick(), 5L, 5L);
+
+        // Advertise the Apollo+ rank on a timer.
+        if (getConfig().getBoolean("ranks.apollo-plus.advert-enabled", true)) {
+            long adTicks = Math.max(1L, getConfig().getLong("ranks.apollo-plus.advert-minutes", 45)) * 60L * 20L;
+            getServer().getScheduler().runTaskTimer(this, this::broadcastApolloPlusAd, adTicks, adTicks);
+        }
     }
 
     // ---- world border ----
@@ -379,6 +389,7 @@ public class ApolloSMP extends JavaPlugin {
         ranks.save();
         nicks.save();
         trails.save();
+        onboarding.save();
         logistics.save();
     }
 
@@ -434,6 +445,7 @@ public class ApolloSMP extends JavaPlugin {
     public com.apollosmp.staff.StaffRanks ranks() { return ranks; }
     public com.apollosmp.staff.NickManager nicks() { return nicks; }
     public com.apollosmp.cosmetic.ParticleTrail trails() { return trails; }
+    public com.apollosmp.onboarding.OnboardingManager onboarding() { return onboarding; }
     public com.apollosmp.sell.WorthTags worthTags() { return worthTags; }
     public com.apollosmp.logistics.LogisticsManager logistics() { return logistics; }
 
@@ -454,6 +466,26 @@ public class ApolloSMP extends JavaPlugin {
     /** The server address shown on the sidebar and in the welcome message. */
     public String serverIp() {
         return getConfig().getString("server-ip", "apollo.noob.club");
+    }
+
+    /** The webstore URL used by /buy to send players to purchase Apollo+. */
+    public String storeUrl() {
+        return getConfig().getString("store-url", "https://apollo-smp.tebex.store");
+    }
+
+    /** Periodic advert for the Apollo+ rank (see the advert-* keys in config). */
+    private void broadcastApolloPlusAd() {
+        if (getServer().getOnlinePlayers().isEmpty()) return;
+        String url = storeUrl();
+        getServer().broadcast(com.apollosmp.util.Msg.mm(
+                "<#ffd54a>\u2726</#ffd54a> <gradient:#f9d423:#ff4e50><bold>Apollo+</bold></gradient> "
+                        + "<gray>- 10 homes, +10% sell, <white>/nick</white>, <white>/craft</white>, "
+                        + "<white>/ec</white>, vaults, a particle trail & more!"));
+        getServer().broadcast(com.apollosmp.util.Msg.mm(
+                "<gray>Only <white>$4.99/month</white>. Tap <#5ad1e8><click:run_command:'/buy'>"
+                        + "<hover:show_text:'Open the store'><u>/buy</u></hover></click></#5ad1e8> "
+                        + "<gray>or visit <#5ad1e8><click:open_url:'" + url + "'>"
+                        + "<hover:show_text:'Open the store'><u>the store</u></hover></click></#5ad1e8><gray>."));
     }
 
     /** How item sell prices are shown: "actionbar", "tooltip", "lore" or "off". */

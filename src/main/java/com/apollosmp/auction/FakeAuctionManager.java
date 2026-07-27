@@ -145,7 +145,7 @@ public class FakeAuctionManager {
 
     // ---- config ----
     private boolean enabled() { return plugin.getConfig().getBoolean("fake-auctions.enabled", true); }
-    private int targetCount() { return Math.max(0, plugin.getConfig().getInt("fake-auctions.count", 200)); }
+    private int targetCount() { return Math.max(0, plugin.getConfig().getInt("fake-auctions.count", 800)); }
     private int epicMax() { return Math.max(0, Math.min(20, plugin.getConfig().getInt("fake-auctions.epic-max", 5))); }
     private int churnPercent() {
         return Math.max(0, Math.min(100, plugin.getConfig().getInt("fake-auctions.churn-percent", 15)));

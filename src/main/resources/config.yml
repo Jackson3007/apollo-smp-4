@@ -147,7 +147,7 @@ auction-house:
 # Admins can force a refresh with /apollo fakeah refresh (or clear them entirely).
 fake-auctions:
   enabled: true
-  count: 200              # how many seeded listings to keep up
+  count: 800              # how many seeded listings to keep up
   epic-max: 5             # at most this many top-tier items (elytra, netherite...) at once
   refresh-minutes: 4      # how often to age out / top up the pool
   churn-percent: 15       # % of the pool retired & replaced each refresh
@@ -230,8 +230,34 @@ world-border:
 # placeholder and the welcome message.
 server-ip: "apollo.noob.club"
 
+# Your webstore link (Tebex/CraftingStore). Shown by /buy so players can
+# purchase Apollo+. Replace with your real store URL.
+store-url: "https://apollo-smp.tebex.store"
+
+# ---- New player onboarding ----
+# A "Getting Started" checklist (/guide) that teaches the core systems and pays
+# small rewards, with a bonus for finishing everything. Opens once on first join.
+onboarding:
+  enabled: true
+  completion-bonus: 2000.0
+
+# ---- Starter kit ----
+# A small one-time kit given the first time a player ever joins.
+starter-kit:
+  enabled: true
+  # Items as MATERIAL:amount. Leave the list empty to use the built-in small kit.
+  items:
+    - "STONE_PICKAXE:1"
+    - "STONE_AXE:1"
+    - "STONE_SWORD:1"
+    - "BREAD:16"
+    - "OAK_LOG:8"
+    - "TORCH:16"
+
 scoreboard:
   enabled: true
+  # Show the Top 3 richest players near the bottom of the sidebar.
+  baltop: true
   # Title shown at the top of the sidebar.
   title: "<gradient:#f9d423:#ff4e50><bold>APOLLO SMP</bold></gradient>"
   # Refresh rate in server ticks (20 = 1s).
@@ -275,6 +301,9 @@ ranks:
     sell-bonus-percent: 10.0
     # Announce to the server when an Apollo+ member logs in.
     join-flair: true
+    # Periodically advertise the Apollo+ rank in chat.
+    advert-enabled: true
+    advert-minutes: 45
     # Cosmetic trail particle (any Bukkit Particle name). Toggled per-player with /trail.
     trail-particle: HAPPY_VILLAGER
 

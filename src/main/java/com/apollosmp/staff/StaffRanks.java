@@ -52,6 +52,7 @@ public class StaffRanks {
         Player online = plugin.getServer().getPlayer(id);
         if (online != null) {
             applyPermissions(online);
+            if (plugin.nicks() != null) plugin.nicks().apply(online);
             plugin.nameTags().invalidate();
         }
     }

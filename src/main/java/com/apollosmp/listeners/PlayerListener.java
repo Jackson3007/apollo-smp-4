@@ -1,11 +1,16 @@
 package com.apollosmp.listeners;
 
 import com.apollosmp.ApolloSMP;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.ItemStack;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class PlayerListener implements Listener {
 
@@ -54,6 +59,57 @@ public class PlayerListener implements Listener {
             plugin.msg().send(player, "<gray>You have <white>" + mail
                     + "</white> item(s) waiting. Collect them with <white>/menu</white>.");
         }
+
+        if (firstJoin) {
+            giveStarterKit(player);
+            if (plugin.onboarding().enabled()) {
+                plugin.msg().send(player, "<#f9d423>\u2726</#f9d423> <gray>New here? Open <white>/guide</white> "
+                        + "<gray>for starter tasks and rewards.");
+                // Pop the guide open once so they see it.
+                plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                    if (player.isOnline()) new com.apollosmp.gui.menus.GuideMenu(plugin, player).open();
+                }, 40L);
+            }
+        }
+    }
+
+    /** A small one-time kit handed to brand-new players. */
+    private void giveStarterKit(Player player) {
+        if (!plugin.getConfig().getBoolean("starter-kit.enabled", true)) return;
+
+        List<ItemStack> kit = new ArrayList<>();
+        List<String> configured = plugin.getConfig().getStringList("starter-kit.items");
+        if (configured.isEmpty()) {
+            kit.add(new ItemStack(Material.STONE_PICKAXE));
+            kit.add(new ItemStack(Material.STONE_AXE));
+            kit.add(new ItemStack(Material.STONE_SWORD));
+            kit.add(new ItemStack(Material.BREAD, 16));
+            kit.add(new ItemStack(Material.OAK_LOG, 8));
+            kit.add(new ItemStack(Material.TORCH, 16));
+        } else {
+            for (String entry : configured) {
+                String[] parts = entry.split(":");
+                Material material = Material.matchMaterial(parts[0].trim());
+                if (material == null || !material.isItem()) continue;
+                int amount = 1;
+                if (parts.length > 1) {
+                    try {
+                        amount = Math.max(1, Integer.parseInt(parts[1].trim()));
+                    } catch (NumberFormatException ignored) {
+                        // keep amount at 1
+                    }
+                }
+                kit.add(new ItemStack(material, amount));
+            }
+        }
+        if (kit.isEmpty()) return;
+
+        for (ItemStack item : kit) {
+            for (ItemStack overflow : player.getInventory().addItem(item).values()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), overflow);
+            }
+        }
+        plugin.msg().send(player, "<green>Here's a little starter kit to get you going. Good luck!");
     }
 
     private void announceApolloPlusJoin(Player player) {
@@ -73,6 +129,7 @@ public class PlayerListener implements Listener {
         msg.sendRaw(player, "<gray>  Server IP: <#5ad1e8>" + plugin.serverIp() + "</#5ad1e8>");
         msg.sendRaw(player, "");
         msg.sendRaw(player, "<#f9d423>Handy commands:</#f9d423>");
+        msg.sendRaw(player, "  <white>/guide</white> <dark_gray>-</dark_gray> <gray>new here? start here for rewards</gray>");
         msg.sendRaw(player, "  <white>/menu</white> <dark_gray>-</dark_gray> <gray>the main hub</gray>");
         msg.sendRaw(player, "  <white>/sell</white> <dark_gray>-</dark_gray> <gray>sell items for money</gray>");
         msg.sendRaw(player, "  <white>/ah</white> <dark_gray>-</dark_gray> <gray>browse the auction house</gray>");

@@ -8,6 +8,14 @@ website: https://apollosmp.example
 softdepend: [Votifier, NuVotifier, ProtocolLib]
 
 commands:
+  guide:
+    description: New here? Open the getting-started guide
+    aliases: [start, tasks, quests, tutorial, gettingstarted]
+    usage: /guide
+  buy:
+    description: Open the store to purchase Apollo+
+    aliases: [store, shop, ranks]
+    usage: /buy
   nick:
     description: Set a custom nickname (Apollo+)
     aliases: [nickname]
