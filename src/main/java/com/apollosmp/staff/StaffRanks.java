@@ -56,16 +56,12 @@ public class StaffRanks {
         }
     }
 
-<<<<<<< HEAD
     /**
      * Apply a player's rank permissions while they're online:
      *   - Owners and Mods get apollo.admin (full powers).
      *   - Apollo+ (donor) gets apollo.plus and a raised home limit.
      *   - YouTuber is a badge only, no permissions.
      */
-=======
-    /** Mods and owners get apollo.admin for as long as they're online. */
->>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
     public void applyPermissions(Player player) {
         PermissionAttachment existing = attachments.remove(player.getUniqueId());
         if (existing != null) {
@@ -77,7 +73,6 @@ public class StaffRanks {
         }
 
         StaffRank rank = of(player);
-<<<<<<< HEAD
         if (rank == null) return;
 
         PermissionAttachment attachment = player.addAttachment(plugin);
@@ -90,12 +85,6 @@ public class StaffRanks {
             }
             case YOUTUBER -> { /* cosmetic badge only */ }
         }
-=======
-        if (rank == null || !rank.isStaff()) return;
-
-        PermissionAttachment attachment = player.addAttachment(plugin);
-        attachment.setPermission("apollo.admin", true);
->>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
         attachments.put(player.getUniqueId(), attachment);
     }
 

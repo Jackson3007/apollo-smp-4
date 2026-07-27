@@ -26,10 +26,6 @@ public class VoteManager {
 
     /** Used when config.yml has no properly configured sites yet. */
     private static final List<Service> DEFAULT_SITES = List.of(
-<<<<<<< HEAD
-=======
-            new Service("TopG", "http://topg.org/minecraft-servers/server-684435#vote"),
->>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
             new Service("PlanetMinecraft",
                     "https://www.planetminecraft.com/server/apollo-smp-apollo-noob-club/vote/"),
             new Service("Minecraft-MP", "https://minecraft-mp.com/server/361247/vote/"));

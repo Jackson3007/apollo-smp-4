@@ -32,11 +32,7 @@ public class RankCommand implements CommandExecutor, TabCompleter {
         if (args.length == 0 || args[0].equalsIgnoreCase("list")) {
             Map<UUID, StaffRank> all = plugin.ranks().all();
             if (all.isEmpty()) {
-<<<<<<< HEAD
                 plugin.msg().send(sender, "<gray>Nobody has a role yet. Try <white>/rank set <player> apollo+</white>.");
-=======
-                plugin.msg().send(sender, "<gray>Nobody has a role yet. Try <white>/rank set <player> mod</white>.");
->>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
                 return true;
             }
             plugin.msg().sendRaw(sender, "<#f9d423><bold>Server roles</bold>");
@@ -49,11 +45,7 @@ public class RankCommand implements CommandExecutor, TabCompleter {
         }
 
         if (!args[0].equalsIgnoreCase("set") || args.length < 3) {
-<<<<<<< HEAD
             plugin.msg().send(sender, "<gray>Usage: <white>/rank set <player> <owner|mod|youtuber|apollo+|none></white>");
-=======
-            plugin.msg().send(sender, "<gray>Usage: <white>/rank set <player> <owner|mod|youtuber|none></white>");
->>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
             plugin.msg().send(sender, "<gray>Or <white>/rank list</white>.");
             return true;
         }
@@ -73,11 +65,7 @@ public class RankCommand implements CommandExecutor, TabCompleter {
 
         StaffRank rank = StaffRank.fromString(wanted);
         if (rank == null) {
-<<<<<<< HEAD
             plugin.msg().send(sender, "<red>Pick owner, mod, youtuber, apollo+ or none.");
-=======
-            plugin.msg().send(sender, "<red>Pick owner, mod, youtuber or none.");
->>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
             return true;
         }
 
@@ -102,11 +90,7 @@ public class RankCommand implements CommandExecutor, TabCompleter {
             return names;
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("set")) {
-<<<<<<< HEAD
             return List.of("owner", "mod", "youtuber", "apollo+", "none");
-=======
-            return List.of("owner", "mod", "youtuber", "none");
->>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
         }
         return List.of();
     }

@@ -114,11 +114,8 @@ public class ApolloSMP extends JavaPlugin {
         this.ranks = new com.apollosmp.staff.StaffRanks(this);
         this.worthTags = new com.apollosmp.sell.WorthTags(this);
         this.logistics = new com.apollosmp.logistics.LogisticsManager(this);
-<<<<<<< HEAD
         // Needs sell() + auctions() ready, so it's created after the core managers.
         this.fakeAuctions = new com.apollosmp.auction.FakeAuctionManager(this);
-=======
->>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
         this.spawners.cleanupOrphans();
         this.toolExpiry = new com.apollosmp.merchant.ToolExpiryTask(this);
         this.holograms = new com.apollosmp.invest.BusinessHolograms(this);

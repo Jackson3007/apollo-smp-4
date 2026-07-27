@@ -5,13 +5,9 @@ public enum StaffRank {
 
     OWNER("Owner", "#ff4e50", true),
     MOD("Mod", "#5ad1e8", true),
-<<<<<<< HEAD
     YOUTUBER("YouTuber", "#e94fd0", false),
     // Purchasable donor rank ($4.99/mo). Not staff - carries perks, not admin powers.
     APOLLO_PLUS("Apollo+", "#ffd54a", false);
-=======
-    YOUTUBER("YouTuber", "#e94fd0", false);
->>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
 
     private final String display;
     private final String colour;
@@ -36,7 +32,6 @@ public enum StaffRank {
 
     public static StaffRank fromString(String s) {
         if (s == null) return null;
-<<<<<<< HEAD
         String norm = s.trim().toLowerCase();
         // Friendly aliases for the donor rank ("/rank set X apollo+").
         switch (norm) {
@@ -47,10 +42,6 @@ public enum StaffRank {
         }
         try {
             return StaffRank.valueOf(norm.toUpperCase());
-=======
-        try {
-            return StaffRank.valueOf(s.toUpperCase());
->>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
         } catch (IllegalArgumentException ex) {
             return null;
         }
