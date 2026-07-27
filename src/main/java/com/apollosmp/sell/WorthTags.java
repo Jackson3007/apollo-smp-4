@@ -86,16 +86,17 @@ public class WorthTags implements Listener {
      * How the sell price is shown to players:
      *   "actionbar" (default) - shown above the hotbar when you hold an item.
      *                           Never touches the item, so stacking always works.
-     *   "lore"                - written onto the item tooltip. Looks nice, but the
-     *                           extra data stops otherwise-identical items stacking.
+     *   "tooltip"             - shown on every item's tooltip via ProtocolLib, again
+     *                           without touching the real item (needs ProtocolLib).
+     *   "lore"                - written onto the item tooltip directly. The extra
+     *                           data stops otherwise-identical items stacking.
      *   "off"                 - no price display (use /worth instead).
      */
     private String displayMode() {
-        String m = plugin.getConfig().getString("sell.worth-display", "actionbar");
-        return m == null ? "actionbar" : m.trim().toLowerCase();
+        return plugin.worthDisplayMode();
     }
 
-    /** The tooltip tagger only runs in "lore" mode; other modes never modify items. */
+    /** The tooltip-lore tagger only runs in "lore" mode; other modes never modify items. */
     public boolean enabled() {
         // Legacy fallback: if someone explicitly turned worth-lore off, honour that.
         if (!plugin.getConfig().getBoolean("sell.worth-lore", true)
@@ -105,9 +106,15 @@ public class WorthTags implements Listener {
         return displayMode().equals("lore");
     }
 
-    /** Show the value in the action bar (above the hotbar) instead of on the item. */
+    /**
+     * Show the value in the action bar (above the hotbar) instead of on the item.
+     * Also used as the automatic fallback when "tooltip" is selected but ProtocolLib
+     * isn't installed, so players always see prices somewhere.
+     */
     private boolean actionBarEnabled() {
-        return displayMode().equals("actionbar");
+        String mode = displayMode();
+        if (mode.equals("actionbar")) return true;
+        return mode.equals("tooltip") && !plugin.worthPacketsActive();
     }
 
     /**

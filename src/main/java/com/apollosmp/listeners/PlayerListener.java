@@ -24,9 +24,11 @@ public class PlayerListener implements Listener {
         plugin.board().create(player);
         plugin.nameTags().invalidate();
         plugin.ranks().applyPermissions(player);
+        plugin.nicks().apply(player);
         plugin.staffMode().applyVanishTo(player);
         plugin.staffMode().restoreOnJoin(player);
         sendWelcome(player);
+        announceApolloPlusJoin(player);
         plugin.auctions().flushNotifications(player);
         plugin.voting().deliverPending(player);
 
@@ -52,6 +54,15 @@ public class PlayerListener implements Listener {
             plugin.msg().send(player, "<gray>You have <white>" + mail
                     + "</white> item(s) waiting. Collect them with <white>/menu</white>.");
         }
+    }
+
+    private void announceApolloPlusJoin(Player player) {
+        if (!player.hasPermission("apollo.plus")) return;
+        if (!plugin.getConfig().getBoolean("ranks.apollo-plus.join-flair", true)) return;
+        String name = player.getName();
+        plugin.getServer().broadcast(com.apollosmp.util.Msg.mm(
+                "<#ffd54a>\u2726</#ffd54a> <gray>" + name
+                        + " <#ffd54a>joined - welcome an Apollo+ member!</#ffd54a>"));
     }
 
     private void sendWelcome(Player player) {

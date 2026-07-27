@@ -75,6 +75,10 @@ public class ApolloSMP extends JavaPlugin {
     private com.apollosmp.admin.StaffMode staffMode;
     private com.apollosmp.staff.StaffRanks ranks;
     private com.apollosmp.sell.WorthTags worthTags;
+    private com.apollosmp.sell.WorthPackets worthPackets;
+    private boolean worthPacketsActive = false;
+    private com.apollosmp.staff.NickManager nicks;
+    private com.apollosmp.cosmetic.ParticleTrail trails;
     private com.apollosmp.logistics.LogisticsManager logistics;
     private com.apollosmp.merchant.ToolExpiryTask toolExpiry;
 
@@ -113,6 +117,8 @@ public class ApolloSMP extends JavaPlugin {
         this.staffMode = new com.apollosmp.admin.StaffMode(this);
         this.ranks = new com.apollosmp.staff.StaffRanks(this);
         this.worthTags = new com.apollosmp.sell.WorthTags(this);
+        this.nicks = new com.apollosmp.staff.NickManager(this);
+        this.trails = new com.apollosmp.cosmetic.ParticleTrail(this);
         this.logistics = new com.apollosmp.logistics.LogisticsManager(this);
         // Needs sell() + auctions() ready, so it's created after the core managers.
         this.fakeAuctions = new com.apollosmp.auction.FakeAuctionManager(this);
@@ -135,11 +141,14 @@ public class ApolloSMP extends JavaPlugin {
         // Fill the auction house with some activity so it never looks empty.
         fakeAuctions.seed();
 
+        setupWorthPackets();
+
         getLogger().info("Apollo SMP enabled. May the sun shine on your economy.");
     }
 
     @Override
     public void onDisable() {
+        if (worthPackets != null) worthPackets.unregister();
         if (holograms != null) holograms.removeAll();
         if (spawners != null) spawners.removeAllLabels();
         getServer().getScheduler().cancelTasks(this);
@@ -188,6 +197,11 @@ public class ApolloSMP extends JavaPlugin {
         reg("staff", new com.apollosmp.commands.StaffCommand(this));
         reg("rank", new com.apollosmp.commands.RankCommand(this));
         reg("worth", new com.apollosmp.commands.WorthCommand(this));
+        reg("nick", new com.apollosmp.commands.NickCommand(this));
+        com.apollosmp.commands.PerkCommands perks = new com.apollosmp.commands.PerkCommands(this);
+        reg("craft", perks);
+        reg("ec", perks);
+        reg("trail", perks);
 
         TpaCommand tpaCommand = new TpaCommand(this);
         reg("tpa", tpaCommand);
@@ -285,6 +299,7 @@ public class ApolloSMP extends JavaPlugin {
         getServer().getScheduler().runTaskTimer(this, () -> spawners.tick(), 60L, 20L);
         getServer().getScheduler().runTaskTimer(this, () -> logistics.tick(), 600L, 600L);
         getServer().getScheduler().runTaskTimer(this, () -> worthTags.tick(), 40L, 40L);
+        getServer().getScheduler().runTaskTimer(this, () -> trails.tick(), 5L, 5L);
     }
 
     // ---- world border ----
@@ -362,6 +377,8 @@ public class ApolloSMP extends JavaPlugin {
         snapshots.save();
         staffMode.save();
         ranks.save();
+        nicks.save();
+        trails.save();
         logistics.save();
     }
 
@@ -372,6 +389,7 @@ public class ApolloSMP extends JavaPlugin {
         setupWorldBorders();
         applySleepRule();
         nameTags.invalidate();
+        if (nicks != null) nicks.applyAll();
         for (Player player : getServer().getOnlinePlayers()) {
             board.remove(player);
             board.create(player);
@@ -414,6 +432,8 @@ public class ApolloSMP extends JavaPlugin {
     public com.apollosmp.admin.InventorySnapshots snapshots() { return snapshots; }
     public com.apollosmp.admin.StaffMode staffMode() { return staffMode; }
     public com.apollosmp.staff.StaffRanks ranks() { return ranks; }
+    public com.apollosmp.staff.NickManager nicks() { return nicks; }
+    public com.apollosmp.cosmetic.ParticleTrail trails() { return trails; }
     public com.apollosmp.sell.WorthTags worthTags() { return worthTags; }
     public com.apollosmp.logistics.LogisticsManager logistics() { return logistics; }
 
@@ -434,5 +454,40 @@ public class ApolloSMP extends JavaPlugin {
     /** The server address shown on the sidebar and in the welcome message. */
     public String serverIp() {
         return getConfig().getString("server-ip", "apollo.noob.club");
+    }
+
+    /** How item sell prices are shown: "actionbar", "tooltip", "lore" or "off". */
+    public String worthDisplayMode() {
+        String m = getConfig().getString("sell.worth-display", "actionbar");
+        return m == null ? "actionbar" : m.trim().toLowerCase();
+    }
+
+    /** True when client-side tooltip prices are running (ProtocolLib present). */
+    public boolean worthPacketsActive() {
+        return worthPacketsActive;
+    }
+
+    /**
+     * Turn on client-side price tooltips if ProtocolLib is installed. This is the
+     * only way to show a price on every item's tooltip without changing the item
+     * itself, so items still stack. Falls back silently to the action bar otherwise.
+     */
+    private void setupWorthPackets() {
+        if (getServer().getPluginManager().getPlugin("ProtocolLib") == null) {
+            if (worthDisplayMode().equals("tooltip")) {
+                getLogger().info("worth-display is 'tooltip' but ProtocolLib isn't installed - "
+                        + "showing prices in the action bar instead. Install ProtocolLib for per-item tooltips.");
+            }
+            return;
+        }
+        try {
+            this.worthPackets = new com.apollosmp.sell.WorthPackets(this);
+            this.worthPacketsActive = this.worthPackets.register();
+            getLogger().info("ProtocolLib found - per-item price tooltips available "
+                    + "(set sell.worth-display: tooltip). Items still stack normally.");
+        } catch (Throwable ex) {
+            worthPacketsActive = false;
+            getLogger().warning("Couldn't start ProtocolLib price tooltips: " + ex.getMessage());
+        }
     }
 }

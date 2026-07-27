@@ -5,9 +5,24 @@ api-version: '26.2'
 author: Apollo SMP
 description: Branded economy core for Apollo SMP - money, /sell, auction house, buy orders, homes, RTP, world border and a branded sidebar.
 website: https://apollosmp.example
-softdepend: [Votifier, NuVotifier]
+softdepend: [Votifier, NuVotifier, ProtocolLib]
 
 commands:
+  nick:
+    description: Set a custom nickname (Apollo+)
+    aliases: [nickname]
+    usage: /nick <name|off>
+  craft:
+    description: Open a crafting table anywhere (Apollo+)
+    aliases: [workbench, wb]
+    usage: /craft
+  ec:
+    description: Open your ender chest anywhere (Apollo+)
+    aliases: [enderchest, echest]
+    usage: /ec
+  trail:
+    description: Toggle your cosmetic particle trail (Apollo+)
+    usage: /trail
   balance:
     description: Check your balance (opens the menu with no args)
     aliases: [bal, money, wallet]
@@ -99,7 +114,6 @@ commands:
     description: Open a personal storage vault
     aliases: [vault, pvault]
     usage: /pv [number]
-    permission: apollo.admin
   rank:
     description: Give a player a server role
     aliases: [ranks, setrank]

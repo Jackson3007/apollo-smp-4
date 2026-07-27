@@ -50,7 +50,13 @@ public class HomeCommands implements CommandExecutor, TabCompleter {
                     + "</white>). Delete one or rank up.");
             return;
         }
-        plugin.homes().setHome(player.getUniqueId(), name, player.getLocation(), Material.RED_BED);
+        // Apollo+ can pick a custom icon for the homes menu by holding an item.
+        Material icon = Material.RED_BED;
+        if (player.hasPermission("apollo.plus")) {
+            Material held = player.getInventory().getItemInMainHand().getType();
+            if (held != null && !held.isAir() && held.isItem()) icon = held;
+        }
+        plugin.homes().setHome(player.getUniqueId(), name, player.getLocation(), icon);
         plugin.msg().send(player, (exists ? "<green>Updated home <#f9d423>" : "<green>Home <#f9d423>")
                 + name + "</#f9d423> set!");
     }

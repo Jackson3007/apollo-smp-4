@@ -24,8 +24,8 @@ public class VaultCommand implements CommandExecutor, TabCompleter {
             plugin.msg().send(sender, "<red>Only players can open a vault.");
             return true;
         }
-        if (!player.hasPermission("apollo.admin")) {
-            plugin.msg().send(player, "<red>You don't have permission to do that.");
+        if (!player.hasPermission("apollo.plus") && !player.hasPermission("apollo.admin")) {
+            plugin.msg().send(player, "<red>Personal vaults are an <#ffd54a>Apollo+</#ffd54a> <red>perk.");
             return true;
         }
 
@@ -49,7 +49,7 @@ public class VaultCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1 && sender.hasPermission("apollo.admin")) {
+        if (args.length == 1 && (sender.hasPermission("apollo.plus") || sender.hasPermission("apollo.admin"))) {
             List<String> out = new ArrayList<>();
             for (int i = 1; i <= plugin.vaults().vaultCount(); i++) out.add(String.valueOf(i));
             return out;

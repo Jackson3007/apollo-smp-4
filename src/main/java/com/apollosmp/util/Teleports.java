@@ -29,6 +29,8 @@ public class Teleports {
         }
 
         int warmupSeconds = plugin.getConfig().getInt("homes.warmup-seconds", 3);
+        // Apollo+ perk: skip the teleport warmup entirely.
+        if (player.hasPermission("apollo.plus")) warmupSeconds = 0;
         if (warmupSeconds <= 0) {
             finish(player, destination, cost, successMini);
             return true;

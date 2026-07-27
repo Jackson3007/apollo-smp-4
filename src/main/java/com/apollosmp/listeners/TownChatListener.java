@@ -2,7 +2,6 @@ package com.apollosmp.listeners;
 
 import com.apollosmp.ApolloSMP;
 import com.apollosmp.town.Town;
-import com.apollosmp.town.TownRank;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -10,8 +9,9 @@ import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.inventory.ItemStack;
 
-/** Adds a [Town] tag in front of a resident's chat messages. */
+/** Adds a [Town] tag in front of a resident's chat messages, plus the [item] showcase. */
 public class TownChatListener implements Listener {
 
     private final ApolloSMP plugin;
@@ -35,8 +35,19 @@ public class TownChatListener implements Listener {
             return;
         }
 
+        // Apollo+ can drop the item they're holding into chat by typing [item].
+        final ItemStack showcase = showcaseFor(event);
+
         com.apollosmp.staff.StaffRank staff = plugin.ranks().of(event.getPlayer());
-        if (town == null && staff == null) return; // nothing to add
+        if (town == null && staff == null) {
+            if (showcase != null) {
+                event.renderer((source, sourceName, message, viewer) ->
+                        sourceName.colorIfAbsent(NamedTextColor.WHITE)
+                                .append(Component.text(": ", NamedTextColor.GRAY))
+                                .append(withShowcase(message, showcase).colorIfAbsent(NamedTextColor.WHITE)));
+            }
+            return; // nothing else to add
+        }
 
         final Component badge = staff == null
                 ? Component.empty()
@@ -50,7 +61,7 @@ public class TownChatListener implements Listener {
             event.renderer((source, sourceName, message, viewer) ->
                     badge.append(sourceName.colorIfAbsent(NamedTextColor.WHITE))
                             .append(Component.text(": ", NamedTextColor.GRAY))
-                            .append(message.colorIfAbsent(NamedTextColor.WHITE)));
+                            .append(withShowcase(message, showcase).colorIfAbsent(NamedTextColor.WHITE)));
             return;
         }
 
@@ -58,17 +69,37 @@ public class TownChatListener implements Listener {
         TextColor tagColour = TextColor.fromHexString(town.tagColour());
         final TextColor townColour = tagColour == null
                 ? TextColor.fromHexString("#f9d423") : tagColour;
-        TownRank townRank = town.rankOf(event.getPlayer().getUniqueId());
-        final String rankName = townRank == null ? TownRank.RESIDENT.display() : townRank.display();
 
+        // Just the town name in chat - no in-town role/title.
         event.renderer((source, sourceName, message, viewer) ->
                 badge.append(Component.text("[", NamedTextColor.GRAY))
                         .append(Component.text(tag, townColour))
-                        .append(Component.text(" | ", NamedTextColor.DARK_GRAY))
-                        .append(Component.text(rankName, TextColor.fromHexString("#5ad1e8")))
                         .append(Component.text("] ", NamedTextColor.GRAY))
                         .append(sourceName.colorIfAbsent(NamedTextColor.WHITE))
                         .append(Component.text(": ", NamedTextColor.GRAY))
-                        .append(message.colorIfAbsent(NamedTextColor.WHITE)));
+                        .append(withShowcase(message, showcase).colorIfAbsent(NamedTextColor.WHITE)));
+    }
+
+    /** The held item if the player is Apollo+ and typed the [item] token, else null. */
+    private ItemStack showcaseFor(AsyncChatEvent event) {
+        if (!event.getPlayer().hasPermission("apollo.plus")
+                && !event.getPlayer().hasPermission("apollo.admin")) {
+            return null;
+        }
+        String text = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
+                .plainText().serialize(event.message());
+        if (!text.contains("[item]")) return null;
+        ItemStack hand = event.getPlayer().getInventory().getItemInMainHand();
+        if (hand == null || hand.getType().isAir()) return null;
+        return hand.clone();
+    }
+
+    /** Replace the literal [item] token with a hoverable representation of the item. */
+    private Component withShowcase(Component message, ItemStack item) {
+        if (item == null) return message;
+        Component itemComp = Component.text("[" + com.apollosmp.util.Items.pretty(item.getType()) + "]")
+                .color(TextColor.fromHexString("#5ad1e8"))
+                .hoverEvent(item.asHoverEvent());
+        return message.replaceText(b -> b.matchLiteral("[item]").replacement(itemComp));
     }
 }

@@ -40,15 +40,17 @@ economy:
 sell:
   # How to show an item's sell price to players:
   #   actionbar - shown above the hotbar when you hold/switch to an item.
-  #               This NEVER changes the item, so items always stack normally.
-  #               (Recommended - it's the default.)
-  #   lore      - written onto the item's tooltip. Looks nice, but the extra
-  #               data stops otherwise-identical items from stacking together.
+  #               Never changes the item, so items always stack. (Default.)
+  #   tooltip   - shown on EVERY item's tooltip, and items STILL stack normally.
+  #               Requires the free ProtocolLib plugin (drop it in /plugins). The
+  #               price is added only to what the client sees, never the real item.
+  #               If ProtocolLib isn't installed this falls back to actionbar.
+  #   lore      - written straight onto the item tooltip with no extra plugin, BUT
+  #               the added data stops identical items from stacking together.
   #   off       - no automatic display; players use /worth instead.
   worth-display: actionbar
-  # Legacy switch, only used when worth-display is "lore": also show the whole
-  # stack's value. Leave OFF - the total changes with stack size, which stops
-  # identical items merging.
+  # Show the whole stack's value as well as the per-item price. Works with the
+  # "tooltip" mode; leave OFF for "lore" mode or identical stacks won't merge.
   worth-lore: true
   worth-lore-total: false
   # Total value in a chest's title bar. Most servers can't retitle real
@@ -135,20 +137,28 @@ auction-house:
   max-listing-price: 1000000000000.0
 
 # ---- Auction house activity ("filler" listings) ----
-# Seeds a handful of listings from believable player names so the auction house
-# never looks empty on a quiet server. They behave exactly like real listings:
-#   - Priced ABOVE the item's sell value, so nobody can buy-and-flip for profit.
-#   - Buying one just gives the item and takes the money (a money sink).
-#   - Never saved to disk; they age out over a day or two and are replaced, so the
-#     board visibly changes over time. Set enabled: false to turn the feature off.
+# Seeds a large, varied pool of listings from believable player names so the
+# auction house always looks busy. They behave exactly like real listings:
+#   - A realistic spread: mostly common/junk and mid-tier stock, with only a few
+#     genuinely good items at a time (epic-max).
+#   - Priced HIGH (like real players over-pricing) and ALWAYS above the item's sell
+#     value, so nobody can buy-and-flip for profit. Buying one is a money sink.
+#   - Never saved to disk; they age out over a day or two and are replaced.
 # Admins can force a refresh with /apollo fakeah refresh (or clear them entirely).
 fake-auctions:
   enabled: true
-  count: 10               # how many seeded listings to keep up
+  count: 200              # how many seeded listings to keep up
+  epic-max: 5             # at most this many top-tier items (elytra, netherite...) at once
   refresh-minutes: 4      # how often to age out / top up the pool
-  churn-percent: 25       # chance each refresh to retire one listing early
-  markup-min: 1.3         # price = sell value x (this .. markup-max)
-  markup-max: 1.9
+  churn-percent: 15       # % of the pool retired & replaced each refresh
+  # Price = the item's sell value x (markup-min..markup-max), floored per tier below,
+  # so nothing is ever cheap and every price beats the sell value.
+  markup-min: 2.0
+  markup-max: 4.0
+  floor-common: 100.0     # minimum price for junk (cobble, dirt, mob drops...)
+  floor-uncommon: 500.0   # iron/gold/blocks/useful bits
+  floor-rare: 2500.0      # diamonds, enchanted gear, shulkers
+  floor-epic: 12000.0     # elytra, netherite, totems, beacons...
   # The "sellers" shown internally. Edit to taste (names aren't displayed in the
   # menu, but they keep each listing distinct).
   seller-names:
@@ -253,14 +263,20 @@ scoreboard:
 #     /rank set <player> apollo+
 # and remove it with /rank set <player> none. Perks:
 #   - 10 homes (up from the default 3)
-#   - A gold [Apollo+] tag in chat
+#   - A gold [Apollo+] tag in chat and the tab list
 #   - A sell bonus on everything they sell (sell-bonus-percent below)
-#   - No /rtp cooldown
+#   - No /rtp cooldown and no /home warmup (instant teleports)
+#   - /nick custom nickname, /craft, /ec, personal vaults (/pv) and a particle trail
+#   - Custom home icons (hold an item when running /sethome)
 # The home cap comes from homes.limits ("apollo.homes.10") below - keep them in step.
 ranks:
   apollo-plus:
     # Extra % added to every sale an Apollo+ member makes. 10 = +10%.
     sell-bonus-percent: 10.0
+    # Announce to the server when an Apollo+ member logs in.
+    join-flair: true
+    # Cosmetic trail particle (any Bukkit Particle name). Toggled per-player with /trail.
+    trail-particle: HAPPY_VILLAGER
 
 # Data auto-saves on a timer as a safety net (minutes). Changes also save immediately.
 autosave-minutes: 5
