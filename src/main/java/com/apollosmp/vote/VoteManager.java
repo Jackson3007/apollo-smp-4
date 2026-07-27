@@ -1,11 +1,20 @@
 package com.apollosmp.vote;
 
 import com.apollosmp.ApolloSMP;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
+import java.io.File;
+import java.io.IOException;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Vote links and the periodic reminder. Purely informational for now — no
@@ -16,13 +25,150 @@ public class VoteManager {
     public record Service(String name, String link) {}
 
     /** Used when config.yml has no properly configured sites yet. */
-    private static final Service DEFAULT_SITE =
-            new Service("TopG", "https://topg.org/minecraft-servers/server-684435");
+    private static final List<Service> DEFAULT_SITES = List.of(
+            new Service("PlanetMinecraft",
+                    "https://www.planetminecraft.com/server/apollo-smp-apollo-noob-club/vote/"),
+            new Service("Minecraft-MP", "https://minecraft-mp.com/server/361247/vote/"));
 
     private final ApolloSMP plugin;
+    private final File file;
+
+    /** Money owed to players who voted while offline. */
+    private final Map<String, Double> pending = new ConcurrentHashMap<>();
+    /** Sites each player has already been paid for today, so a retry can't double-pay. */
+    private final Map<String, Set<String>> paidToday = new ConcurrentHashMap<>();
+    private volatile String paidDate = "";
+    private volatile boolean votifierActive = false;
 
     public VoteManager(ApolloSMP plugin) {
         this.plugin = plugin;
+        this.file = new File(plugin.getDataFolder(), "votes.yml");
+        load();
+    }
+
+    public double reward() {
+        return plugin.getConfig().getDouble("voting.reward", 500.0);
+    }
+
+    public void setVotifierActive(boolean active) { this.votifierActive = active; }
+    public boolean votifierActive() { return votifierActive; }
+
+    private String today() { return LocalDate.now().toString(); }
+
+    private void rollDay() {
+        String now = today();
+        if (!now.equals(paidDate)) {
+            paidDate = now;
+            paidToday.clear();
+        }
+    }
+
+    /** Called on the main thread when a vote site confirms a vote. */
+    public void handleVerifiedVote(String username, String service) {
+        plugin.getLogger().info("[Vote] Received a confirmed vote from " + username
+                + " via " + (service == null || service.isBlank() ? "unknown site" : service) + ".");
+        rollDay();
+        String key = username.toLowerCase();
+        String site = service == null || service.isBlank() ? "unknown" : service.toLowerCase();
+
+        Set<String> already = paidToday.computeIfAbsent(key, k -> new LinkedHashSet<>());
+        if (!already.add(site)) {
+            plugin.getLogger().info("[Vote] " + username + " was already paid for " + site + " today.");
+            return;
+        }
+
+        double amount = reward();
+        Player online = findOnline(username);
+        if (online != null) {
+            plugin.economy().deposit(online.getUniqueId(), amount);
+            plugin.getLogger().info("[Vote] Paid " + amount + " to " + online.getName() + ".");
+            plugin.msg().send(online, "");
+            plugin.msg().send(online, "<gradient:#f9d423:#ff4e50><bold>Thanks for voting!</bold></gradient>");
+            plugin.msg().send(online, "<gray>Your vote was confirmed - here's <#f9d423>"
+                    + plugin.msg().money(amount) + "</#f9d423>.");
+            plugin.msg().send(online, "");
+            announce(online.getName());
+        } else {
+            pending.merge(key, amount, Double::sum);
+            plugin.getLogger().info("[Vote] " + username + " voted while offline - "
+                    + amount + " saved for their return.");
+        }
+        save();
+    }
+
+    /**
+     * Vote sites often send the name in a different case to the one in game,
+     * so match without caring about case.
+     */
+    private Player findOnline(String username) {
+        for (Player p : plugin.getServer().getOnlinePlayers()) {
+            if (p.getName().equalsIgnoreCase(username)) return p;
+        }
+        return null;
+    }
+
+    /** Queued payouts, for the admin readout. */
+    public Map<String, Double> pendingPayouts() {
+        return new java.util.LinkedHashMap<>(pending);
+    }
+
+    private void announce(String name) {
+        if (!plugin.getConfig().getBoolean("voting.announce", true)) return;
+        for (Player p : plugin.getServer().getOnlinePlayers()) {
+            plugin.msg().sendRaw(p, "");
+            plugin.msg().sendRaw(p, "<gradient:#f9d423:#ff4e50><bold>\u2600 "
+                    + name + " voted for Apollo!</bold></gradient>");
+            plugin.msg().sendRaw(p, "<gray>They earned <#f9d423>" + plugin.msg().money(reward())
+                    + "</#f9d423><gray>. "
+                    + "<click:run_command:'/vote'><hover:show_text:'Click to open the vote menu'>"
+                    + "<#5ad1e8><u>Vote too</u></#5ad1e8></hover></click><gray>.</gray>");
+            plugin.msg().sendRaw(p, "");
+            p.playSound(p.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 0.5f, 1.6f);
+        }
+    }
+
+    /** Pay out anything earned while they were away. */
+    public void deliverPending(Player player) {
+        Double owed = pending.remove(player.getName().toLowerCase());
+        if (owed == null || owed <= 0) return;
+        plugin.economy().deposit(player.getUniqueId(), owed);
+        save();
+        plugin.msg().send(player, "<green>Welcome back! Your votes earned you <#f9d423>"
+                + plugin.msg().money(owed) + "</#f9d423> while you were offline.");
+        plugin.getLogger().info("[Vote] Paid " + owed + " owed to " + player.getName() + " on join.");
+    }
+
+    // ---- persistence ----
+    public void save() {
+        FileConfiguration cfg = new YamlConfiguration();
+        for (Map.Entry<String, Double> e : pending.entrySet()) {
+            cfg.set("pending." + e.getKey(), e.getValue());
+        }
+        cfg.set("paid.date", paidDate);
+        for (Map.Entry<String, Set<String>> e : paidToday.entrySet()) {
+            cfg.set("paid.players." + e.getKey(), new ArrayList<>(e.getValue()));
+        }
+        try {
+            cfg.save(file);
+        } catch (IOException ex) {
+            plugin.getLogger().severe("Failed to save votes.yml: " + ex.getMessage());
+        }
+    }
+
+    private void load() {
+        if (!file.exists()) return;
+        FileConfiguration cfg = YamlConfiguration.loadConfiguration(file);
+        ConfigurationSection pend = cfg.getConfigurationSection("pending");
+        if (pend != null) {
+            for (String name : pend.getKeys(false)) pending.put(name, cfg.getDouble("pending." + name));
+        }
+        paidDate = cfg.getString("paid.date", "");
+        ConfigurationSection paid = cfg.getConfigurationSection("paid.players");
+        if (paid != null) {
+            for (String name : paid.getKeys(false)) {
+                paidToday.put(name, new LinkedHashSet<>(cfg.getStringList("paid.players." + name)));
+            }
+        }
     }
 
     public boolean reminderEnabled() {
@@ -30,7 +176,7 @@ public class VoteManager {
     }
 
     public int reminderMinutes() {
-        return Math.max(1, plugin.getConfig().getInt("voting.reminder-minutes", 60));
+        return Math.max(1, plugin.getConfig().getInt("voting.reminder-minutes", 50));
     }
 
     /** Configured vote sites, skipping any that still hold placeholder links. */
@@ -45,7 +191,7 @@ public class VoteManager {
             if (url.isEmpty() || url.contains("000000")) continue;
             out.add(new Service(name.toString(), url));
         }
-        if (out.isEmpty()) out.add(DEFAULT_SITE);
+        if (out.isEmpty()) out.addAll(DEFAULT_SITES);
         return out;
     }
 
@@ -78,10 +224,16 @@ public class VoteManager {
         String bar = "<dark_gray>\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa\u25aa";
         for (Player player : plugin.getServer().getOnlinePlayers()) {
             plugin.msg().send(player, bar);
-            plugin.msg().send(player, "<gradient:#f9d423:#ff4e50><bold>\u2600 Vote for Apollo!</bold></gradient>");
-            plugin.msg().send(player, "<gray>Voting helps more players find the server.");
+            int sites = services().size();
+            plugin.msg().send(player, "<gradient:#f9d423:#ff4e50><bold>\u2600 Vote and get "
+                    + plugin.msg().money(reward()) + "!</bold></gradient>");
+            plugin.msg().send(player, "<gray>That's <#f9d423>" + plugin.msg().money(reward())
+                    + "</#f9d423> <gray>per site" + (sites > 1
+                            ? ", so <#f9d423>" + plugin.msg().money(reward() * sites)
+                                    + "</#f9d423> <gray>a day across all " + sites + "."
+                            : "."));
             plugin.msg().send(player, "<click:run_command:'/vote'><hover:show_text:'Click to open the vote menu'>"
-                    + "<#5ad1e8><u>Click here for the vote links</u></#5ad1e8></hover></click>");
+                    + "<#5ad1e8><u>Click here to vote</u></#5ad1e8></hover></click>");
             plugin.msg().send(player, bar);
         }
     }

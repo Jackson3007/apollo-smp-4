@@ -22,7 +22,9 @@ public class RtpCommand implements CommandExecutor {
             return true;
         }
         plugin.msg().send(player, "<gray>Searching for a safe spot...");
-        RtpManager.Result r = plugin.rtp().attempt(player, false);
+        // Apollo+ members (and admins) skip the RTP cooldown/cost.
+        boolean bypass = player.hasPermission("apollo.plus") || player.hasPermission("apollo.admin");
+        RtpManager.Result r = plugin.rtp().attempt(player, bypass);
         switch (r) {
             case SUCCESS -> plugin.msg().send(player, "<green>Teleported to the wild!");
             case COOLDOWN -> plugin.msg().send(player, "<red>Wait "

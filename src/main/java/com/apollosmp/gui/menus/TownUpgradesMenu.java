@@ -86,7 +86,7 @@ public class TownUpgradesMenu extends Gui {
 
     @Override
     public void onClick(Player player, int slot, ItemStack clicked, ClickType click) {
-        if (slot == 40) { new TownMenu(plugin, player).open(); return; }
+        if (slot == 40) { new TownManageMenu(plugin, player).open(); return; }
 
         Town town = plugin.towns().getTownOf(player.getUniqueId());
         if (town == null) return;

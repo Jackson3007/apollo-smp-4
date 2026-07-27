@@ -40,6 +40,7 @@ public class TownPlotsMenu extends Gui {
         Set<String> keys = new LinkedHashSet<>();
         keys.addAll(town.plotOwners().keySet());
         keys.addAll(town.plotSale().keySet());
+        keys.addAll(town.plotRent().keySet());
         List<String> all = new ArrayList<>(keys);
 
         int from = page * PAGE_SIZE;
@@ -67,6 +68,16 @@ public class TownPlotsMenu extends Gui {
                     ? "<gray>Owner: <white>Town-owned</white>"
                     : "<gray>Owner: <white>" + ownerName + "</white>");
             if (price != null) lore.add("<gray>For sale: <#f9d423>" + plugin.msg().money(price) + "</#f9d423>");
+            Double rent = town.rentPrice(key);
+            if (rent != null) {
+                lore.add("<gray>Rent: <#f9d423>" + plugin.msg().money(rent) + "</#f9d423> <gray>per "
+                        + plugin.towns().rentPeriodLabel() + "</gray>");
+                Long due = town.rentDueAt(key);
+                if (owner != null && due != null) {
+                    long mins = Math.max(0, (due - System.currentTimeMillis()) / 60000);
+                    lore.add("<gray>Next payment in <white>" + (mins / 60) + "h " + (mins % 60) + "m</white>");
+                }
+            }
             if (coords != null) {
                 lore.add("<gray>Chunk: <white>" + coords[0] + ", " + coords[1] + "</white>");
                 lore.add("<gray>Around x <white>" + (coords[0] * 16 + 8)
@@ -114,7 +125,7 @@ public class TownPlotsMenu extends Gui {
         }
         switch (slot) {
             case 45 -> { if (page > 0) new TownPlotsMenu(plugin, player, page - 1).open(); }
-            case 49 -> new TownMenu(plugin, player).open();
+            case 49 -> new TownManageMenu(plugin, player).open();
             case 53 -> new TownPlotsMenu(plugin, player, page + 1).open();
             default -> { /* no-op */ }
         }

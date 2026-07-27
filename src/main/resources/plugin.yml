@@ -5,6 +5,7 @@ api-version: '26.2'
 author: Apollo SMP
 description: Branded economy core for Apollo SMP - money, /sell, auction house, buy orders, homes, RTP, world border and a branded sidebar.
 website: https://apollosmp.example
+softdepend: [Votifier, NuVotifier]
 
 commands:
   balance:
@@ -22,9 +23,12 @@ commands:
     description: Admin economy management
     usage: /eco <give|take|set> <player> <amount>
     permission: apollo.admin
+  worth:
+    description: See what your items sell for
+    aliases: [value, prices, pricecheck]
+    usage: /worth [hand]
   sell:
     description: Sell items to the server
-    aliases: [shop]
     usage: /sell [hand|all]
   ah:
     description: Open the Apollo auction house
@@ -54,7 +58,7 @@ commands:
   apollo:
     description: Apollo SMP admin root command
     aliases: [apollosmp]
-    usage: /apollo <reload|version>
+    usage: /apollo <reload|version|fakeah>
     permission: apollo.admin
   menu:
     description: Open the Apollo main menu
@@ -72,9 +76,55 @@ commands:
     description: Create and manage your town
     aliases: [t, towns]
     usage: /town
+  tc:
+    description: Talk to your town
+    aliases: [townchat]
+    usage: /tc [message]
+  ac:
+    description: Talk to your alliance
+    aliases: [allychat]
+    usage: /ac [message]
   discord:
     description: Get the Discord invite link
     usage: /discord
+  specialauction:
+    description: Bid on the daily mystery business
+    aliases: [sa, mysteryauction]
+    usage: /specialauction [claim]
+  merchant:
+    description: Visit the travelling merchant
+    aliases: [trader, wares]
+    usage: /merchant
+  pv:
+    description: Open a personal storage vault
+    aliases: [vault, pvault]
+    usage: /pv [number]
+    permission: apollo.admin
+  rank:
+    description: Give a player a server role
+    aliases: [ranks, setrank]
+    usage: /rank set <player> <owner|mod|youtuber|apollo+|none>
+    permission: apollo.admin
+  staff:
+    description: Toggle staff mode
+    aliases: [adminmode, am, sm]
+    usage: /staff [vanish]
+    permission: apollo.admin
+  items:
+    description: Free catalogue of every unique item
+    aliases: [itemlist, allitems]
+    usage: /items
+    permission: apollo.admin
+  announce:
+    description: Broadcast a server announcement
+    aliases: [broadcast, bc]
+    usage: /announce <message>
+    permission: apollo.admin
+  admin:
+    description: Open the Apollo admin panel
+    aliases: [apanel, adminpanel]
+    usage: /admin
+    permission: apollo.admin
   tpa:
     description: Request to teleport to a player
     usage: /tpa <player>
@@ -97,6 +147,9 @@ permissions:
   apollo.admin:
     description: Full administrative access to Apollo SMP
     default: op
+  apollo.plus:
+    description: Apollo+ donor rank - extra homes, sell bonus, no RTP cooldown
+    default: false
   apollo.homes.max:
     description: Base home permission (limit is configured per-rank in config.yml)
     default: true

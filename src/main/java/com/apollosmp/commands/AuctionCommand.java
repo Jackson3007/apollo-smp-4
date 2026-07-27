@@ -67,7 +67,10 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
             new AuctionMenu(plugin, player, false, 0, query.toString()).open();
             return true;
         }
-        plugin.msg().send(player, "<red>Usage: /ah [sell <price>|mine|search <item>]");
+        // Anything else is treated as a search: /ah diamond sword
+        StringBuilder query = new StringBuilder(args[0]);
+        for (int i = 1; i < args.length; i++) query.append(" ").append(args[i]);
+        new AuctionMenu(plugin, player, false, 0, query.toString()).open();
         return true;
     }
 

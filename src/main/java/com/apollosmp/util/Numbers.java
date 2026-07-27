@@ -16,6 +16,7 @@ public final class Numbers {
             case 'k' -> { multiplier = 1_000d; s = s.substring(0, s.length() - 1); }
             case 'm' -> { multiplier = 1_000_000d; s = s.substring(0, s.length() - 1); }
             case 'b' -> { multiplier = 1_000_000_000d; s = s.substring(0, s.length() - 1); }
+            case 't' -> { multiplier = 1_000_000_000_000d; s = s.substring(0, s.length() - 1); }
             default -> { /* no suffix */ }
         }
         try {

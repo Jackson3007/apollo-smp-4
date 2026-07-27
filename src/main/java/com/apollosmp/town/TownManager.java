@@ -43,9 +43,6 @@ public class TownManager {
     private int claimsBase() { return plugin.getConfig().getInt("towns.claims-base", 6); }
     private int claimsPerMember() { return plugin.getConfig().getInt("towns.claims-per-member", 4); }
 
-<<<<<<< Updated upstream
-    private int maxClaims(Town town) { return claimsBase() + town.memberCount() * claimsPerMember(); }
-=======
     private int maxClaims(Town town) {
         return claimsBase() + town.memberCount() * claimsPerMember()
                 + town.upgradeLevel(TownUpgrade.CLAIM_LIMIT) * 2;
@@ -109,7 +106,6 @@ public class TownManager {
             }
         }
     }
->>>>>>> Stashed changes
 
     // ---- keys ----
     public static String chunkKey(World world, int cx, int cz) { return world.getName() + "," + cx + "," + cz; }
@@ -173,13 +169,93 @@ public class TownManager {
         for (String ck : new ArrayList<>(town.claims())) chunkIndex.remove(ck);
         for (UUID m : new ArrayList<>(town.members().keySet())) playerTown.remove(m);
         towns.remove(town.name().toLowerCase());
+        if (plugin.wars() != null) plugin.wars().forgetTown(town.name());
+        if (plugin.diplomacy() != null) plugin.diplomacy().forgetTown(town.name());
         touch();
         plugin.msg().send(player, "<yellow>Town <white>" + town.name() + "</white> has been disbanded.");
         return true;
     }
 
-<<<<<<< Updated upstream
-=======
+    /** Colours a town may pick for its chat tag. */
+    public static final String[][] TAG_COLOURS = {
+            {"Gold", "#f9d423"}, {"Crimson", "#ff4e50"}, {"Sky", "#5ad1e8"},
+            {"Rose", "#e94fd0"}, {"Emerald", "#57d977"}, {"Violet", "#9b6cff"},
+            {"Amber", "#ff9a3c"}, {"Ice", "#c9f2ff"}, {"Lime", "#a4e857"},
+            {"Ocean", "#3c8cff"}, {"Ash", "#b0b0b0"}, {"Blood", "#a3232b"}
+    };
+
+    /** Set the town's chat tag colour. */
+    public boolean setTagColour(Player player, String hex) {
+        Town town = getTownOf(player.getUniqueId());
+        if (town == null) { plugin.msg().send(player, "<red>You're not in a town."); return false; }
+        if (!town.mayor().equals(player.getUniqueId())) {
+            plugin.msg().send(player, "<red>Only the mayor can change the town colour."); return false;
+        }
+        String clean = hex == null ? "" : hex.trim();
+        if (!clean.startsWith("#")) clean = "#" + clean;
+        if (!clean.matches("#[0-9a-fA-F]{6}")) {
+            plugin.msg().send(player, "<red>That isn't a colour. Try something like <white>#5ad1e8</white>.");
+            return false;
+        }
+        town.setTagColour(clean);
+        touch();
+        // The tag text is the same, so nudge the name tags to redraw.
+        if (plugin.nameTags() != null) plugin.nameTags().invalidate();
+        plugin.msg().send(player, "<green>Town colour set: <" + clean + ">"
+                + town.name() + "</" + clean + ">");
+        return true;
+    }
+
+    /** Set the message shown to anyone entering town land. */
+    public boolean setBoard(Player player, String message) {
+        Town town = getTownOf(player.getUniqueId());
+        if (town == null) { plugin.msg().send(player, "<red>You're not in a town."); return false; }
+        if (!town.mayor().equals(player.getUniqueId())
+                && !town.hasPerm(player.getUniqueId(), TownPerm.MANAGE_PERMS)) {
+            plugin.msg().send(player, "<red>You can't change the town board."); return false;
+        }
+        if (message == null || message.isBlank() || message.equalsIgnoreCase("clear")) {
+            town.setBoard(null);
+            touch();
+            plugin.msg().send(player, "<yellow>Town board cleared.");
+            return true;
+        }
+        // Strip formatting - everyone who walks in sees this.
+        String clean = message.replace("<", "").replace(">", "");
+        if (clean.length() > 60) clean = clean.substring(0, 60);
+        town.setBoard(clean);
+        touch();
+        plugin.msg().send(player, "<green>Town board set: <white>" + clean + "</white>");
+        announceToTown(town, player.getUniqueId(),
+                "<gray>The town board now reads: <white>" + clean + "</white>", null);
+        return true;
+    }
+
+    /** Everything the residents hold, added to the town's own funds. */
+    public double memberWealth(Town town) {
+        double total = 0;
+        for (UUID member : town.members().keySet()) {
+            total += plugin.economy().getBalance(member);
+        }
+        return total;
+    }
+
+    /** A town's total worth: its bank plus every resident's balance. */
+    public double wealthOf(Town town) {
+        return town.bank() + memberWealth(town);
+    }
+
+    /** Towns ranked for the leaderboard. */
+    public List<Town> topTowns(String metric, int limit) {
+        List<Town> all = new ArrayList<>(towns.values());
+        switch (metric == null ? "wealth" : metric) {
+            case "land" -> all.sort((a, b) -> Integer.compare(b.claims().size(), a.claims().size()));
+            case "residents" -> all.sort((a, b) -> Integer.compare(b.memberCount(), a.memberCount()));
+            default -> all.sort((a, b) -> Double.compare(wealthOf(b), wealthOf(a)));
+        }
+        return all.size() > limit ? new ArrayList<>(all.subList(0, limit)) : all;
+    }
+
     /**
      * Pick the whole town up and drop it where the mayor is standing.
      * Members, ranks and the bank survive; land and plots are released.
@@ -227,7 +303,6 @@ public class TownManager {
         return true;
     }
 
->>>>>>> Stashed changes
     // ---- claiming ----
     public boolean claimHere(Player player) {
         Town town = getTownOf(player.getUniqueId());
@@ -320,7 +395,24 @@ public class TownManager {
         playerTown.put(player.getUniqueId(), town.name().toLowerCase());
         touch();
         plugin.msg().send(player, "<green>Welcome to <#f9d423>" + town.name() + "</#f9d423>!");
+        announceToTown(town, player.getUniqueId(),
+                "<green>" + player.getName() + "</green> <gray>has joined <white>"
+                        + town.name() + "</white>. Residents: <white>"
+                        + town.memberCount() + "</white></gray>",
+                org.bukkit.Sound.ENTITY_PLAYER_LEVELUP);
         return true;
+    }
+
+    /** Tell everyone in a town something, optionally skipping one player. */
+    public void announceToTown(Town town, UUID except, String message, org.bukkit.Sound sound) {
+        if (town == null) return;
+        for (UUID member : town.members().keySet()) {
+            if (except != null && member.equals(except)) continue;
+            Player online = plugin.getServer().getPlayer(member);
+            if (online == null) continue;
+            plugin.msg().send(online, message);
+            if (sound != null) online.playSound(online.getLocation(), sound, 0.5f, 1.5f);
+        }
     }
 
     public boolean leave(Player player) {
@@ -333,6 +425,10 @@ public class TownManager {
         playerTown.remove(player.getUniqueId());
         touch();
         plugin.msg().send(player, "<yellow>You left " + town.name() + ".");
+        announceToTown(town, player.getUniqueId(),
+                "<gray>" + player.getName() + " has left <white>" + town.name()
+                        + "</white>. Residents: <white>" + town.memberCount() + "</white></gray>",
+                null);
         return true;
     }
 
@@ -355,6 +451,11 @@ public class TownManager {
         plugin.msg().send(actor, "<yellow>Resident removed from the town.");
         Player t = plugin.getServer().getPlayer(target);
         if (t != null) plugin.msg().send(t, "<red>You were removed from " + town.name() + ".");
+        String kickedName = t != null ? t.getName()
+                : plugin.getServer().getOfflinePlayer(target).getName();
+        announceToTown(town, actor.getUniqueId(),
+                "<gray>" + (kickedName == null ? "A resident" : kickedName)
+                        + " was removed from <white>" + town.name() + "</white>.</gray>", null);
         return true;
     }
 
@@ -477,7 +578,10 @@ public class TownManager {
                 plugin.msg().send(player, "<red>Teleporting to towns is disabled on this server.");
                 return false;
             }
-            if (!town.publicSpawn()) {
+            Town mine = getTownOf(player.getUniqueId());
+            boolean allied = mine != null && plugin.diplomacy() != null
+                    && plugin.diplomacy().allied(mine.name(), town.name());
+            if (!town.publicSpawn() && !allied) {
                 plugin.msg().send(player, "<red><white>" + town.name()
                         + "</white> doesn't allow visitors to teleport in.");
                 return false;
@@ -514,6 +618,142 @@ public class TownManager {
         return true;
     }
 
+    private long rentPeriodMillis() {
+        return Math.max(1L, plugin.getConfig().getLong("towns.rent-period-hours", 24)) * 3600_000L;
+    }
+
+    public String rentPeriodLabel() {
+        long hours = Math.max(1L, plugin.getConfig().getLong("towns.rent-period-hours", 24));
+        if (hours % 24 == 0) {
+            long days = hours / 24;
+            return days == 1 ? "day" : days + " days";
+        }
+        return hours == 1 ? "hour" : hours + " hours";
+    }
+
+    /** List the chunk you're standing in as a rental. */
+    public boolean rentOutPlotHere(Player player, double price) {
+        Town town = getTownOf(player.getUniqueId());
+        if (town == null) { plugin.msg().send(player, "<red>You're not in a town."); return false; }
+        if (!town.hasPerm(player.getUniqueId(), TownPerm.SELL_PLOT)) {
+            plugin.msg().send(player, "<red>You don't have permission to list plots."); return false;
+        }
+        String here = chunkKey(player.getLocation());
+        if (!town.hasClaim(here)) { plugin.msg().send(player, "<red>Your town doesn't own this chunk."); return false; }
+        if (price < 0) price = 0;
+        town.setForRent(here, price);
+        touch();
+        plugin.msg().send(player, "<green>This plot is up for rent at " + plugin.msg().money(price)
+                + " per " + rentPeriodLabel() + ".");
+        return true;
+    }
+
+    /** Take out a tenancy on the plot you're standing in. */
+    public boolean rentPlotHere(Player player) {
+        String here = chunkKey(player.getLocation());
+        Town town = getTownAt(here);
+        if (town == null) { plugin.msg().send(player, "<red>This land isn't part of a town."); return false; }
+        if (!town.isMember(player.getUniqueId())) {
+            plugin.msg().send(player, "<red>Only residents can rent plots in this town."); return false;
+        }
+        Double rent = town.rentPrice(here);
+        if (rent == null) { plugin.msg().send(player, "<red>This plot isn't for rent."); return false; }
+        if (town.plotOwner(here) != null) {
+            plugin.msg().send(player, "<red>Someone is already renting this plot."); return false;
+        }
+        if (!plugin.economy().has(player.getUniqueId(), rent)) {
+            plugin.msg().send(player, "<red>You need " + plugin.msg().money(rent)
+                    + " for the first " + rentPeriodLabel() + "."); return false;
+        }
+        plugin.economy().withdraw(player.getUniqueId(), rent);
+        town.depositBank(rent);
+        town.setPlotOwner(here, player.getUniqueId());
+        town.setRentDue(here, System.currentTimeMillis() + rentPeriodMillis());
+        touch();
+        plugin.msg().send(player, "<green>Rented! You paid " + plugin.msg().money(rent)
+                + ". Next payment in one " + rentPeriodLabel() + ".");
+        return true;
+    }
+
+    /** Give up a rental you hold. */
+    public boolean endRentHere(Player player) {
+        String here = chunkKey(player.getLocation());
+        Town town = getTownAt(here);
+        if (town == null) return false;
+        if (!player.getUniqueId().equals(town.plotOwner(here))) {
+            plugin.msg().send(player, "<red>You aren't renting this plot."); return false;
+        }
+        if (town.rentPrice(here) == null) {
+            plugin.msg().send(player, "<red>You own this plot outright - it isn't a rental."); return false;
+        }
+        town.setPlotOwner(here, null);
+        town.rentDue().remove(here);
+        touch();
+        plugin.msg().send(player, "<yellow>You've given up the tenancy. No more rent is due.");
+        return true;
+    }
+
+    /** Take a plot off the market. */
+    public boolean unlistPlotHere(Player player) {
+        Town town = getTownOf(player.getUniqueId());
+        if (town == null) { plugin.msg().send(player, "<red>You're not in a town."); return false; }
+        if (!town.hasPerm(player.getUniqueId(), TownPerm.SELL_PLOT)) {
+            plugin.msg().send(player, "<red>You don't have permission to change listings."); return false;
+        }
+        String here = chunkKey(player.getLocation());
+        if (!town.isListed(here)) { plugin.msg().send(player, "<gray>This plot isn't listed."); return false; }
+        town.clearListing(here);
+        touch();
+        plugin.msg().send(player, "<yellow>Listing removed.");
+        return true;
+    }
+
+    /** Charge tenants when their period is up. Evicts anyone who can't pay. */
+    public void collectRent() {
+        boolean changed = false;
+        long now = System.currentTimeMillis();
+
+        for (Town town : towns.values()) {
+            for (Map.Entry<String, Long> entry : new ArrayList<>(town.rentDue().entrySet())) {
+                String plot = entry.getKey();
+                if (entry.getValue() > now) continue;
+
+                Double rent = town.rentPrice(plot);
+                UUID tenant = town.plotOwner(plot);
+                if (rent == null || tenant == null) {
+                    town.rentDue().remove(plot);
+                    changed = true;
+                    continue;
+                }
+
+                Player online = plugin.getServer().getPlayer(tenant);
+                if (plugin.economy().has(tenant, rent)) {
+                    plugin.economy().withdraw(tenant, rent);
+                    town.depositBank(rent);
+                    town.setRentDue(plot, now + rentPeriodMillis());
+                    if (online != null) {
+                        plugin.msg().send(online, "<gray>Rent of " + plugin.msg().money(rent)
+                                + " paid to <white>" + town.name() + "</white>.");
+                    }
+                } else {
+                    town.setPlotOwner(plot, null);
+                    town.rentDue().remove(plot);
+                    if (online != null) {
+                        plugin.msg().send(online, "<red>You couldn't cover the rent on your plot in <white>"
+                                + town.name() + "</white>. The tenancy has ended.");
+                    }
+                    Player mayor = plugin.getServer().getPlayer(town.mayor());
+                    if (mayor != null) {
+                        plugin.msg().send(mayor, "<yellow>A tenant missed rent - a plot in <white>"
+                                + town.name() + "</white> is available again.");
+                    }
+                }
+                changed = true;
+            }
+        }
+        if (changed) touch();
+    }
+
     public boolean buyPlotHere(Player player) {
         String here = chunkKey(player.getLocation());
         Town town = getTownAt(here);
@@ -522,7 +762,17 @@ public class TownManager {
             plugin.msg().send(player, "<red>Only residents can buy plots in this town."); return false;
         }
         Double price = town.plotPrice(here);
-        if (price == null) { plugin.msg().send(player, "<red>This plot isn't for sale."); return false; }
+        if (price == null) {
+            if (town.rentPrice(here) != null) {
+                plugin.msg().send(player, "<gray>This plot is for rent, not sale. Use <white>/town rentplot</white>.");
+            } else {
+                plugin.msg().send(player, "<red>This plot isn't for sale.");
+            }
+            return false;
+        }
+        if (town.plotOwner(here) != null) {
+            plugin.msg().send(player, "<red>Someone already owns this plot."); return false;
+        }
         if (!plugin.economy().has(player.getUniqueId(), price)) {
             plugin.msg().send(player, "<red>You can't afford this plot."); return false;
         }
@@ -545,7 +795,10 @@ public class TownManager {
         if (plotOwner != null) {
             return plotOwner.equals(player.getUniqueId()) || player.getUniqueId().equals(town.mayor());
         }
-        return town.hasPerm(player.getUniqueId(), TownPerm.BUILD);
+        if (town.hasPerm(player.getUniqueId(), TownPerm.BUILD)) return true;
+        // A trusted ally may build here if this town said so.
+        return plugin.diplomacy() != null
+                && plugin.diplomacy().playerAllowed(player, town, AllyPerm.BUILD);
     }
 
     // ---- taxes (called on a timer) ----
@@ -571,6 +824,9 @@ public class TownManager {
     // ---- persistence ----
     private void touch() { dirty = true; save(); }
 
+    /** Let other systems record that a town changed. */
+    public void markDirty() { touch(); }
+
     public void save() {
         if (!dirty) return;
         FileConfiguration cfg = new YamlConfiguration();
@@ -581,12 +837,11 @@ public class TownManager {
             cfg.set(base + ".bank", town.bank());
             cfg.set(base + ".tax", town.tax());
             cfg.set(base + ".public-spawn", town.publicSpawn());
-<<<<<<< Updated upstream
-=======
+            if (town.board() != null) cfg.set(base + ".board", town.board());
+            cfg.set(base + ".tagColour", town.tagColour());
             for (Map.Entry<TownUpgrade, Integer> e : town.upgrades().entrySet()) {
                 cfg.set(base + ".upgrades." + e.getKey().name(), e.getValue());
             }
->>>>>>> Stashed changes
             if (town.spawn() != null) cfg.set(base + ".spawn", serLoc(town.spawn()));
             for (Map.Entry<UUID, TownRank> e : town.members().entrySet()) {
                 cfg.set(base + ".members." + e.getKey(), e.getValue().name());
@@ -598,6 +853,12 @@ public class TownManager {
             List<String> sales = new ArrayList<>();
             for (Map.Entry<String, Double> e : town.plotSale().entrySet()) sales.add(e.getKey() + "=" + e.getValue());
             cfg.set(base + ".sales", sales);
+            List<String> rents = new ArrayList<>();
+            for (Map.Entry<String, Double> e : town.plotRent().entrySet()) rents.add(e.getKey() + "=" + e.getValue());
+            cfg.set(base + ".rents", rents);
+            List<String> due = new ArrayList<>();
+            for (Map.Entry<String, Long> e : town.rentDue().entrySet()) due.add(e.getKey() + "=" + e.getValue());
+            cfg.set(base + ".rentDue", due);
             for (TownRank r : TownRank.values()) {
                 List<String> perms = new ArrayList<>();
                 for (TownPerm p : town.permsFor(r)) perms.add(p.name());
@@ -626,8 +887,8 @@ public class TownManager {
                 town.setBank(cfg.getDouble(base + ".bank"));
                 town.setTax(cfg.getDouble(base + ".tax"));
                 town.setPublicSpawn(cfg.getBoolean(base + ".public-spawn", true));
-<<<<<<< Updated upstream
-=======
+                town.setBoard(cfg.getString(base + ".board"));
+                town.setTagColour(cfg.getString(base + ".tagColour", "#f9d423"));
                 ConfigurationSection ups = cfg.getConfigurationSection(base + ".upgrades");
                 if (ups != null) {
                     for (String upName : ups.getKeys(false)) {
@@ -635,7 +896,6 @@ public class TownManager {
                         if (up != null) town.setUpgradeLevel(up, ups.getInt(upName));
                     }
                 }
->>>>>>> Stashed changes
                 String spawn = cfg.getString(base + ".spawn");
                 if (spawn != null) town.setSpawn(deserLoc(spawn));
 
@@ -653,6 +913,14 @@ public class TownManager {
                 for (String entry : cfg.getStringList(base + ".sales")) {
                     String[] pr = entry.split("=");
                     if (pr.length == 2) town.setForSale(pr[0], Double.parseDouble(pr[1]));
+                }
+                for (String entry : cfg.getStringList(base + ".rents")) {
+                    String[] pr = entry.split("=");
+                    if (pr.length == 2) town.setForRent(pr[0], Double.parseDouble(pr[1]));
+                }
+                for (String entry : cfg.getStringList(base + ".rentDue")) {
+                    String[] pr = entry.split("=");
+                    if (pr.length == 2) town.setRentDue(pr[0], Long.parseLong(pr[1]));
                 }
                 ConfigurationSection ps = cfg.getConfigurationSection(base + ".perms");
                 if (ps != null) {

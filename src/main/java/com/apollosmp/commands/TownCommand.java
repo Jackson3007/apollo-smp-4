@@ -40,12 +40,9 @@ public class TownCommand implements CommandExecutor, TabCompleter {
         switch (args[0].toLowerCase()) {
             case "claim" -> plugin.towns().claimHere(player);
             case "unclaim" -> plugin.towns().unclaimHere(player);
-            case "spawn" -> plugin.towns().teleportSpawn(player);
+            case "spawn", "home" -> plugin.towns().teleportSpawn(player);
             case "setspawn" -> plugin.towns().setSpawnHere(player);
             case "leave" -> plugin.towns().leave(player);
-<<<<<<< Updated upstream
-            case "disband" -> plugin.towns().disband(player);
-=======
             case "move", "relocate" -> {
                 if (args.length < 2 || !args[1].equalsIgnoreCase("confirm")) {
                     Town own = plugin.towns().getTownOf(player.getUniqueId());
@@ -79,8 +76,10 @@ public class TownCommand implements CommandExecutor, TabCompleter {
                     plugin.towns().disband(player);
                 }
             }
->>>>>>> Stashed changes
             case "buyplot" -> plugin.towns().buyPlotHere(player);
+            case "rentplot" -> plugin.towns().rentPlotHere(player);
+            case "endrent" -> plugin.towns().endRentHere(player);
+            case "unlistplot" -> plugin.towns().unlistPlotHere(player);
 
             case "create" -> {
                 if (args.length < 2) plugin.msg().send(player, "<gray>Usage: <white>/town create <name></white>");
@@ -130,6 +129,10 @@ public class TownCommand implements CommandExecutor, TabCompleter {
                 Double amount = parse(player, args, "/town sellplot <price>");
                 if (amount != null) plugin.towns().sellPlotHere(player, amount);
             }
+            case "rentoutplot", "listrent" -> {
+                Double amount = parse(player, args, "/town rentoutplot <price>");
+                if (amount != null) plugin.towns().rentOutPlotHere(player, amount);
+            }
 
             case "tp", "teleport", "visit" -> {
                 if (args.length < 2) plugin.msg().send(player, "<gray>Usage: <white>/town tp <town></white>");
@@ -156,10 +159,32 @@ public class TownCommand implements CommandExecutor, TabCompleter {
                         ? "<green>Claim borders shown. <gray>Run it again to hide them."
                         : "<yellow>Claim borders hidden.");
             }
-<<<<<<< Updated upstream
-=======
             case "upgrades", "upgrade" -> new com.apollosmp.gui.menus.TownUpgradesMenu(plugin, player).open();
->>>>>>> Stashed changes
+            case "top", "leaderboard" -> {
+                String metric = args.length > 1 ? args[1].toLowerCase() : "wealth";
+                new com.apollosmp.gui.menus.TownTopMenu(plugin, player, metric).open();
+            }
+            case "colour", "color" -> {
+                if (args.length < 2) {
+                    new com.apollosmp.gui.menus.TownColourMenu(plugin, player).open();
+                    return true;
+                }
+                plugin.towns().setTagColour(player, args[1]);
+            }
+            case "board" -> {
+                if (args.length < 2) {
+                    Town own = plugin.towns().getTownOf(player.getUniqueId());
+                    if (own == null || own.board() == null) {
+                        plugin.msg().send(player, "<gray>No board set. Use <white>/town board <message></white>.");
+                    } else {
+                        plugin.msg().send(player, "<gray>Board: <white>" + own.board() + "</white>");
+                    }
+                    return true;
+                }
+                StringBuilder sb = new StringBuilder(args[1]);
+                for (int i = 2; i < args.length; i++) sb.append(" ").append(args[i]);
+                plugin.towns().setBoard(player, sb.toString());
+            }
             case "map" -> plugin.borders().sendMap(player);
             case "plot", "plotinfo" -> {
                 Town here = plugin.towns().getTownAtLoc(player.getLocation());
@@ -183,6 +208,47 @@ public class TownCommand implements CommandExecutor, TabCompleter {
                     }
                 }
             }
+            case "war" -> {
+                if (args.length < 2) {
+                    plugin.msg().send(player, "<gray>Usage: <white>/town war <town> <10|30|60|120></white>");
+                    plugin.msg().send(player, "<gray>Or: <white>/town war accept|decline [town]</white>");
+                    return true;
+                }
+                String sub = args[1].toLowerCase();
+                if (sub.equals("accept")) {
+                    plugin.wars().accept(player, args.length > 2 ? args[2] : null);
+                } else if (sub.equals("decline") || sub.equals("refuse")) {
+                    plugin.wars().decline(player);
+                } else {
+                    int minutes = 30;
+                    if (args.length > 2) {
+                        try {
+                            minutes = Integer.parseInt(args[2]);
+                        } catch (NumberFormatException ex) {
+                            plugin.msg().send(player, "<red>Pick 10, 30, 60 or 120 minutes.");
+                            return true;
+                        }
+                    }
+                    plugin.wars().declare(player, args[1], minutes);
+                }
+            }
+            case "peace" -> plugin.wars().offerPeace(player, args.length > 1 ? args[1] : null);
+            case "ally", "alliance" -> {
+                if (args.length < 2) {
+                    new com.apollosmp.gui.menus.TownDiplomacyMenu(plugin, player).open();
+                    return true;
+                }
+                String sub = args[1].toLowerCase();
+                if (sub.equals("accept")) {
+                    plugin.diplomacy().accept(player, args.length > 2 ? args[2] : null);
+                } else if (sub.equals("decline") || sub.equals("refuse")) {
+                    plugin.diplomacy().decline(player);
+                } else if (sub.equals("break") && args.length > 2) {
+                    plugin.diplomacy().breakAlliance(player, args[2]);
+                } else {
+                    plugin.diplomacy().propose(player, args[1]);
+                }
+            }
             case "help" -> sendHelp(player);
             default -> new TownMenu(plugin, player).open();
         }
@@ -198,18 +264,24 @@ public class TownCommand implements CommandExecutor, TabCompleter {
         plugin.msg().send(player, "<gray>/town kick <player> <white>| <gray>/town rank <player> <rank>");
         plugin.msg().send(player, "<gray>/town deposit <amt> <white>| <gray>/town withdraw <amt>");
         plugin.msg().send(player, "<gray>/town tax <amt> <white>| <gray>/town sellplot <price>");
-        plugin.msg().send(player, "<gray>/town buyplot <white>| <gray>/town spawn <white>| <gray>/town setspawn");
+        plugin.msg().send(player, "<gray>/town rentoutplot <price> <white>- list a plot for rent");
+        plugin.msg().send(player, "<gray>/town rentplot <white>| <gray>/town endrent <white>| <gray>/town unlistplot");
+        plugin.msg().send(player, "<gray>/town buyplot <white>| <gray>/town home <white>| <gray>/town setspawn");
         plugin.msg().send(player, "<gray>/town list <white>- browse every town");
         plugin.msg().send(player, "<gray>/town tp <town> <white>- teleport to a town");
         plugin.msg().send(player, "<gray>/town visitors <on|off> <white>- allow outside teleports");
         plugin.msg().send(player, "<gray>/town border <white>- outline claims with particles");
         plugin.msg().send(player, "<gray>/town map <white>- text map of nearby land");
         plugin.msg().send(player, "<gray>/town plot <white>- who owns the chunk you're on");
-<<<<<<< Updated upstream
-=======
         plugin.msg().send(player, "<gray>/town move <white>- relocate the whole town");
         plugin.msg().send(player, "<gray>/town upgrades <white>- spend the bank on perks");
->>>>>>> Stashed changes
+        plugin.msg().send(player, "<gray>/town board <msg> <white>- greet visitors");
+        plugin.msg().send(player, "<gray>/town color <white>- pick your chat tag colour");
+        plugin.msg().send(player, "<gray>/town top <white>- richest and biggest towns");
+        plugin.msg().send(player, "<gray>/town war <town> <mins> <white>- declare war");
+        plugin.msg().send(player, "<gray>/town peace <white>- sue for peace");
+        plugin.msg().send(player, "<gray>/town ally <town> <white>- propose an alliance");
+        plugin.msg().send(player, "<gray>/tc <white>| <gray>/ac <white>- town and ally chat");
         plugin.msg().send(player, "<gray>/town leave <white>| <gray>/town disband");
     }
 
@@ -244,13 +316,10 @@ public class TownCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            return List.of("create", "claim", "unclaim", "invite", "join", "kick", "rank",
-                    "deposit", "withdraw", "tax", "sellplot", "buyplot",
-<<<<<<< Updated upstream
-                    "spawn", "setspawn", "list", "tp", "visitors", "border", "map", "plot",
-=======
-                    "spawn", "setspawn", "list", "tp", "visitors", "border", "map", "plot", "move", "upgrades",
->>>>>>> Stashed changes
+            return List.of("create", "claim", "unclaim", "home", "invite", "join", "kick", "rank",
+                    "deposit", "withdraw", "tax", "sellplot", "rentoutplot", "buyplot",
+                    "rentplot", "endrent", "unlistplot",
+                    "spawn", "setspawn", "list", "tp", "visitors", "border", "map", "plot", "move", "upgrades", "war", "peace", "ally", "board", "top", "color",
                     "leave", "disband", "help");
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("kick") || args[0].equalsIgnoreCase("rank"))
@@ -265,6 +334,22 @@ public class TownCommand implements CommandExecutor, TabCompleter {
             }
             return names;
         }
+        if (args.length == 2 && args[0].equalsIgnoreCase("top")) {
+            return List.of("wealth", "land", "residents");
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("ally")) {
+            List<String> out = new ArrayList<>(List.of("accept", "decline", "break"));
+            for (Town t : plugin.towns().allTowns()) out.add(t.name());
+            return out;
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("war")) {
+            List<String> out = new ArrayList<>(List.of("accept", "decline"));
+            for (Town t : plugin.towns().allTowns()) out.add(t.name());
+            return out;
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("war")) {
+            return List.of("10", "30", "60", "120");
+        }
         if (args.length == 2 && (args[0].equalsIgnoreCase("tp") || args[0].equalsIgnoreCase("join"))) {
             List<String> names = new ArrayList<>();
             for (Town t : plugin.towns().allTowns()) names.add(t.name());
@@ -273,12 +358,9 @@ public class TownCommand implements CommandExecutor, TabCompleter {
         if (args.length == 2 && args[0].equalsIgnoreCase("visitors")) {
             return List.of("on", "off");
         }
-<<<<<<< Updated upstream
-=======
         if (args.length == 2 && (args[0].equalsIgnoreCase("disband") || args[0].equalsIgnoreCase("move"))) {
             return List.of("confirm");
         }
->>>>>>> Stashed changes
         if (args.length == 3 && args[0].equalsIgnoreCase("rank")) {
             return List.of("assistant", "commander", "resident");
         }

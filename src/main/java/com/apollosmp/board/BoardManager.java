@@ -60,9 +60,48 @@ public class BoardManager {
      * The sidebar lines to actually draw. If the config predates the town lines,
      * they get slotted in automatically so existing setups don't miss out.
      */
+    /** Total time played, from the vanilla statistic (stored in ticks). */
+    private String playtime(Player player) {
+        long ticks;
+        try {
+            ticks = player.getStatistic(org.bukkit.Statistic.PLAY_ONE_MINUTE);
+        } catch (Exception ex) {
+            return "-";
+        }
+        long minutes = ticks / 20 / 60;
+        long days = minutes / 1440;
+        long hours = (minutes % 1440) / 60;
+        long mins = minutes % 60;
+        if (days > 0) return days + "d " + hours + "h";
+        if (hours > 0) return hours + "h " + mins + "m";
+        return mins + "m";
+    }
+
     private List<String> effectiveLines() {
         List<String> lines = new ArrayList<>(plugin.getConfig().getStringList("scoreboard.lines"));
         if (lines.isEmpty()) return lines;
+
+        // Swap the old homes/listings row for playtime.
+        if (lines.stream().noneMatch(l -> l.contains("%playtime%"))) {
+            int replaced = -1;
+            for (int i = 0; i < lines.size(); i++) {
+                String l = lines.get(i);
+                if (l.contains("%homes%") || l.contains("%listings%") || l.contains("%skycoins%")) {
+                    if (replaced < 0) {
+                        lines.set(i, " <gray>Playtime:</gray> <white>%playtime%</white>");
+                        replaced = i;
+                    } else {
+                        lines.set(i, null);
+                    }
+                }
+            }
+            lines.removeIf(java.util.Objects::isNull);
+        }
+
+        // Make sure the footer points at /menu.
+        if (lines.stream().noneMatch(l -> l.contains("/menu"))) {
+            lines.add("<gray>/menu <dark_gray>for everything</dark_gray>");
+        }
 
         boolean hasOwn = false;
         boolean hasHere = false;
@@ -167,6 +206,7 @@ public class BoardManager {
                 // Older configs had the placeholder IP hard-coded into the line.
                 .replace("play.apollosmp.net", ip)
                 .replace("%ip%", ip)
+                .replace("%playtime%", playtime(player))
                 .replace("%town_here%", hereTown == null ? "Wilderness" : hereTown.name())
                 .replace("%town_rank%", ownTown == null || ownTown.rankOf(id) == null
                         ? "-" : ownTown.rankOf(id).display())

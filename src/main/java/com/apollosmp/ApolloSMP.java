@@ -46,6 +46,7 @@ public class ApolloSMP extends JavaPlugin {
     private SellManager sell;
     private Mailbox mailbox;
     private AuctionManager auctions;
+    private com.apollosmp.auction.FakeAuctionManager fakeAuctions;
     private OrderManager orders;
     private BoardManager board;
     private RtpManager rtp;
@@ -59,10 +60,23 @@ public class ApolloSMP extends JavaPlugin {
     private com.apollosmp.town.ChatPromptManager prompts;
     private com.apollosmp.board.NameTagManager nameTags;
     private com.apollosmp.town.BorderVisualizer borders;
-<<<<<<< Updated upstream
-    private com.apollosmp.listeners.MenuItemListener menuItem;
-=======
->>>>>>> Stashed changes
+    private com.apollosmp.town.WarManager wars;
+    private com.apollosmp.town.DiplomacyManager diplomacy;
+    private com.apollosmp.town.ChatChannels channels;
+    private com.apollosmp.shop.ShopManager shops;
+    private com.apollosmp.listeners.WarListener warListener;
+    private com.apollosmp.invest.BusinessHolograms holograms;
+    private com.apollosmp.merchant.MerchantManager merchant;
+    private com.apollosmp.special.SpecialAuctionManager specialAuction;
+    private com.apollosmp.special.SpecialBusinessManager specialBusinesses;
+    private com.apollosmp.spawner.SpawnerManager spawners;
+    private com.apollosmp.vault.VaultManager vaults;
+    private com.apollosmp.admin.InventorySnapshots snapshots;
+    private com.apollosmp.admin.StaffMode staffMode;
+    private com.apollosmp.staff.StaffRanks ranks;
+    private com.apollosmp.sell.WorthTags worthTags;
+    private com.apollosmp.logistics.LogisticsManager logistics;
+    private com.apollosmp.merchant.ToolExpiryTask toolExpiry;
 
     @Override
     public void onEnable() {
@@ -86,6 +100,26 @@ public class ApolloSMP extends JavaPlugin {
         this.prompts = new com.apollosmp.town.ChatPromptManager(this);
         this.nameTags = new com.apollosmp.board.NameTagManager(this);
         this.borders = new com.apollosmp.town.BorderVisualizer(this);
+        this.wars = new com.apollosmp.town.WarManager(this);
+        this.diplomacy = new com.apollosmp.town.DiplomacyManager(this);
+        this.channels = new com.apollosmp.town.ChatChannels(this);
+        this.shops = new com.apollosmp.shop.ShopManager(this);
+        this.merchant = new com.apollosmp.merchant.MerchantManager(this);
+        this.specialAuction = new com.apollosmp.special.SpecialAuctionManager(this);
+        this.specialBusinesses = new com.apollosmp.special.SpecialBusinessManager(this);
+        this.spawners = new com.apollosmp.spawner.SpawnerManager(this);
+        this.vaults = new com.apollosmp.vault.VaultManager(this);
+        this.snapshots = new com.apollosmp.admin.InventorySnapshots(this);
+        this.staffMode = new com.apollosmp.admin.StaffMode(this);
+        this.ranks = new com.apollosmp.staff.StaffRanks(this);
+        this.worthTags = new com.apollosmp.sell.WorthTags(this);
+        this.logistics = new com.apollosmp.logistics.LogisticsManager(this);
+        // Needs sell() + auctions() ready, so it's created after the core managers.
+        this.fakeAuctions = new com.apollosmp.auction.FakeAuctionManager(this);
+        this.spawners.cleanupOrphans();
+        this.toolExpiry = new com.apollosmp.merchant.ToolExpiryTask(this);
+        this.holograms = new com.apollosmp.invest.BusinessHolograms(this);
+        this.holograms.cleanupOrphans();
 
         registerCommands();
         registerListeners();
@@ -98,11 +132,16 @@ public class ApolloSMP extends JavaPlugin {
             board.create(player);
         }
 
+        // Fill the auction house with some activity so it never looks empty.
+        fakeAuctions.seed();
+
         getLogger().info("Apollo SMP enabled. May the sun shine on your economy.");
     }
 
     @Override
     public void onDisable() {
+        if (holograms != null) holograms.removeAll();
+        if (spawners != null) spawners.removeAllLabels();
         getServer().getScheduler().cancelTasks(this);
         saveAll();
         getLogger().info("Apollo SMP disabled. Data saved.");
@@ -136,6 +175,19 @@ public class ApolloSMP extends JavaPlugin {
         reg("vote", new VoteCommand(this));
         reg("town", new com.apollosmp.commands.TownCommand(this));
         reg("discord", new com.apollosmp.commands.DiscordCommand(this));
+        reg("tc", new com.apollosmp.commands.ChannelCommand(this,
+                com.apollosmp.town.ChatChannels.Channel.TOWN));
+        reg("ac", new com.apollosmp.commands.ChannelCommand(this,
+                com.apollosmp.town.ChatChannels.Channel.ALLY));
+        reg("admin", new com.apollosmp.commands.AdminPanelCommand(this));
+        reg("announce", new com.apollosmp.commands.AnnounceCommand(this));
+        reg("merchant", new com.apollosmp.commands.MerchantCommand(this));
+        reg("specialauction", new com.apollosmp.commands.SpecialAuctionCommand(this));
+        reg("pv", new com.apollosmp.commands.VaultCommand(this));
+        reg("items", new com.apollosmp.commands.ItemsCommand(this));
+        reg("staff", new com.apollosmp.commands.StaffCommand(this));
+        reg("rank", new com.apollosmp.commands.RankCommand(this));
+        reg("worth", new com.apollosmp.commands.WorthCommand(this));
 
         TpaCommand tpaCommand = new TpaCommand(this);
         reg("tpa", tpaCommand);
@@ -173,18 +225,43 @@ public class ApolloSMP extends JavaPlugin {
                 new com.apollosmp.listeners.TownChatListener(this), this);
         getServer().getPluginManager().registerEvents(
                 new com.apollosmp.listeners.TownBorderListener(this), this);
+        this.warListener = new com.apollosmp.listeners.WarListener(this);
+        getServer().getPluginManager().registerEvents(warListener, this);
+        getServer().getPluginManager().registerEvents(
+                new com.apollosmp.listeners.TownBlockListener(this), this);
         getServer().getPluginManager().registerEvents(
                 new com.apollosmp.listeners.SleepListener(this), this);
         getServer().getPluginManager().registerEvents(
                 new com.apollosmp.listeners.SpawnerListener(this), this);
-<<<<<<< Updated upstream
-        this.menuItem = new com.apollosmp.listeners.MenuItemListener(this);
-        getServer().getPluginManager().registerEvents(menuItem, this);
-=======
->>>>>>> Stashed changes
+        getServer().getPluginManager().registerEvents(
+                new com.apollosmp.listeners.MerchantToolListener(this), this);
+        getServer().getPluginManager().registerEvents(
+                new com.apollosmp.listeners.SpecialBusinessListener(this), this);
+        getServer().getPluginManager().registerEvents(
+                new com.apollosmp.listeners.MobStackListener(this), this);
+        getServer().getPluginManager().registerEvents(
+                new com.apollosmp.listeners.VaultListener(this), this);
+        getServer().getPluginManager().registerEvents(
+                new com.apollosmp.listeners.LogisticsListener(this), this);
+        getServer().getPluginManager().registerEvents(worthTags, this);
 
         long taxTicks = Math.max(1L, getConfig().getLong("towns.tax-interval-hours", 24)) * 3600L * 20L;
         getServer().getScheduler().runTaskTimer(this, () -> towns.collectTaxes(), taxTicks, taxTicks);
+
+        com.apollosmp.vote.VotifierHook votifier = new com.apollosmp.vote.VotifierHook(this);
+        votifier.tryRegister();
+        voting.setVotifierActive(votifier.isActive());
+
+        // Loud and unmistakable, so vote problems are easy to diagnose.
+        getLogger().info("======================================");
+        getLogger().info(" Vote rewards: " + (votifier.isActive()
+                ? "ACTIVE - " + msg().money(voting.reward()) + " per confirmed vote"
+                : "INACTIVE - NuVotifier not detected"));
+        getLogger().info(" Vote sites configured: " + voting.services().size());
+        for (com.apollosmp.vote.VoteManager.Service s : voting.services()) {
+            getLogger().info("   - " + s.name());
+        }
+        getLogger().info("======================================");
 
         long reminderTicks = (long) voting.reminderMinutes() * 60L * 20L;
         getServer().getScheduler().runTaskTimer(this, () -> voting.sendReminders(),
@@ -196,12 +273,18 @@ public class ApolloSMP extends JavaPlugin {
         applySleepRule();
 
         getServer().getScheduler().runTaskTimer(this, () -> nameTags.updateAll(), 40L, 40L);
-<<<<<<< Updated upstream
-        getServer().getScheduler().runTaskTimer(this, () -> borders.tick(), 10L, 10L);
-=======
         getServer().getScheduler().runTaskTimer(this, () -> borders.tick(), 8L, 8L);
         getServer().getScheduler().runTaskTimer(this, () -> towns.applyUpgradeEffects(), 60L, 60L);
->>>>>>> Stashed changes
+        getServer().getScheduler().runTaskTimer(this, () -> towns.collectRent(), 1200L, 6000L);
+        getServer().getScheduler().runTaskTimer(this, () -> wars.tick(), 100L, 100L);
+        getServer().getScheduler().runTaskTimer(this, () -> diplomacy.tick(), 600L, 600L);
+        getServer().getScheduler().runTaskTimer(this, () -> holograms.tick(), 40L, 20L);
+        getServer().getScheduler().runTaskTimer(this, () -> toolExpiry.tick(), 200L, 600L);
+        getServer().getScheduler().runTaskTimer(this, () -> merchant.refreshIfNeeded(), 1200L, 1200L);
+        getServer().getScheduler().runTaskTimer(this, () -> specialAuction.tick(), 100L, 20L);
+        getServer().getScheduler().runTaskTimer(this, () -> spawners.tick(), 60L, 20L);
+        getServer().getScheduler().runTaskTimer(this, () -> logistics.tick(), 600L, 600L);
+        getServer().getScheduler().runTaskTimer(this, () -> worthTags.tick(), 40L, 40L);
     }
 
     // ---- world border ----
@@ -230,6 +313,10 @@ public class ApolloSMP extends JavaPlugin {
         // Expire old auction listings once a minute.
         getServer().getScheduler().runTaskTimer(this, () -> auctions.expireTick(), 1200L, 1200L);
 
+        // Keep the auction house looking active: age out and refill seeded listings.
+        long fakeRefresh = Math.max(1L, getConfig().getLong("fake-auctions.refresh-minutes", 4)) * 60L * 20L;
+        getServer().getScheduler().runTaskTimer(this, () -> fakeAuctions.tick(), fakeRefresh, fakeRefresh);
+
         if (getConfig().getBoolean("scoreboard.enabled", true)) {
             long refresh = Math.max(5L, getConfig().getLong("scoreboard.refresh-ticks", 20));
             getServer().getScheduler().runTaskTimer(this, () -> board.updateAll(), refresh, refresh);
@@ -237,6 +324,9 @@ public class ApolloSMP extends JavaPlugin {
 
         // Ambient particles above business blocks.
         getServer().getScheduler().runTaskTimer(this, () -> businesses.spawnParticles(), 40L, 15L);
+        getServer().getScheduler().runTaskTimer(this, () -> specialBusinesses.spawnParticles(), 45L, 15L);
+        getServer().getScheduler().runTaskTimer(this, () -> logistics.spawnParticles(), 50L, 15L);
+        getServer().getScheduler().runTaskTimer(this, () -> shops.spawnParticles(), 60L, 15L);
         // Live-refresh any open business panel (ticks the countdown + updates stored goods).
         getServer().getScheduler().runTaskTimer(this, this::refreshBusinessMenus, 20L, 20L);
     }
@@ -259,10 +349,20 @@ public class ApolloSMP extends JavaPlugin {
         businesses.save();
         skyCoins.save();
         towns.save();
-<<<<<<< Updated upstream
-=======
+        voting.save();
         borders.save();
->>>>>>> Stashed changes
+        wars.save();
+        diplomacy.save();
+        shops.save();
+        specialAuction.save();
+        specialBusinesses.save();
+        spawners.save();
+        vaults.save();
+        snapshots.captureAll();
+        snapshots.save();
+        staffMode.save();
+        ranks.save();
+        logistics.save();
     }
 
     public void reloadAll() {
@@ -286,6 +386,7 @@ public class ApolloSMP extends JavaPlugin {
     public SellManager sell() { return sell; }
     public Mailbox mailbox() { return mailbox; }
     public AuctionManager auctions() { return auctions; }
+    public com.apollosmp.auction.FakeAuctionManager fakeAuctions() { return fakeAuctions; }
     public OrderManager orders() { return orders; }
     public BoardManager board() { return board; }
     public RtpManager rtp() { return rtp; }
@@ -299,10 +400,22 @@ public class ApolloSMP extends JavaPlugin {
     public com.apollosmp.town.ChatPromptManager prompts() { return prompts; }
     public com.apollosmp.board.NameTagManager nameTags() { return nameTags; }
     public com.apollosmp.town.BorderVisualizer borders() { return borders; }
-<<<<<<< Updated upstream
-    public com.apollosmp.listeners.MenuItemListener menuItem() { return menuItem; }
-=======
->>>>>>> Stashed changes
+    public com.apollosmp.town.WarManager wars() { return wars; }
+    public com.apollosmp.town.DiplomacyManager diplomacy() { return diplomacy; }
+    public com.apollosmp.town.ChatChannels channels() { return channels; }
+    public com.apollosmp.shop.ShopManager shops() { return shops; }
+    public com.apollosmp.listeners.WarListener warListener() { return warListener; }
+    public com.apollosmp.invest.BusinessHolograms holograms() { return holograms; }
+    public com.apollosmp.merchant.MerchantManager merchant() { return merchant; }
+    public com.apollosmp.special.SpecialAuctionManager specialAuction() { return specialAuction; }
+    public com.apollosmp.special.SpecialBusinessManager specialBusinesses() { return specialBusinesses; }
+    public com.apollosmp.spawner.SpawnerManager spawners() { return spawners; }
+    public com.apollosmp.vault.VaultManager vaults() { return vaults; }
+    public com.apollosmp.admin.InventorySnapshots snapshots() { return snapshots; }
+    public com.apollosmp.admin.StaffMode staffMode() { return staffMode; }
+    public com.apollosmp.staff.StaffRanks ranks() { return ranks; }
+    public com.apollosmp.sell.WorthTags worthTags() { return worthTags; }
+    public com.apollosmp.logistics.LogisticsManager logistics() { return logistics; }
 
     /** Apply the "how many players must sleep" rule to every overworld. */
     public void applySleepRule() {

@@ -38,9 +38,11 @@ public class AuctionManager {
     private long durationMillis() {
         return plugin.getConfig().getLong("auction-house.listing-duration-hours", 48) * 3600_000L;
     }
-    private double listingTaxPercent() { return plugin.getConfig().getDouble("auction-house.listing-tax-percent", 3.0); }
-    private double minPrice() { return plugin.getConfig().getDouble("auction-house.min-price", 1.0); }
-    private double maxPrice() { return plugin.getConfig().getDouble("auction-house.max-price", 1.0E8); }
+    // New keys, so an older config can't reimpose the old limits.
+    private double minPrice() { return plugin.getConfig().getDouble("auction-house.min-listing-price", 1.0); }
+    private double maxPrice() {
+        return plugin.getConfig().getDouble("auction-house.max-listing-price", 1_000_000_000_000.0);
+    }
 
     // ---- queries ----
     public List<Listing> active() {
@@ -64,21 +66,73 @@ public class AuctionManager {
 
     public Listing get(UUID id) { return listings.get(id); }
 
+    // ---- seeded "activity" listings (fakes) ----
+
+    /** Add a seeded listing. Not persisted and never returned to a mailbox. */
+    public void injectFake(Listing listing) {
+        listing.setFake(true);
+        listings.put(listing.id(), listing);
+    }
+
+    public int fakeCount() {
+        int n = 0;
+        for (Listing l : listings.values()) if (l.fake()) n++;
+        return n;
+    }
+
+    public List<Listing> fakes() {
+        List<Listing> out = new ArrayList<>();
+        for (Listing l : listings.values()) if (l.fake()) out.add(l);
+        return out;
+    }
+
+    public void removeFake(UUID id) {
+        Listing l = listings.get(id);
+        if (l != null && l.fake()) listings.remove(id);
+    }
+
+    public void clearFakes() {
+        listings.values().removeIf(Listing::fake);
+    }
+
     // ---- operations ----
 
     /** List the item in the seller's main hand for {@code price}. */
+    /** Post an item on behalf of a town. Sales pay into the town bank. */
+    public boolean listForTown(Player actor, String townName, ItemStack item, double price) {
+        if (item == null || item.getType().isAir()) return false;
+        if (price < minPrice() || price > maxPrice()) {
+            plugin.msg().send(actor, "<red>That price is outside the allowed range.");
+            return false;
+        }
+        ItemStack listed = item.clone();
+        if (plugin.worthTags() != null) plugin.worthTags().strip(listed);
+
+        UUID id = UUID.randomUUID();
+        long now = System.currentTimeMillis();
+        Listing listing = new Listing(id, actor.getUniqueId(), townName, listed, price,
+                now, Long.MAX_VALUE); // town listings stay up until someone buys
+        listing.setTown(townName);
+        listings.put(id, listing);
+        save();
+
+        plugin.msg().send(actor, "<green>Listed <white>" + listed.getAmount() + "x "
+                + com.apollosmp.util.Items.pretty(listed.getType()) + "</white> for <#f9d423>"
+                + plugin.msg().money(price) + "</#f9d423> as a <white>" + townName + "</white> listing.");
+        return true;
+    }
+
     public ListResult list(Player seller, double price) {
         ItemStack hand = seller.getInventory().getItemInMainHand();
         if (hand == null || hand.getType().isAir()) return ListResult.EMPTY_HAND;
         if (price < minPrice()) return ListResult.PRICE_LOW;
         if (price > maxPrice()) return ListResult.PRICE_HIGH;
 
-        double tax = price * (listingTaxPercent() / 100.0);
-        if (tax > 0 && !plugin.economy().withdraw(seller.getUniqueId(), tax)) {
-            return ListResult.NO_FUNDS_FOR_TAX;
-        }
+        // Listing is free - no fee is taken.
 
         ItemStack listed = hand.clone();
+        // Drop the inventory price tag so listings show only the asking price.
+        if (plugin.worthTags() != null) plugin.worthTags().strip(listed);
         seller.getInventory().setItemInMainHand(null);
 
         long now = System.currentTimeMillis();
@@ -94,11 +148,30 @@ public class AuctionManager {
     public BuyResult buy(Player buyer, UUID listingId) {
         Listing listing = listings.get(listingId);
         if (listing == null) return BuyResult.NOT_FOUND;
-        if (listing.seller().equals(buyer.getUniqueId())) return BuyResult.OWN_LISTING;
+        // Buying your town's listing is fine - the money goes to the town bank.
+        if (listing.town() == null && !listing.fake() && listing.seller().equals(buyer.getUniqueId())) {
+            return BuyResult.OWN_LISTING;
+        }
         if (!plugin.economy().has(buyer.getUniqueId(), listing.price())) return BuyResult.NO_FUNDS;
 
         plugin.economy().withdraw(buyer.getUniqueId(), listing.price());
-        plugin.economy().deposit(listing.seller(), listing.price());
+        // A seeded listing has no real seller, so the payment is simply a money sink.
+        if (listing.fake()) {
+            listings.remove(listingId);
+            Items.give(buyer, listing.item());
+            return BuyResult.SUCCESS;
+        }
+        if (listing.town() != null) {
+            com.apollosmp.town.Town town = plugin.towns().townByName(listing.town());
+            if (town != null) {
+                town.depositBank(listing.price());
+                plugin.towns().markDirty();
+            } else {
+                plugin.economy().deposit(listing.seller(), listing.price());
+            }
+        } else {
+            plugin.economy().deposit(listing.seller(), listing.price());
+        }
         listings.remove(listingId);
         dirty = true;
         Items.give(buyer, listing.item());
@@ -133,7 +206,15 @@ public class AuctionManager {
     /** Cancel your own listing; the item is returned to your mailbox. */
     public boolean cancel(UUID seller, UUID listingId) {
         Listing listing = listings.get(listingId);
-        if (listing == null || !listing.seller().equals(seller)) return false;
+        if (listing == null) return false;
+        if (!listing.seller().equals(seller)) {
+            // Town listings can be pulled by anyone who manages the town's plots.
+            if (listing.town() == null) return false;
+            com.apollosmp.town.Town town = plugin.towns().townByName(listing.town());
+            if (town == null || !town.hasPerm(seller, com.apollosmp.town.TownPerm.SELL_PLOT)) {
+                return false;
+            }
+        }
         listings.remove(listingId);
         plugin.mailbox().add(seller, listing.item());
         dirty = true;
@@ -145,6 +226,8 @@ public class AuctionManager {
     public void expireTick() {
         boolean changed = false;
         for (Listing listing : new ArrayList<>(listings.values())) {
+            if (listing.town() != null) continue; // town stock waits for a buyer
+            if (listing.fake()) continue;          // seeded listings are managed separately
             if (listing.isExpired()) {
                 listings.remove(listing.id());
                 plugin.mailbox().add(listing.seller(), listing.item());
@@ -162,9 +245,11 @@ public class AuctionManager {
         if (!dirty) return;
         FileConfiguration cfg = new YamlConfiguration();
         for (Listing l : listings.values()) {
+            if (l.fake()) continue; // seeded listings live only in memory
             String p = "listings." + l.id();
             cfg.set(p + ".seller", l.seller().toString());
             cfg.set(p + ".sellerName", l.sellerName());
+            if (l.town() != null) cfg.set(p + ".town", l.town());
             cfg.set(p + ".item", Items.toBase64(l.item()));
             cfg.set(p + ".price", l.price());
             cfg.set(p + ".createdAt", l.createdAt());
@@ -198,6 +283,7 @@ public class AuctionManager {
                             cfg.getDouble(base + ".price"),
                             cfg.getLong(base + ".createdAt"),
                             cfg.getLong(base + ".expiresAt"));
+                    listing.setTown(cfg.getString(base + ".town"));
                     listings.put(id, listing);
                 } catch (Exception ex) {
                     plugin.getLogger().warning("Skipped bad auction entry: " + key);

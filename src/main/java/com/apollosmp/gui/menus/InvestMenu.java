@@ -39,10 +39,15 @@ public class InvestMenu extends Gui {
                         "<dark_gray>Right-click a placed block to manage it")
                 .hideAttributes().build());
 
-        inventory.setItem(15, Items.of(Material.GRAY_DYE)
-                .name("<dark_gray><bold>Stock Market</bold>")
-                .lore("<dark_gray>Coming soon...")
-                .build());
+        inventory.setItem(15, Items.of(com.apollosmp.logistics.LogisticsManager.WHOLESALE_BLOCK)
+                .name("<#5ad1e8><bold>Logistics</bold>")
+                .lore("<gray>Automate your empire. Distribution",
+                        "<gray>blocks gather from your businesses,",
+                        "<gray>wholesale blocks sell it all for you",
+                        "<gray>every " + plugin.logistics().intervalMinutes() + " minutes.",
+                        "",
+                        "<yellow>Click to browse")
+                .glow(true).hideAttributes().build());
 
         fillEmpty(Items.filler(Material.GRAY_STAINED_GLASS_PANE));
     }
@@ -51,6 +56,8 @@ public class InvestMenu extends Gui {
     public void onClick(Player player, int slot, ItemStack clicked, ClickType click) {
         if (slot == 11) {
             new BusinessShopMenu(plugin, player).open();
+        } else if (slot == 15) {
+            new LogisticsShopMenu(plugin, player).open();
         }
     }
 }

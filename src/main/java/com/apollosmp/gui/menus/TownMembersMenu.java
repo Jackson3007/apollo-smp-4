@@ -76,7 +76,7 @@ public class TownMembersMenu extends Gui {
 
     @Override
     public void onClick(Player clicker, int slot, ItemStack clicked, ClickType click) {
-        if (slot == 49) { new TownMenu(plugin, clicker).open(); return; }
+        if (slot == 49) { new TownManageMenu(plugin, clicker).open(); return; }
         if (slot == 3) {
             clicker.closeInventory();
             plugin.msg().send(clicker, "<#f9d423>Type the player's name to invite</#f9d423> <gray>(or 'cancel').");

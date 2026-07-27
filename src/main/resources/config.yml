@@ -38,9 +38,34 @@ economy:
   pay-tax-percent: 0.0
 
 sell:
+  # How to show an item's sell price to players:
+  #   actionbar - shown above the hotbar when you hold/switch to an item.
+  #               This NEVER changes the item, so items always stack normally.
+  #               (Recommended - it's the default.)
+  #   lore      - written onto the item's tooltip. Looks nice, but the extra
+  #               data stops otherwise-identical items from stacking together.
+  #   off       - no automatic display; players use /worth instead.
+  worth-display: actionbar
+  # Legacy switch, only used when worth-display is "lore": also show the whole
+  # stack's value. Leave OFF - the total changes with stack size, which stops
+  # identical items merging.
+  worth-lore: true
+  worth-lore-total: false
+  # Total value in a chest's title bar. Most servers can't retitle real
+  # containers, so this is off by default.
+  chest-total: false
+  # Anything without an explicit price below still sells for this much, so
+  # almost everything is worth something. Set to 0 to only allow listed items.
+  default-price: 0.25
+  # Price tools, weapons and armour from what they're made of, plus a premium
+  # for enchantments and a discount for wear.
+  gear-pricing: true
+  enchant-value: 250.0    # per enchantment level, scaled by how good it is
+  # Never sellable, on top of the built-in blocks (spawners, bedrock, etc).
+  never-sell: []
   # Prices the SERVER pays you per item when using /sell.
   # Material names: https://jd.papermc.io/paper/1.21/org/bukkit/Material.html
-  # Anything not listed here cannot be sold to the server.
+  # Anything not listed here falls back to default-price above.
   prices:
     # Ores / minerals
     COAL: 2.0
@@ -56,24 +81,37 @@ sell:
     REDSTONE: 2.0
     QUARTZ: 2.5
     NETHERITE_SCRAP: 120.0
+    # 4 scrap + 4 gold (528) so the ingot sells at/under its craft cost - no arbitrage.
+    NETHERITE_INGOT: 500.0
+    # Common crafting components, so gear prices come out sensibly
+    COBBLESTONE: 0.15
+    OAK_PLANKS: 0.4
+    STICK: 0.2
+    LEATHER: 3.0
+    FLINT: 1.0
+    # Aligned with the armadillo scute; turtle scutes are semi-AFK to farm.
+    TURTLE_SCUTE: 10.0
+    TRIPWIRE_HOOK: 5.0
     ANCIENT_DEBRIS: 150.0
     # Farming
     WHEAT: 1.0
     CARROT: 1.0
     POTATO: 1.0
     BEETROOT: 1.0
-    SUGAR_CANE: 1.0
-    PUMPKIN: 2.0
+    # Fully-automatic, zero-input farm - kept modest so it isn't a money printer.
+    SUGAR_CANE: 0.5
+    # Auto pumpkin farms are common; 1.0 keeps them worthwhile without printing.
+    PUMPKIN: 1.0
     MELON_SLICE: 0.5
     NETHER_WART: 2.0
-    # Mob drops
-    ROTTEN_FLESH: 0.5
+    # Mob drops (AFK farm outputs are priced conservatively)
+    ROTTEN_FLESH: 0.25    # zombie farms are high-throughput and fully AFK
     BONE: 1.0
     STRING: 1.0
-    GUNPOWDER: 3.0
+    GUNPOWDER: 2.0        # creeper/witch farms are very AFK
     SPIDER_EYE: 1.5
-    ENDER_PEARL: 12.0
-    BLAZE_ROD: 10.0
+    ENDER_PEARL: 5.0      # enderman farms are the biggest AFK printer - kept low
+    BLAZE_ROD: 6.0        # blaze farms are fully AFK
     GHAST_TEAR: 25.0
     SLIME_BALL: 3.0
     # Wood
@@ -91,11 +129,41 @@ auction-house:
   # Listings are unlimited - there is no per-player cap.
   # How long (in hours) a listing stays up before expiring and being returned.
   listing-duration-hours: 48
-  # Percentage fee charged to the SELLER when they list an item (of the sale price).
-  listing-tax-percent: 3.0
-  # Minimum / maximum price a listing may be set to.
-  min-price: 1.0
-  max-price: 100000000.0
+  # Listing is free - no fee is charged to the seller.
+  # Price range a listing may be set to.
+  min-listing-price: 1.0
+  max-listing-price: 1000000000000.0
+
+# ---- Auction house activity ("filler" listings) ----
+# Seeds a handful of listings from believable player names so the auction house
+# never looks empty on a quiet server. They behave exactly like real listings:
+#   - Priced ABOVE the item's sell value, so nobody can buy-and-flip for profit.
+#   - Buying one just gives the item and takes the money (a money sink).
+#   - Never saved to disk; they age out over a day or two and are replaced, so the
+#     board visibly changes over time. Set enabled: false to turn the feature off.
+# Admins can force a refresh with /apollo fakeah refresh (or clear them entirely).
+fake-auctions:
+  enabled: true
+  count: 10               # how many seeded listings to keep up
+  refresh-minutes: 4      # how often to age out / top up the pool
+  churn-percent: 25       # chance each refresh to retire one listing early
+  markup-min: 1.3         # price = sell value x (this .. markup-max)
+  markup-max: 1.9
+  # The "sellers" shown internally. Edit to taste (names aren't displayed in the
+  # menu, but they keep each listing distinct).
+  seller-names:
+    - "Zephyr_Craft"
+    - "mango_miner"
+    - "PixelNomad"
+    - "AshfallV"
+    - "QuartzFox"
+    - "BrickByBrick"
+    - "lunar_dgot"
+    - "EmberWisp"
+    - "kelp_king"
+    - "VelvetPine"
+    - "NovaDrift"
+    - "SilentBrook"
 
 orders:
   # Max active buy-orders a single player may have at once.
@@ -109,6 +177,8 @@ homes:
   # Home limits per permission rank. The plugin grants the HIGHEST matching value.
   # Give a rank permission like apollo.homes.5 to allow 5 homes.
   default-limit: 3
+  # Everyone gets at least this many, whatever default-limit says.
+  minimum-limit: 3
   limits:
     "apollo.homes.5": 5
     "apollo.homes.10": 10
@@ -160,7 +230,7 @@ scoreboard:
   #   %balance% %balance_raw% %player% %online% %world% %homes% %listings% %x% %y% %z%
   #   %skycoins% %businesses% %ip%
   #   %town% (your town)  %town_rank% (your role)  %town_bank%
-  #   %town_here% (the land you're standing on)
+  #   %town_here% (the land you're standing on)  %playtime%
   lines:
     - "<dark_gray>▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪</dark_gray>"
     - "<gray>Player:</gray> <white>%player%</white>"
@@ -173,47 +243,120 @@ scoreboard:
     - " <gray>Role:</gray> <#5ad1e8>%town_rank%</#5ad1e8>"
     - " <gray>Bank:</gray> <#f9d423>%town_bank%</#f9d423>"
     - " <gray>Standing in:</gray> <white>%town_here%</white>"
-    - ""
-    - " <gray>Homes:</gray> <white>%homes%</white>  <gray>AH:</gray> <white>%listings%</white>"
+    - " <gray>Playtime:</gray> <white>%playtime%</white>"
     - "<dark_gray>▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪</dark_gray>"
     - "<#ff4e50>%ip%</#ff4e50>"
+    - "<gray>/menu <dark_gray>for everything</dark_gray>"
+
+# ---- Purchasable ranks ----
+# Apollo+ is the $4.99/month donor rank. Grant it after a purchase with:
+#     /rank set <player> apollo+
+# and remove it with /rank set <player> none. Perks:
+#   - 10 homes (up from the default 3)
+#   - A gold [Apollo+] tag in chat
+#   - A sell bonus on everything they sell (sell-bonus-percent below)
+#   - No /rtp cooldown
+# The home cap comes from homes.limits ("apollo.homes.10") below - keep them in step.
+ranks:
+  apollo-plus:
+    # Extra % added to every sale an Apollo+ member makes. 10 = +10%.
+    sell-bonus-percent: 10.0
 
 # Data auto-saves on a timer as a safety net (minutes). Changes also save immediately.
 autosave-minutes: 5
 
 # ---- Voting rewards ----
-# Players earn Sky Coins (a second currency) for voting. Replace the links below
-# with your real vote-site URLs. Doing all 5 in one day pays the all-voted bonus.
+# Players earn a reward for each confirmed vote. Replace/extend the links below
+# with your real vote-site URLs (up to 4 are shown in /vote). Entries with a
+# blank link are skipped, so there are no "not set" gaps in the menu.
 voting:
-  # Voting is informational only right now - no coins, keys or rewards.
-  # Players get a reminder in chat and can grab the links from /vote.
+  # Paid out when a vote site confirms a vote through Votifier/NuVotifier.
+  reward: 500.0
+  announce: true          # tell the server when someone votes
   reminder-enabled: true
-  reminder-minutes: 60
-  # Up to 4 sites are shown in /vote. Leave the blank ones as they are
-  # until you have the real links, and they'll show as "not set".
+  reminder-minutes: 50
+  # Two working sites. (TopG was removed - its callback wasn't confirming votes.)
+  # The /vote menu and reminders count these automatically, so messaging stays
+  # correct if you add or remove a site here.
   services:
-    - name: "TopG"
-      link: "https://topg.org/minecraft-servers/server-684435"
-    - name: "Site 2"
-      link: ""
-    - name: "Site 3"
-      link: ""
-    - name: "Site 4"
-      link: ""
+    - name: "PlanetMinecraft"
+      link: "https://www.planetminecraft.com/server/apollo-smp-apollo-noob-club/vote/"
+    - name: "Minecraft-MP"
+      link: "https://minecraft-mp.com/server/361247/vote/"
 
-<<<<<<< Updated upstream
-# ---- Menu compass ----
-# A compass that opens /menu, handed out on join so new players
-# always have an obvious way into every feature.
-menu-compass:
+# ---- Staff mode ----
+# /staff swaps between playing and moderating. Survival gear is stored on
+# disk while you're in staff mode, so a restart can't lose it.
+staff-mode:
+  vanish: true   # hide from non-staff players while in staff mode
+
+# ---- Storage vaults ----
+# /pv gives staff persistent storage. Contents save on close.
+vaults:
+  count: 3   # how many vaults each player gets (1-9)
+  rows: 6    # rows per vault (1-6)
+
+# ---- Special business auction ----
+# One mystery business goes under the hammer each cycle, ending at the
+# configured hour. Bids are held in escrow and refunded when outbid.
+special-auction:
   enabled: true
-  slot: 8      # hotbar slot 0-8
+  opening-bid: 20000.0
+  min-increment: 2500.0
+  duration-hours: 24
+  end-hour: 12                     # 24-hour clock
+  timezone: "America/Los_Angeles"  # noon PST/PDT
 
-=======
->>>>>>> Stashed changes
+# ---- Travelling merchant ----
+# Three rare goods, rerolled every day at midnight. Prices are deliberately
+# brutal - these are meant to be a long-term money sink.
+merchant:
+  price-multiplier: 1.0   # scale every price at once
+  tool-hours: 48          # how long the drill and feller last
+  seed: 7                 # change this to reroll the whole schedule
+
+# ---- Floating labels ----
+# Every label is a display entity, so these are the dials to turn if the
+# server feels heavy. Set enabled to false to remove them all at once.
+holograms:
+  enabled: true
+  view-distance: 16   # labels only exist this close to a player
+
+# ---- Logistics ----
+# Distribution blocks gather from nearby businesses; wholesale blocks sell it.
+logistics:
+  distribution-price: 25000.0
+  wholesale-price: 60000.0
+  business-radius: 8          # how far a distribution block reaches for businesses
+  # Distribution blocks must physically touch the wholesale block, or touch
+  # another distribution block that chains back to one.
+  sell-interval-minutes: 5
+  storage-cap: 4096           # how much a wholesale block holds before it stops pulling
+  fee-percent: 8.0            # cut taken off each automated sale
+
+# ---- Businesses ----
+invest:
+  # Floating text above business blocks showing income and the next payout.
+  holograms: true
+  # Size of that floating text. 1.0 is vanilla size, lower is smaller.
+  hologram-scale: 0.6
+
 # ---- Spawners ----
 spawners:
-  silk-touch-pickup: true   # mine spawners with Silk Touch and keep the mob type
+  # Natural spawners still need Silk Touch. Player-placed ones always drop.
+  silk-touch-pickup: true
+  holograms: true    # floating label showing the mob and stack size
+  # How close a player must be for a spawner to run. Vanilla is 16.
+  activation-range: 64
+  max-stack: 64      # how many spawners can sit on one block
+
+# ---- Mob stacking ----
+# Spawner mobs merge together so spawner rooms stay cheap to run.
+# Killing a stacked mob removes one from the stack.
+mob-stacking:
+  enabled: true
+  max-stack: 50
+  merge-radius: 6.0
 
 # ---- Discord ----
 # A reminder is posted halfway between each vote reminder.
@@ -239,20 +382,32 @@ towns:
   # Master switch for /town tp. Each town can also block visitors itself
   # from the town menu, so leave this on unless you want to disable it server-wide.
   public-spawn-teleport: true
-<<<<<<< Updated upstream
-  name-tag: true           # show [Town] above heads and in the tab list
-  border-flash-on-enter: true  # briefly outline the claim when you walk into a town
-=======
   move-cost: 0.0           # price for a mayor to relocate the whole town
+  rent-period-hours: 24    # how often plot rent is charged
   upgrade-cost-multiplier: 1.0  # scale every town upgrade price at once
+  # Players can't fight each other inside town land unless the towns are at war.
+  pvp-protection: true
+  shop:
+    stall-price: 500.0      # cost of a market stall
+    ally-discount: 10.0     # percent off for allied towns
+  diplomacy:
+    max-allies: 3        # how many towns one town can be allied with
+    offer-minutes: 10    # how long an alliance offer waits for an answer
+  war:
+    enabled: true
+    offer-minutes: 5          # how long a declaration waits for an answer
+    raid-share: 0.5           # share of a business's stock a raider takes
+    raid-cooldown-minutes: 5  # before the same business can be raided again
   name-tag: true           # show [Town] above heads and in the tab list
   border-flash-on-enter: true  # briefly outline the claim when you walk into a town
   # Border look. spacing and radius are the performance dials - lower spacing
   # and higher radius mean a lot more particles.
   border:
+    default-on: true    # new players see claim borders until they turn them off
     spacing: 1.0        # blocks between particles along an edge (lower = denser)
     height: 2.0         # how tall the wall is, in blocks
     corner-height: 6.0  # taller pillars at chunk corners
+    plot-height: 1.0    # owned plots get a low box instead of a full wall
+    plot-spacing: 2.0   # and fewer particles along it
     size: 2.0           # particle size (1.0 = vanilla redstone dust)
     radius: 2           # how many chunks around you get drawn (1-6)
->>>>>>> Stashed changes

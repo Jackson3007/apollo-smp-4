@@ -23,12 +23,12 @@ public class PlayerListener implements Listener {
         plugin.economy().ensureAccount(player.getUniqueId(), player.getName());
         plugin.board().create(player);
         plugin.nameTags().invalidate();
-<<<<<<< Updated upstream
-        plugin.menuItem().give(player);
-=======
->>>>>>> Stashed changes
+        plugin.ranks().applyPermissions(player);
+        plugin.staffMode().applyVanishTo(player);
+        plugin.staffMode().restoreOnJoin(player);
         sendWelcome(player);
         plugin.auctions().flushNotifications(player);
+        plugin.voting().deliverPending(player);
 
         boolean wildEveryJoin = plugin.getConfig().getBoolean("rtp.wild-on-join", false);
         boolean wildFirstJoin = firstJoin
@@ -56,31 +56,29 @@ public class PlayerListener implements Listener {
 
     private void sendWelcome(Player player) {
         var msg = plugin.msg();
-        msg.send(player, "<#f9d423>\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501</#f9d423>");
-        msg.send(player, "<gradient:#f9d423:#ff4e50><bold>  Welcome to Apollo SMP!</bold></gradient>");
-        msg.send(player, "<gray>  Server IP: <#5ad1e8>" + plugin.serverIp() + "</#5ad1e8>");
-        msg.send(player, "");
-        msg.send(player, "<#f9d423>Handy commands:</#f9d423>");
-        msg.send(player, "  <white>/menu</white> <dark_gray>-</dark_gray> <gray>the main hub</gray>");
-        msg.send(player, "  <white>/sell</white> <dark_gray>-</dark_gray> <gray>sell items for money</gray>");
-        msg.send(player, "  <white>/ah</white> <dark_gray>-</dark_gray> <gray>browse the auction house</gray>");
-        msg.send(player, "  <white>/invest</white> <dark_gray>-</dark_gray> <gray>buy & manage businesses</gray>");
-        msg.send(player, "  <white>/town</white> <dark_gray>-</dark_gray> <gray>create & manage a town</gray>");
-        msg.send(player, "  <white>/vote</white> <dark_gray>-</dark_gray> <gray>support the server</gray>");
-        msg.send(player, "  <white>/discord</white> <dark_gray>-</dark_gray> <gray>join the community</gray>");
-        msg.send(player, "  <white>/sethome</white> <dark_gray>&</dark_gray> <white>/home</white> <dark_gray>-</dark_gray> <gray>set & travel home</gray>");
-        msg.send(player, "  <white>/rtp</white> <dark_gray>-</dark_gray> <gray>teleport into the wild</gray>");
-        msg.send(player, "  <white>/tpa</white> <dark_gray>-</dark_gray> <gray>teleport to a friend</gray>");
-<<<<<<< Updated upstream
-        msg.send(player, "");
-        msg.send(player, "<gray>Tip: right-click the <#f9d423>Apollo Menu</#f9d423> compass any time.");
-=======
->>>>>>> Stashed changes
-        msg.send(player, "<#f9d423>\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501</#f9d423>");
+        // Only the first line carries the Apollo prefix; the rest are raw.
+        msg.send(player, "<gradient:#f9d423:#ff4e50><bold>Welcome to Apollo SMP!</bold></gradient>");
+        msg.sendRaw(player, "<#f9d423>\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501</#f9d423>");
+        msg.sendRaw(player, "<gray>  Server IP: <#5ad1e8>" + plugin.serverIp() + "</#5ad1e8>");
+        msg.sendRaw(player, "");
+        msg.sendRaw(player, "<#f9d423>Handy commands:</#f9d423>");
+        msg.sendRaw(player, "  <white>/menu</white> <dark_gray>-</dark_gray> <gray>the main hub</gray>");
+        msg.sendRaw(player, "  <white>/sell</white> <dark_gray>-</dark_gray> <gray>sell items for money</gray>");
+        msg.sendRaw(player, "  <white>/ah</white> <dark_gray>-</dark_gray> <gray>browse the auction house</gray>");
+        msg.sendRaw(player, "  <white>/invest</white> <dark_gray>-</dark_gray> <gray>buy & manage businesses</gray>");
+        msg.sendRaw(player, "  <white>/town</white> <dark_gray>-</dark_gray> <gray>create & manage a town</gray>");
+        msg.sendRaw(player, "  <white>/sethome</white> <dark_gray>&</dark_gray> <white>/home</white> <dark_gray>-</dark_gray> <gray>set & travel home</gray>");
+        msg.sendRaw(player, "  <white>/rtp</white> <dark_gray>-</dark_gray> <gray>teleport into the wild</gray>");
+        msg.sendRaw(player, "  <white>/vote</white> <dark_gray>-</dark_gray> <gray>earn <#f9d423>"
+                + plugin.msg().money(plugin.voting().reward()) + "</#f9d423> <gray>per site</gray>");
+        msg.sendRaw(player, "  <white>/discord</white> <dark_gray>-</dark_gray> <gray>join the community</gray>");
+        msg.sendRaw(player, "<#f9d423>\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501</#f9d423>");
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
+        plugin.ranks().clearAttachment(event.getPlayer());
+        plugin.snapshots().capture(event.getPlayer());
         plugin.board().remove(event.getPlayer());
         plugin.nameTags().remove(event.getPlayer());
     }

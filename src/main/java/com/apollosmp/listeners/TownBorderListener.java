@@ -78,6 +78,13 @@ public class TownBorderListener implements Listener {
         if (town == null) return;
         String key = com.apollosmp.town.TownManager.chunkKey(to);
         java.util.UUID owner = town.plotOwner(key);
+
+        // An unclaimed plot that's on the market gets a proper announcement.
+        if (owner == null && town.isListed(key)) {
+            announceListing(player, town, key);
+            return;
+        }
+
         if (owner == null) {
             player.sendActionBar(Msg.mm("<gray>" + town.name() + " <dark_gray>|</dark_gray> town land"));
             return;
@@ -90,6 +97,47 @@ public class TownBorderListener implements Listener {
         } else {
             player.sendActionBar(Msg.mm("<gray>" + town.name()
                     + " <dark_gray>|</dark_gray> <#e94fd0>" + name + "'s plot</#e94fd0>"));
+        }
+    }
+
+    /** Big on-screen prompt for a plot that's for sale or rent. */
+    private void announceListing(Player player, Town town, String key) {
+        Double sale = town.plotPrice(key);
+        Double rent = town.rentPrice(key);
+        boolean member = town.isMember(player.getUniqueId());
+
+        String heading;
+        String priceText;
+        String command;
+        if (sale != null) {
+            heading = "<green><bold>Plot For Sale</bold></green>";
+            priceText = "<#f9d423>" + plugin.msg().money(sale) + "</#f9d423>";
+            command = "/town buyplot";
+        } else if (rent != null) {
+            heading = "<#5ad1e8><bold>Plot For Rent</bold></#5ad1e8>";
+            priceText = "<#f9d423>" + plugin.msg().money(rent) + "</#f9d423> <gray>per "
+                    + plugin.towns().rentPeriodLabel() + "</gray>";
+            command = "/town rentplot";
+        } else {
+            return;
+        }
+
+        String subtitle = member
+                ? priceText + " <dark_gray>|</dark_gray> <white>" + command + "</white>"
+                : priceText + " <dark_gray>|</dark_gray> <gray>residents only</gray>";
+
+        player.showTitle(Title.title(Msg.mm(heading), Msg.mm(subtitle), TIMES));
+
+        plugin.msg().send(player, "<gray>This plot in <white>" + town.name() + "</white> is "
+                + (sale != null ? "for sale at " : "for rent at ") + priceText + ".");
+        if (member) {
+            plugin.msg().send(player, "<click:run_command:'" + command
+                    + "'><hover:show_text:'Click to run " + command + "'>"
+                    + "<green><u>Click here to " + (sale != null ? "buy" : "rent")
+                    + " it</u></green></hover></click> <dark_gray>or type " + command + "</dark_gray>");
+        } else {
+            plugin.msg().send(player, "<gray>You'd need to be a resident of <white>"
+                    + town.name() + "</white> to take it.");
         }
     }
 

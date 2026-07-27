@@ -26,7 +26,8 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         if (args.length == 0) {
             plugin.msg().sendRaw(sender, "<gradient:#f9d423:#ff4e50><bold>Apollo SMP</bold></gradient> "
                     + "<gray>v" + plugin.getPluginMeta().getVersion() + "</gray>");
-            plugin.msg().send(sender, "<gray>Use <white>/apollo reload</white> or <white>/apollo version</white>.");
+            plugin.msg().send(sender, "<gray>Use <white>/apollo reload</white>, <white>/apollo version</white> "
+                    + "<gray>or <white>/apollo fakeah <refresh|clear></white>.");
             return true;
         }
         switch (args[0].toLowerCase()) {
@@ -37,7 +38,18 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             case "version" -> plugin.msg().sendRaw(sender,
                     "<gradient:#f9d423:#ff4e50><bold>Apollo SMP</bold></gradient> <gray>v"
                             + plugin.getPluginMeta().getVersion() + "</gray>");
-            default -> plugin.msg().send(sender, "<red>Usage: /apollo <reload|version>");
+            case "fakeah" -> {
+                String sub = args.length > 1 ? args[1].toLowerCase() : "refresh";
+                if (sub.equals("clear")) {
+                    plugin.auctions().clearFakes();
+                    plugin.msg().send(sender, "<yellow>Cleared all seeded auction listings.");
+                } else {
+                    plugin.fakeAuctions().seed();
+                    plugin.msg().send(sender, "<green>Refreshed seeded auction listings "
+                            + "<gray>(now <#f9d423>" + plugin.auctions().fakeCount() + "</#f9d423> <gray>up).");
+                }
+            }
+            default -> plugin.msg().send(sender, "<red>Usage: /apollo <reload|version|fakeah>");
         }
         return true;
     }
@@ -46,8 +58,12 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
         List<String> out = new ArrayList<>();
         if (args.length == 1) {
-            for (String s : List.of("reload", "version")) {
+            for (String s : List.of("reload", "version", "fakeah")) {
                 if (s.startsWith(args[0].toLowerCase())) out.add(s);
+            }
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("fakeah")) {
+            for (String s : List.of("refresh", "clear")) {
+                if (s.startsWith(args[1].toLowerCase())) out.add(s);
             }
         }
         return out;

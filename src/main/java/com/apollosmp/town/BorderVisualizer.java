@@ -7,8 +7,6 @@ import org.bukkit.Particle;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
-<<<<<<< Updated upstream
-=======
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -16,7 +14,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
->>>>>>> Stashed changes
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -47,15 +44,11 @@ public class BorderVisualizer {
     private static final Color PLOT = Color.fromRGB(233, 79, 208);     // Apollo purple
 
     private final ApolloSMP plugin;
-    /** Players who toggled the outline on permanently. */
-    private final Set<UUID> always = ConcurrentHashMap.newKeySet();
+    /** Players who have explicitly chosen. Anyone absent uses the server default. */
+    private final Map<UUID, Boolean> choices = new ConcurrentHashMap<>();
     /** Players getting a temporary flash, mapped to when it expires. */
     private final Map<UUID, Long> flashUntil = new ConcurrentHashMap<>();
 
-<<<<<<< Updated upstream
-    public BorderVisualizer(ApolloSMP plugin) {
-        this.plugin = plugin;
-=======
     private final File file;
 
     public BorderVisualizer(ApolloSMP plugin) {
@@ -69,7 +62,14 @@ public class BorderVisualizer {
         FileConfiguration cfg = YamlConfiguration.loadConfiguration(file);
         for (String raw : cfg.getStringList("showing")) {
             try {
-                always.add(UUID.fromString(raw));
+                choices.put(UUID.fromString(raw), true);
+            } catch (IllegalArgumentException ignored) {
+                // skip bad entries
+            }
+        }
+        for (String raw : cfg.getStringList("hidden")) {
+            try {
+                choices.put(UUID.fromString(raw), false);
             } catch (IllegalArgumentException ignored) {
                 // skip bad entries
             }
@@ -78,60 +78,53 @@ public class BorderVisualizer {
 
     public void save() {
         FileConfiguration cfg = new YamlConfiguration();
-        List<String> ids = new ArrayList<>();
-        for (UUID id : always) ids.add(id.toString());
-        cfg.set("showing", ids);
+        List<String> on = new ArrayList<>();
+        List<String> off = new ArrayList<>();
+        for (Map.Entry<UUID, Boolean> e : choices.entrySet()) {
+            (e.getValue() ? on : off).add(e.getKey().toString());
+        }
+        cfg.set("showing", on);
+        cfg.set("hidden", off);
         try {
             cfg.save(file);
         } catch (IOException ex) {
             plugin.getLogger().warning("Failed to save borders.yml: " + ex.getMessage());
         }
->>>>>>> Stashed changes
+    }
+
+    /** Borders are on unless the player turned them off. */
+    private boolean defaultOn() {
+        return plugin.getConfig().getBoolean("towns.border.default-on", true);
     }
 
     /** Toggle the persistent outline. Returns the new state. */
     public boolean toggle(Player player) {
-<<<<<<< Updated upstream
-        if (always.remove(player.getUniqueId())) return false;
-        always.add(player.getUniqueId());
-        return true;
-=======
-        boolean on;
-        if (always.remove(player.getUniqueId())) on = false;
-        else {
-            always.add(player.getUniqueId());
-            on = true;
-        }
+        boolean on = !isOn(player);
+        choices.put(player.getUniqueId(), on);
         save();
         return on;
->>>>>>> Stashed changes
     }
 
     public boolean isOn(Player player) {
-        return always.contains(player.getUniqueId());
+        return choices.getOrDefault(player.getUniqueId(), defaultOn());
     }
 
-<<<<<<< Updated upstream
-=======
     private double spacing() { return Math.max(0.25, plugin.getConfig().getDouble("towns.border.spacing", 1.0)); }
     private double height() { return Math.max(1.0, plugin.getConfig().getDouble("towns.border.height", 2.0)); }
     private float dotSize() { return (float) Math.max(0.5, plugin.getConfig().getDouble("towns.border.size", 2.0)); }
     private int radius() { return Math.max(1, Math.min(6, plugin.getConfig().getInt("towns.border.radius", 2))); }
     private double cornerHeight() { return Math.max(height(), plugin.getConfig().getDouble("towns.border.corner-height", 6.0)); }
+    /** Plot boxes sit inside town land, so they're kept low and sparse. */
+    private double plotHeight() { return Math.max(0, plugin.getConfig().getDouble("towns.border.plot-height", 1.0)); }
+    private double plotSpacing() { return Math.max(0.25, plugin.getConfig().getDouble("towns.border.plot-spacing", 2.0)); }
 
->>>>>>> Stashed changes
     /** Briefly show the outline, e.g. when walking into a town. */
     public void flash(Player player, long millis) {
         flashUntil.put(player.getUniqueId(), System.currentTimeMillis() + millis);
     }
 
-<<<<<<< Updated upstream
-    public void forget(Player player) {
-        always.remove(player.getUniqueId());
-=======
     /** Clears the temporary flash only - the on/off choice is remembered. */
     public void forget(Player player) {
->>>>>>> Stashed changes
         flashUntil.remove(player.getUniqueId());
     }
 
@@ -144,7 +137,7 @@ public class BorderVisualizer {
             Long until = flashUntil.get(id);
             boolean flashing = until != null && until > now;
             if (until != null && !flashing) flashUntil.remove(id);
-            if (!flashing && !always.contains(id)) continue;
+            if (!flashing && !isOn(player)) continue;
             draw(player);
         }
     }
@@ -152,11 +145,7 @@ public class BorderVisualizer {
     /** Draw the exposed edges of every claim near the player. */
     private void draw(Player player) {
         World world = player.getWorld();
-<<<<<<< Updated upstream
-        int radius = 3; // chunks
-=======
         int radius = radius();
->>>>>>> Stashed changes
         int pcx = player.getLocation().getBlockX() >> 4;
         int pcz = player.getLocation().getBlockZ() >> 4;
         double baseY = player.getLocation().getY();
@@ -175,32 +164,47 @@ public class BorderVisualizer {
                 else if (town.isMember(player.getUniqueId())) color = OWN;
                 else color = OTHER;
 
-                boolean north = !sameTown(world, cx, cz - 1, town);
-                boolean south = !sameTown(world, cx, cz + 1, town);
-                boolean west = !sameTown(world, cx - 1, cz, town);
-                boolean east = !sameTown(world, cx + 1, cz, town);
+                boolean north;
+                boolean south;
+                boolean west;
+                boolean east;
+                if (plotOwner != null) {
+                    // Owned plots get boxed in completely, so each one reads as
+                    // its own square even in the middle of a town.
+                    north = !samePlot(world, town, cx, cz - 1, plotOwner);
+                    south = !samePlot(world, town, cx, cz + 1, plotOwner);
+                    west = !samePlot(world, town, cx - 1, cz, plotOwner);
+                    east = !samePlot(world, town, cx + 1, cz, plotOwner);
+                } else {
+                    north = !sameTown(world, cx, cz - 1, town);
+                    south = !sameTown(world, cx, cz + 1, town);
+                    west = !sameTown(world, cx - 1, cz, town);
+                    east = !sameTown(world, cx + 1, cz, town);
+                }
 
+                boolean isPlot = plotOwner != null;
                 double minX = cx * 16.0;
                 double minZ = cz * 16.0;
-<<<<<<< Updated upstream
-                for (double step = 0; step <= 16; step += 2) {
-                    if (north) column(player, minX + step, baseY, minZ, color);
-                    if (south) column(player, minX + step, baseY, minZ + 16, color);
-                    if (west) column(player, minX, baseY, minZ + step, color);
-                    if (east) column(player, minX + 16, baseY, minZ + step, color);
-=======
-                double gap = spacing();
+                double gap = isPlot ? plotSpacing() : spacing();
                 for (double step = 0; step <= 16; step += gap) {
-                    // Chunk corners get a tall pillar so the outline reads from a distance.
-                    boolean corner = step < 0.01 || step > 15.99;
-                    if (north) column(player, minX + step, baseY, minZ, color, corner);
-                    if (south) column(player, minX + step, baseY, minZ + 16, color, corner);
-                    if (west) column(player, minX, baseY, minZ + step, color, corner);
-                    if (east) column(player, minX + 16, baseY, minZ + step, color, corner);
->>>>>>> Stashed changes
+                    // Town corners get a tall pillar; plot boxes stay low and even.
+                    boolean corner = !isPlot && (step < 0.01 || step > 15.99);
+                    double top = isPlot ? plotHeight() : (corner ? cornerHeight() : height());
+                    if (north) column(player, minX + step, baseY, minZ, color, top);
+                    if (south) column(player, minX + step, baseY, minZ + 16, color, top);
+                    if (west) column(player, minX, baseY, minZ + step, color, top);
+                    if (east) column(player, minX + 16, baseY, minZ + step, color, top);
                 }
             }
         }
+    }
+
+    /** True when the neighbouring chunk is part of the same person's plot. */
+    private boolean samePlot(World world, Town town, int cx, int cz, UUID owner) {
+        String key = TownManager.chunkKey(world, cx, cz);
+        Town other = plugin.towns().getTownAt(key);
+        if (other == null || !other.name().equalsIgnoreCase(town.name())) return false;
+        return owner.equals(other.plotOwner(key));
     }
 
     private boolean sameTown(World world, int cx, int cz, Town town) {
@@ -208,20 +212,11 @@ public class BorderVisualizer {
         return other != null && other.name().equalsIgnoreCase(town.name());
     }
 
-<<<<<<< Updated upstream
-    /** A short vertical stack of particles so the edge reads as a wall. */
-    private void column(Player player, double x, double baseY, double z, Color color) {
-        Particle.DustOptions options = new Particle.DustOptions(color, 1.2f);
-        for (double dy = 0; dy <= 2.5; dy += 1.25) {
-            player.spawnParticle(DUST, new Location(player.getWorld(), x, baseY + dy, z),
-=======
-    /** A vertical stack of particles so the edge reads as a solid wall. */
-    private void column(Player player, double x, double baseY, double z, Color color, boolean corner) {
+    /** A vertical stack of particles so the edge reads as a wall. */
+    private void column(Player player, double x, double baseY, double z, Color color, double top) {
         Particle.DustOptions options = new Particle.DustOptions(color, dotSize());
-        double top = corner ? cornerHeight() : height();
         for (double dy = 0; dy <= top; dy += 1.0) {
             player.spawnParticle(DUST, new Location(player.getWorld(), x, baseY + dy + 0.2, z),
->>>>>>> Stashed changes
                     1, 0, 0, 0, 0, options);
         }
     }

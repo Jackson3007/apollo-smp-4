@@ -36,6 +36,7 @@ public class BusinessManager {
     private final File file;
     private final NamespacedKey idKey;
     private final NamespacedKey levelKey;
+    private final NamespacedKey producedKey;
     private final Map<String, BusinessBlock> blocks = new ConcurrentHashMap<>();
     private volatile boolean dirty = false;
 
@@ -44,6 +45,7 @@ public class BusinessManager {
         this.file = new File(plugin.getDataFolder(), "businesses.yml");
         this.idKey = new NamespacedKey(plugin, "business_id");
         this.levelKey = new NamespacedKey(plugin, "business_level");
+        this.producedKey = new NamespacedKey(plugin, "apollo_business_produced");
         load();
     }
 
@@ -51,6 +53,31 @@ public class BusinessManager {
 
     public ItemStack createItem(Business business) {
         return createItem(business, 1);
+    }
+
+    public ItemStack createItem(Business business, int level, long produced) {
+        ItemStack item = createItem(business, level);
+        if (produced <= 0) return item;
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.getPersistentDataContainer().set(producedKey, PersistentDataType.LONG, produced);
+            List<Component> lore = meta.lore();
+            if (lore == null) lore = new ArrayList<>();
+            long needed = business.unitsToUpgrade(level);
+            lore.add(Msg.lore("<gray>Upgrade progress kept: <#f9d423>" + produced
+                    + (needed > 0 ? "/" + needed : "") + "</#f9d423>"));
+            meta.lore(lore);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    /** Upgrade progress stored on a picked-up business item. */
+    public long readProduced(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) return 0L;
+        Long value = item.getItemMeta().getPersistentDataContainer()
+                .get(producedKey, PersistentDataType.LONG);
+        return value == null ? 0L : Math.max(0L, value);
     }
 
     /** Build the placeable item for a business at a given level (level travels with it). */
@@ -116,6 +143,7 @@ public class BusinessManager {
     }
 
     public void remove(BusinessBlock block) {
+        if (plugin.holograms() != null) plugin.holograms().forget(block.key());
         blocks.remove(block.key());
         dirty = true;
         save();
@@ -147,6 +175,26 @@ public class BusinessManager {
         block.addProduced(producedThisRun);
         block.setLastGen(block.lastGen() + intervals * interval);
         dirty = true;
+    }
+
+    /**
+     * Pay out a business's earnings - to its town if it's been assigned to one,
+     * otherwise to the owner. Returns the name of whoever got paid.
+     */
+    public String payOut(BusinessBlock block, double amount) {
+        if (amount <= 0) return null;
+        if (block.town() != null) {
+            com.apollosmp.town.Town town = plugin.towns().townByName(block.town());
+            if (town != null) {
+                town.depositBank(amount);
+                plugin.towns().markDirty();
+                return town.name();
+            }
+            // Town is gone - fall back to the owner rather than losing the money.
+            block.setTown(null);
+        }
+        plugin.economy().deposit(block.owner(), amount);
+        return null;
     }
 
     /** Industry upgrade bonus for a business standing on town land. */
@@ -206,20 +254,76 @@ public class BusinessManager {
             if (def == null) continue;
             Particle particle = resolveParticle(def.particleName());
             if (particle == null) continue;
+
+            int level = Math.max(1, b.level());
             Location loc = new Location(world, b.x() + 0.5, b.y() + 1.15, b.z() + 0.5);
-            world.spawnParticle(particle, loc, 6, 0.25, 0.2, 0.25, 0.01);
+
+            // The base puff grows with level.
+            int count = 3 + level;
+            double spread = 0.22 + level * 0.02;
+            world.spawnParticle(particle, loc, count, spread, 0.2, spread, 0.01);
+
+            // Mid levels earn a slowly turning ring.
+            if (level >= 3) {
+                Particle ring = resolveParticle("ENCHANT");
+                if (ring != null) {
+                    int points = 4 + level;
+                    double radius = 0.55 + level * 0.03;
+                    double turn = (System.currentTimeMillis() % 6000L) / 6000.0 * Math.PI * 2;
+                    for (int i = 0; i < points; i++) {
+                        double angle = turn + (Math.PI * 2 * i / points);
+                        world.spawnParticle(ring,
+                                loc.clone().add(Math.cos(angle) * radius, -0.35, Math.sin(angle) * radius),
+                                1, 0, 0, 0, 0);
+                    }
+                }
+            }
+
+            // High levels get a crown above the block.
+            if (level >= 6) {
+                Particle crown = resolveParticle("END_ROD");
+                if (crown != null) {
+                    world.spawnParticle(crown, loc.clone().add(0, 0.55, 0),
+                            1 + (level - 5) / 2, 0.14, 0.05, 0.14, 0.004);
+                }
+            }
+
+            // Maxed businesses shimmer.
+            if (level >= Business.MAX_LEVEL) {
+                Particle top = resolveParticle("FLAME");
+                if (top != null) {
+                    double turn = (System.currentTimeMillis() % 2400L) / 2400.0 * Math.PI * 2;
+                    for (int i = 0; i < 3; i++) {
+                        double angle = turn + (Math.PI * 2 * i / 3);
+                        world.spawnParticle(top,
+                                loc.clone().add(Math.cos(angle) * 0.75, 0.85, Math.sin(angle) * 0.75),
+                                1, 0, 0, 0, 0);
+                    }
+                }
+            }
         }
     }
 
     private Particle resolveParticle(String name) {
-        try {
-            return Particle.valueOf(name);
-        } catch (IllegalArgumentException | NullPointerException e) {
+        if (name == null) return null;
+        // Some particles were renamed between versions, so try the old name too.
+        String[] candidates = switch (name) {
+            case "ENCHANT" -> new String[]{"ENCHANT", "ENCHANTMENT_TABLE"};
+            case "CRIT" -> new String[]{"CRIT", "CRIT_MAGIC"};
+            case "WAX_ON" -> new String[]{"WAX_ON", "HAPPY_VILLAGER"};
+            default -> new String[]{name};
+        };
+        for (String candidate : candidates) {
             try {
-                return Particle.valueOf("HAPPY_VILLAGER");
-            } catch (Exception ignored) {
-                return null;
+                return Particle.valueOf(candidate);
+            } catch (IllegalArgumentException ignored) {
+                // try the next one
             }
+        }
+        try {
+            return Particle.valueOf("HAPPY_VILLAGER");
+        } catch (Exception ignored) {
+            return null;
         }
     }
 
@@ -240,6 +344,7 @@ public class BusinessManager {
             cfg.set(base + ".lastGen", b.lastGen());
             cfg.set(base + ".level", b.level());
             cfg.set(base + ".produced", b.producedSinceUpgrade());
+            if (b.town() != null) cfg.set(base + ".town", b.town());
             for (Map.Entry<Material, Integer> e : b.storage().entrySet()) {
                 if (e.getValue() > 0) cfg.set(base + ".storage." + e.getKey().name(), e.getValue());
             }
@@ -270,6 +375,7 @@ public class BusinessManager {
                         s.getLong("lastGen"));
                 block.setLevel(s.getInt("level", 1));
                 block.setProducedSinceUpgrade(s.getLong("produced", 0));
+                block.setTown(s.getString("town"));
                 ConfigurationSection store = s.getConfigurationSection("storage");
                 if (store != null) {
                     for (String matName : store.getKeys(false)) {

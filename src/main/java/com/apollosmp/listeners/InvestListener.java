@@ -41,6 +41,12 @@ public class InvestListener implements Listener {
         Player player = event.getPlayer();
         plugin.businesses().register(event.getBlockPlaced().getLocation(), id, level,
                 player.getUniqueId(), player.getName());
+        long carried = plugin.businesses().readProduced(event.getItemInHand());
+        if (carried > 0) {
+            com.apollosmp.invest.BusinessBlock placed =
+                    plugin.businesses().getAt(event.getBlockPlaced().getLocation());
+            if (placed != null) placed.setProducedSinceUpgrade(carried);
+        }
         plugin.msg().send(player, "<green>You set up <reset>" + def.displayName()
                 + " <gray>[L" + level + "]</gray> <green>here! Right-click it to manage.");
     }
@@ -57,7 +63,8 @@ public class InvestListener implements Listener {
         event.setDropItems(false);
 
         if (def != null) {
-            Items.give(player, plugin.businesses().createItem(def, block.level()));
+            Items.give(player, plugin.businesses().createItem(def, block.level(),
+                    block.producedSinceUpgrade()));
         }
         for (Map.Entry<Material, Integer> e : block.storage().entrySet()) {
             int amount = e.getValue();
@@ -96,10 +103,20 @@ public class InvestListener implements Listener {
         ItemStack hand = event.getPlayer().getInventory().getItemInMainHand();
         if ("votekey".equals(plugin.customItems().readId(hand))) return;
 
-        // Anyone can open a business panel (they're not locked to one person).
         event.setCancelled(true);
         Player player = event.getPlayer();
         plugin.businesses().updateProduction(block);
+
+        if (!player.getUniqueId().equals(block.owner())) {
+            // At war you can raid it, but you still can't manage it.
+            if (plugin.warListener().tryRaid(player, block)) return;
+            if (!player.hasPermission("apollo.admin")) {
+                plugin.msg().send(player, "<red>This is <white>"
+                        + (block.ownerName() == null ? "someone else" : block.ownerName())
+                        + "</white>'s business.");
+                return;
+            }
+        }
         new BusinessMenu(plugin, player, block).open();
     }
 
