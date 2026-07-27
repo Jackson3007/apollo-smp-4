@@ -17,7 +17,10 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
+<<<<<<< HEAD
 import org.bukkit.event.player.PlayerItemHeldEvent;
+=======
+>>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
@@ -82,6 +85,7 @@ public class WorthTags implements Listener {
      * ground, pulled from a chest, or already in the bag. Two stacks of the
      * same thing therefore always carry the same tooltip and merge normally.
      */
+<<<<<<< HEAD
     /**
      * How the sell price is shown to players:
      *   "actionbar" (default) - shown above the hotbar when you hold an item.
@@ -108,6 +112,10 @@ public class WorthTags implements Listener {
     /** Show the value in the action bar (above the hotbar) instead of on the item. */
     private boolean actionBarEnabled() {
         return displayMode().equals("actionbar");
+=======
+    public boolean enabled() {
+        return plugin.getConfig().getBoolean("sell.worth-lore", true);
+>>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
     }
 
     /**
@@ -399,6 +407,7 @@ public class WorthTags implements Listener {
         shownTotal.remove(player.getUniqueId());
     }
 
+<<<<<<< HEAD
     // ------------------------------------------------ action-bar display
     /** Show a held item's sell value in the action bar (never touches the item). */
     public void showActionBar(Player player, ItemStack stack) {
@@ -428,6 +437,8 @@ public class WorthTags implements Listener {
         showActionBar(event.getPlayer(), stack);
     }
 
+=======
+>>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
     // ------------------------------------------------ events
     /** Strip before a pickup so the incoming stack merges, then re-tag. */
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)

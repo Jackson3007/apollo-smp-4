@@ -103,7 +103,11 @@ commands:
   rank:
     description: Give a player a server role
     aliases: [ranks, setrank]
+<<<<<<< HEAD
     usage: /rank set <player> <owner|mod|youtuber|apollo+|none>
+=======
+    usage: /rank set <player> <owner|mod|youtuber|none>
+>>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
     permission: apollo.admin
   staff:
     description: Toggle staff mode

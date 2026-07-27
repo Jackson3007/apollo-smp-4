@@ -16,8 +16,11 @@ public class Listing {
     private String town;
     /** Set when this is a live view of a market stall rather than stored stock. */
     private String stallKey;
+<<<<<<< HEAD
     /** True for a seeded "activity" listing (a simulated player sale). */
     private boolean fake;
+=======
+>>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
 
     public Listing(UUID id, UUID seller, String sellerName, ItemStack item,
                    double price, long createdAt, long expiresAt) {
@@ -37,8 +40,11 @@ public class Listing {
     public void setTown(String town) { this.town = (town == null || town.isBlank()) ? null : town; }
     public String stallKey() { return stallKey; }
     public void setStallKey(String stallKey) { this.stallKey = stallKey; }
+<<<<<<< HEAD
     public boolean fake() { return fake; }
     public void setFake(boolean fake) { this.fake = fake; }
+=======
+>>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
     public ItemStack item() { return item.clone(); }
     public double price() { return price; }
     public long createdAt() { return createdAt; }

@@ -38,6 +38,7 @@ economy:
   pay-tax-percent: 0.0
 
 sell:
+<<<<<<< HEAD
   # How to show an item's sell price to players:
   #   actionbar - shown above the hotbar when you hold/switch to an item.
   #               This NEVER changes the item, so items always stack normally.
@@ -50,6 +51,14 @@ sell:
   # stack's value. Leave OFF - the total changes with stack size, which stops
   # identical items merging.
   worth-lore: true
+=======
+  # Show each item's sell price on its tooltip while it's in your inventory.
+  # The line is removed again as soon as the item leaves.
+  # Shows each item's sell price on its tooltip.
+  worth-lore: true
+  # Also show the whole stack's value. Leave this OFF - the total changes with
+  # stack size, so identical items stop merging together.
+>>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
   worth-lore-total: false
   # Total value in a chest's title bar. Most servers can't retitle real
   # containers, so this is off by default.
@@ -81,16 +90,25 @@ sell:
     REDSTONE: 2.0
     QUARTZ: 2.5
     NETHERITE_SCRAP: 120.0
+<<<<<<< HEAD
     # 4 scrap + 4 gold (528) so the ingot sells at/under its craft cost - no arbitrage.
     NETHERITE_INGOT: 500.0
+=======
+    # 4 scrap + 4 gold, so priced accordingly
+    NETHERITE_INGOT: 530.0
+>>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
     # Common crafting components, so gear prices come out sensibly
     COBBLESTONE: 0.15
     OAK_PLANKS: 0.4
     STICK: 0.2
     LEATHER: 3.0
     FLINT: 1.0
+<<<<<<< HEAD
     # Aligned with the armadillo scute; turtle scutes are semi-AFK to farm.
     TURTLE_SCUTE: 10.0
+=======
+    TURTLE_SCUTE: 20.0
+>>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
     TRIPWIRE_HOOK: 5.0
     ANCIENT_DEBRIS: 150.0
     # Farming
@@ -133,6 +151,7 @@ auction-house:
   # Price range a listing may be set to.
   min-listing-price: 1.0
   max-listing-price: 1000000000000.0
+<<<<<<< HEAD
 
 # ---- Auction house activity ("filler" listings) ----
 # Seeds a handful of listings from believable player names so the auction house
@@ -164,6 +183,8 @@ fake-auctions:
     - "VelvetPine"
     - "NovaDrift"
     - "SilentBrook"
+=======
+>>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
 
 orders:
   # Max active buy-orders a single player may have at once.
@@ -247,6 +268,7 @@ scoreboard:
     - "<dark_gray>▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪</dark_gray>"
     - "<#ff4e50>%ip%</#ff4e50>"
     - "<gray>/menu <dark_gray>for everything</dark_gray>"
+<<<<<<< HEAD
 
 # ---- Purchasable ranks ----
 # Apollo+ is the $4.99/month donor rank. Grant it after a purchase with:
@@ -261,6 +283,8 @@ ranks:
   apollo-plus:
     # Extra % added to every sale an Apollo+ member makes. 10 = +10%.
     sell-bonus-percent: 10.0
+=======
+>>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
 
 # Data auto-saves on a timer as a safety net (minutes). Changes also save immediately.
 autosave-minutes: 5
@@ -275,14 +299,27 @@ voting:
   announce: true          # tell the server when someone votes
   reminder-enabled: true
   reminder-minutes: 50
+<<<<<<< HEAD
   # Two working sites. (TopG was removed - its callback wasn't confirming votes.)
   # The /vote menu and reminders count these automatically, so messaging stays
   # correct if you add or remove a site here.
   services:
+=======
+  # Up to 4 sites are shown in /vote. Leave the blank ones as they are
+  # until you have the real links, and they'll show as "not set".
+  services:
+    - name: "TopG"
+      link: "http://topg.org/minecraft-servers/server-684435#vote"
+>>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
     - name: "PlanetMinecraft"
       link: "https://www.planetminecraft.com/server/apollo-smp-apollo-noob-club/vote/"
     - name: "Minecraft-MP"
       link: "https://minecraft-mp.com/server/361247/vote/"
+<<<<<<< HEAD
+=======
+    - name: "Site 4"
+      link: ""
+>>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
 
 # ---- Staff mode ----
 # /staff swaps between playing and moderating. Survival gear is stored on

@@ -149,18 +149,25 @@ public class AuctionManager {
         Listing listing = listings.get(listingId);
         if (listing == null) return BuyResult.NOT_FOUND;
         // Buying your town's listing is fine - the money goes to the town bank.
+<<<<<<< HEAD
         if (listing.town() == null && !listing.fake() && listing.seller().equals(buyer.getUniqueId())) {
+=======
+        if (listing.town() == null && listing.seller().equals(buyer.getUniqueId())) {
+>>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
             return BuyResult.OWN_LISTING;
         }
         if (!plugin.economy().has(buyer.getUniqueId(), listing.price())) return BuyResult.NO_FUNDS;
 
         plugin.economy().withdraw(buyer.getUniqueId(), listing.price());
+<<<<<<< HEAD
         // A seeded listing has no real seller, so the payment is simply a money sink.
         if (listing.fake()) {
             listings.remove(listingId);
             Items.give(buyer, listing.item());
             return BuyResult.SUCCESS;
         }
+=======
+>>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
         if (listing.town() != null) {
             com.apollosmp.town.Town town = plugin.towns().townByName(listing.town());
             if (town != null) {
@@ -227,7 +234,10 @@ public class AuctionManager {
         boolean changed = false;
         for (Listing listing : new ArrayList<>(listings.values())) {
             if (listing.town() != null) continue; // town stock waits for a buyer
+<<<<<<< HEAD
             if (listing.fake()) continue;          // seeded listings are managed separately
+=======
+>>>>>>> 64517bb122938652b58cfadb8fb8f18f7b09402b
             if (listing.isExpired()) {
                 listings.remove(listing.id());
                 plugin.mailbox().add(listing.seller(), listing.item());
