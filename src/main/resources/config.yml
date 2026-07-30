@@ -136,6 +136,15 @@ auction-house:
   min-listing-price: 1.0
   max-listing-price: 1000000000000.0
 
+# ---- Fake player count ----
+# Adds a few "players" to the count shown in the multiplayer server list so the
+# server never looks empty to people browsing. This affects the server-list count
+# only - it does not add players to the in-game tab list.
+fake-players:
+  enabled: true
+  min: 2
+  max: 3
+
 # ---- Auction house activity ("filler" listings) ----
 # Seeds a large, varied pool of listings from believable player names so the
 # auction house always looks busy. They behave exactly like real listings:
@@ -339,12 +348,16 @@ staff-mode:
   # and hide the real leave/join messages so it looks like a genuine disconnect.
   fake-messages: true
 
-# ---- Incognito (admin spy mode) ----
-# /adminmode drops an admin in as a random-named player with a fresh survival
-# start and an auto /rtp, with only /adminmode available until they return.
+# ---- Characters / disguise (admin) ----
+# /adminmode (or the admin panel) lets an admin play as one of these characters,
+# each with its own saved inventory and progress. Names are the Minecraft accounts
+# whose skin + floating name are used - this needs the free LibsDisguises plugin
+# for the skin/nameplate; without it, only the chat/tab name changes.
 incognito:
-  # Fake a join/leave message under the random name so it looks like a real player.
-  fake-messages: true
+  personas:
+    - "Milo_Craft"
+    - "PixelWren"
+    - "AshFox"
 
 # ---- Storage vaults ----
 # /pv gives staff persistent storage. Contents save on close.

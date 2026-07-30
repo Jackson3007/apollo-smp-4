@@ -29,10 +29,10 @@ public class AdminModeCommand implements CommandExecutor {
             return true;
         }
 
-        if (plugin.incognito().isIncognito(player.getUniqueId())) {
-            plugin.incognito().exit(player);
+        if (plugin.incognito().isDisguised(player.getUniqueId())) {
+            plugin.incognito().returnToSelf(player);
         } else {
-            plugin.incognito().enter(player);
+            new com.apollosmp.gui.menus.PersonaMenu(plugin, player).open();
         }
         return true;
     }

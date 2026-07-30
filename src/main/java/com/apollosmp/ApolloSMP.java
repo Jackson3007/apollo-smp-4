@@ -267,6 +267,7 @@ public class ApolloSMP extends JavaPlugin {
                 new com.apollosmp.listeners.LogisticsListener(this), this);
         getServer().getPluginManager().registerEvents(worthTags, this);
         getServer().getPluginManager().registerEvents(new com.apollosmp.listeners.IncognitoListener(this), this);
+        getServer().getPluginManager().registerEvents(new com.apollosmp.listeners.FakePlayerPing(this), this);
 
         long taxTicks = Math.max(1L, getConfig().getLong("towns.tax-interval-hours", 24)) * 3600L * 20L;
         getServer().getScheduler().runTaskTimer(this, () -> towns.collectTaxes(), taxTicks, taxTicks);

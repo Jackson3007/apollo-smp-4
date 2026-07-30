@@ -106,11 +106,11 @@ public class AdminPlayersMenu extends Gui {
 
         inventory.setItem(50, Items.of(Material.BARRIER).name("<red>Close").build());
         inventory.setItem(51, Items.of(Material.PLAYER_HEAD)
-                .name("<#5ad1e8><bold>Go Incognito</bold>")
-                .lore("<gray>Join as a random new player with a",
-                        "<gray>fresh start to spy on the server.",
-                        "<dark_gray>Only /adminmode works until you return.",
-                        "", "<yellow>Click to disguise").build());
+                .name("<#5ad1e8><bold>Play a Character</bold>")
+                .lore("<gray>Become one of your alt-characters to",
+                        "<gray>experience the server as a player.",
+                        "<dark_gray>Each keeps its own inventory & progress.",
+                        "", "<yellow>Click to choose").build());
         boolean observing = plugin.staffMode().isObserver(viewer.getUniqueId());
         inventory.setItem(52, Items.of(observing ? Material.LIME_DYE : Material.ENDER_EYE)
                 .name(observing ? "<green><bold>Return to Server</bold>" : "<#f9d423><bold>Leave (Stay Hidden)</bold>")
@@ -144,7 +144,7 @@ public class AdminPlayersMenu extends Gui {
             case 50 -> player.closeInventory();
             case 51 -> {
                 player.closeInventory();
-                plugin.incognito().enter(player);
+                new PersonaMenu(plugin, player).open();
             }
             case 52 -> {
                 player.closeInventory();
