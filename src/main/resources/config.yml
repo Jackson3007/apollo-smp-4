@@ -218,11 +218,12 @@ rtp:
 
 world-border:
   enabled: true
-  # World -> border diameter in blocks (centered on 0,0). 20000 = 20k x 20k.
+  # World -> border diameter in blocks (centered on 0,0). 10000 = 10k x 10k
+  # (so 5,000 blocks from spawn in each direction).
   worlds:
-    world: 20000
-    world_nether: 2500
-    world_the_end: 20000
+    world: 10000
+    world_nether: 1250
+    world_the_end: 10000
   # Warning distance (blocks) for the red border effect.
   warning-distance: 32
 
@@ -334,6 +335,16 @@ voting:
 # disk while you're in staff mode, so a restart can't lose it.
 staff-mode:
   vanish: true   # hide from non-staff players while in staff mode
+  # When you /vanish, fake a "left the game" message (and "joined" when you return),
+  # and hide the real leave/join messages so it looks like a genuine disconnect.
+  fake-messages: true
+
+# ---- Incognito (admin spy mode) ----
+# /adminmode drops an admin in as a random-named player with a fresh survival
+# start and an auto /rtp, with only /adminmode available until they return.
+incognito:
+  # Fake a join/leave message under the random name so it looks like a real player.
+  fake-messages: true
 
 # ---- Storage vaults ----
 # /pv gives staff persistent storage. Contents save on close.

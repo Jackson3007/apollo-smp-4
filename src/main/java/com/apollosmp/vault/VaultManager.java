@@ -46,19 +46,32 @@ public class VaultManager {
     }
 
     public void open(Player player, int index) {
+        openFor(player, player.getUniqueId(), index);
+    }
+
+    /** Open {@code owner}'s vault for {@code viewer} (used by admins). Edits save to the owner. */
+    public void openFor(Player viewer, UUID owner, int index) {
         int size = rows() * 9;
-        VaultHolder holder = new VaultHolder(player.getUniqueId(), index);
-        Inventory inv = Bukkit.createInventory(holder, size,
-                Msg.mm("<gradient:#f9d423:#ff4e50><bold>Vault " + index + "</bold></gradient>"));
+        VaultHolder holder = new VaultHolder(owner, index);
+        boolean self = owner.equals(viewer.getUniqueId());
+        String title = self
+                ? "<gradient:#f9d423:#ff4e50><bold>Vault " + index + "</bold></gradient>"
+                : "<#ff4e50><bold>" + safeName(owner) + "'s Vault " + index + "</bold>";
+        Inventory inv = Bukkit.createInventory(holder, size, Msg.mm(title));
         holder.setInventory(inv);
 
-        ItemStack[] saved = vaults.get(key(player.getUniqueId(), index));
+        ItemStack[] saved = vaults.get(key(owner, index));
         if (saved != null) {
             for (int i = 0; i < Math.min(saved.length, size); i++) {
                 inv.setItem(i, saved[i]);
             }
         }
-        player.openInventory(inv);
+        viewer.openInventory(inv);
+    }
+
+    private String safeName(UUID owner) {
+        String name = plugin.economy().nameOf(owner);
+        return name == null ? "Player" : name;
     }
 
     /** Called when a vault inventory closes. */

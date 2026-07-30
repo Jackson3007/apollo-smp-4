@@ -8,6 +8,15 @@ website: https://apollosmp.example
 softdepend: [Votifier, NuVotifier, ProtocolLib]
 
 commands:
+  adminmode:
+    description: Toggle incognito spy mode
+    aliases: [incognito, disguise]
+    usage: /adminmode
+  vanish:
+    description: Disappear as if you logged off (admin)
+    aliases: [v, ghost]
+    usage: /vanish
+    permission: apollo.admin
   guide:
     description: New here? Open the getting-started guide
     aliases: [start, tasks, quests, tutorial, gettingstarted]

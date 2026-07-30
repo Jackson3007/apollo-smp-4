@@ -29,11 +29,7 @@ public class StaffCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length > 0 && args[0].equalsIgnoreCase("vanish")) {
-            boolean hidden = !plugin.staffMode().isVanished(player.getUniqueId());
-            plugin.staffMode().setVanished(player, hidden);
-            plugin.msg().send(player, hidden
-                    ? "<gray>You're now hidden from other players."
-                    : "<gray>You're visible again.");
+            plugin.staffMode().toggleVanish(player);
             return true;
         }
 

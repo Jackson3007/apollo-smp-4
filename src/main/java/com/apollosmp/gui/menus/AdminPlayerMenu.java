@@ -55,6 +55,18 @@ public class AdminPlayerMenu extends Gui {
                     .lore(info.toArray(new String[0])).build();
         inventory.setItem(4, head);
 
+        inventory.setItem(3, Items.of(Material.ENDER_CHEST)
+                .name("<#5ad1e8><bold>View Ender Chest</bold>")
+                .lore(online != null
+                                ? "<gray>Opens their live ender chest."
+                                : "<dark_gray>Only works while they're online.",
+                        "", "<yellow>Click to view").hideAttributes().build());
+
+        inventory.setItem(5, Items.of(Material.CHEST_MINECART)
+                .name("<#f9d423><bold>View Vaults</bold>")
+                .lore("<gray>Browse their personal vaults.",
+                        "", "<yellow>Click to view").hideAttributes().build());
+
         if (online != null) {
             inventory.setItem(10, Items.of(Material.ENDER_PEARL)
                     .name("<green><bold>Teleport to Player</bold>")
@@ -213,6 +225,18 @@ public class AdminPlayerMenu extends Gui {
         }
 
         switch (slot) {
+            case 3 -> {
+                Player online = plugin.getServer().getPlayer(target);
+                if (online == null) {
+                    plugin.msg().send(player, "<red>They must be online to view their ender chest.");
+                    return;
+                }
+                player.closeInventory();
+                player.openInventory(online.getEnderChest());
+                plugin.msg().send(player, "<gray>Viewing <white>" + online.getName()
+                        + "</white>'s ender chest - edits apply immediately.");
+            }
+            case 5 -> new AdminVaultsMenu(plugin, player, target).open();
             case 10 -> {
                 Player online = plugin.getServer().getPlayer(target);
                 if (online == null) { plugin.msg().send(player, "<red>They're offline."); return; }

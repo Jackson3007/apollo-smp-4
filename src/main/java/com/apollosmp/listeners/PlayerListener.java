@@ -25,6 +25,11 @@ public class PlayerListener implements Listener {
         Player player = event.getPlayer();
         boolean firstJoin = !player.hasPlayedBefore();
 
+        // Staff who were vanished across a restart come back silently.
+        if (plugin.staffMode().isStaff(player)) {
+            event.joinMessage(null);
+        }
+
         plugin.economy().ensureAccount(player.getUniqueId(), player.getName());
         plugin.board().create(player);
         plugin.nameTags().invalidate();
@@ -37,6 +42,7 @@ public class PlayerListener implements Listener {
         plugin.auctions().flushNotifications(player);
         plugin.voting().deliverPending(player);
         plugin.specialAuction().flushWins(player);
+        plugin.incognito().restoreOnJoin(player);
 
         boolean wildEveryJoin = plugin.getConfig().getBoolean("rtp.wild-on-join", false);
         boolean wildFirstJoin = firstJoin
@@ -146,6 +152,10 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
+        // A vanished admin already "left" - don't announce a second time.
+        if (plugin.staffMode().isVanished(event.getPlayer().getUniqueId())) {
+            event.quitMessage(null);
+        }
         plugin.ranks().clearAttachment(event.getPlayer());
         plugin.snapshots().capture(event.getPlayer());
         plugin.board().remove(event.getPlayer());

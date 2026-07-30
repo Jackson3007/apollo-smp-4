@@ -73,6 +73,7 @@ public class ApolloSMP extends JavaPlugin {
     private com.apollosmp.vault.VaultManager vaults;
     private com.apollosmp.admin.InventorySnapshots snapshots;
     private com.apollosmp.admin.StaffMode staffMode;
+    private com.apollosmp.admin.IncognitoManager incognito;
     private com.apollosmp.staff.StaffRanks ranks;
     private com.apollosmp.sell.WorthTags worthTags;
     private com.apollosmp.sell.WorthPackets worthPackets;
@@ -116,6 +117,7 @@ public class ApolloSMP extends JavaPlugin {
         this.vaults = new com.apollosmp.vault.VaultManager(this);
         this.snapshots = new com.apollosmp.admin.InventorySnapshots(this);
         this.staffMode = new com.apollosmp.admin.StaffMode(this);
+        this.incognito = new com.apollosmp.admin.IncognitoManager(this);
         this.ranks = new com.apollosmp.staff.StaffRanks(this);
         this.worthTags = new com.apollosmp.sell.WorthTags(this);
         this.nicks = new com.apollosmp.staff.NickManager(this);
@@ -202,6 +204,8 @@ public class ApolloSMP extends JavaPlugin {
         reg("nick", new com.apollosmp.commands.NickCommand(this));
         reg("buy", new com.apollosmp.commands.BuyCommand(this));
         reg("guide", new com.apollosmp.commands.GuideCommand(this));
+        reg("vanish", new com.apollosmp.commands.VanishCommand(this));
+        reg("adminmode", new com.apollosmp.commands.AdminModeCommand(this));
         com.apollosmp.commands.PerkCommands perks = new com.apollosmp.commands.PerkCommands(this);
         reg("craft", perks);
         reg("ec", perks);
@@ -262,6 +266,7 @@ public class ApolloSMP extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new com.apollosmp.listeners.LogisticsListener(this), this);
         getServer().getPluginManager().registerEvents(worthTags, this);
+        getServer().getPluginManager().registerEvents(new com.apollosmp.listeners.IncognitoListener(this), this);
 
         long taxTicks = Math.max(1L, getConfig().getLong("towns.tax-interval-hours", 24)) * 3600L * 20L;
         getServer().getScheduler().runTaskTimer(this, () -> towns.collectTaxes(), taxTicks, taxTicks);
@@ -390,6 +395,7 @@ public class ApolloSMP extends JavaPlugin {
         nicks.save();
         trails.save();
         onboarding.save();
+        incognito.save();
         logistics.save();
     }
 
@@ -442,6 +448,7 @@ public class ApolloSMP extends JavaPlugin {
     public com.apollosmp.vault.VaultManager vaults() { return vaults; }
     public com.apollosmp.admin.InventorySnapshots snapshots() { return snapshots; }
     public com.apollosmp.admin.StaffMode staffMode() { return staffMode; }
+    public com.apollosmp.admin.IncognitoManager incognito() { return incognito; }
     public com.apollosmp.staff.StaffRanks ranks() { return ranks; }
     public com.apollosmp.staff.NickManager nicks() { return nicks; }
     public com.apollosmp.cosmetic.ParticleTrail trails() { return trails; }

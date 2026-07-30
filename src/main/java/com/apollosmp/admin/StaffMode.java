@@ -1,6 +1,8 @@
 package com.apollosmp.admin;
 
 import com.apollosmp.ApolloSMP;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.GameMode;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -130,6 +132,48 @@ public class StaffMode {
     }
 
     // ---- vanish ----
+
+    /**
+     * Toggle "disappear like you logged off." Hides the player from everyone (tab,
+     * locator bar and world), fakes a leave message, and on toggle-off fakes a join.
+     * Returns true if they're now hidden.
+     */
+    public boolean toggleVanish(Player player) {
+        boolean hidden = !isVanished(player.getUniqueId());
+        setVanished(player, hidden);
+        if (hidden) {
+            announceFakeLeave(player);
+            plugin.msg().send(player, "<gray>You vanished - you now appear <white>offline</white> "
+                    + "<gray>(hidden from tab, locator & the world). Run it again to \"rejoin\".");
+        } else {
+            announceFakeJoin(player);
+            plugin.msg().send(player, "<gray>You're back - other players see you as having just joined.");
+        }
+        return hidden;
+    }
+
+    private boolean fakeMessages() {
+        return plugin.getConfig().getBoolean("staff-mode.fake-messages", true);
+    }
+
+    /** Broadcast a vanilla-style "left the game" to everyone but the vanishing player. */
+    public void announceFakeLeave(Player player) {
+        if (!fakeMessages()) return;
+        Component msg = Component.text(player.getName() + " left the game", NamedTextColor.YELLOW);
+        for (Player other : plugin.getServer().getOnlinePlayers()) {
+            if (!other.equals(player)) other.sendMessage(msg);
+        }
+    }
+
+    /** Broadcast a vanilla-style "joined the game" to everyone but the returning player. */
+    public void announceFakeJoin(Player player) {
+        if (!fakeMessages()) return;
+        Component msg = Component.text(player.getName() + " joined the game", NamedTextColor.YELLOW);
+        for (Player other : plugin.getServer().getOnlinePlayers()) {
+            if (!other.equals(player)) other.sendMessage(msg);
+        }
+    }
+
     public void setVanished(Player player, boolean hidden) {
         if (hidden) vanished.add(player.getUniqueId());
         else vanished.remove(player.getUniqueId());

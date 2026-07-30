@@ -105,6 +105,12 @@ public class AdminPlayersMenu extends Gui {
                 .glow(staff).hideAttributes().build());
 
         inventory.setItem(50, Items.of(Material.BARRIER).name("<red>Close").build());
+        inventory.setItem(51, Items.of(Material.PLAYER_HEAD)
+                .name("<#5ad1e8><bold>Go Incognito</bold>")
+                .lore("<gray>Join as a random new player with a",
+                        "<gray>fresh start to spy on the server.",
+                        "<dark_gray>Only /adminmode works until you return.",
+                        "", "<yellow>Click to disguise").build());
         inventory.setItem(53, Items.of(Material.ARROW).name("<gray>Next Page").build());
     }
 
@@ -126,6 +132,10 @@ public class AdminPlayersMenu extends Gui {
             }
             case 48 -> new AdminPlayersMenu(plugin, player, 0, !onlineOnly).open();
             case 50 -> player.closeInventory();
+            case 51 -> {
+                player.closeInventory();
+                plugin.incognito().enter(player);
+            }
             case 53 -> new AdminPlayersMenu(plugin, player, page + 1, onlineOnly).open();
             default -> { /* no-op */ }
         }
