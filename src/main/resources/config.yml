@@ -256,8 +256,6 @@ starter-kit:
 
 scoreboard:
   enabled: true
-  # Show the Top 3 richest players near the bottom of the sidebar.
-  baltop: true
   # Title shown at the top of the sidebar.
   title: "<gradient:#f9d423:#ff4e50><bold>APOLLO SMP</bold></gradient>"
   # Refresh rate in server ticks (20 = 1s).

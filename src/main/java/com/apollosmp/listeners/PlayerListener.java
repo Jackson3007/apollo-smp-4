@@ -36,6 +36,7 @@ public class PlayerListener implements Listener {
         announceApolloPlusJoin(player);
         plugin.auctions().flushNotifications(player);
         plugin.voting().deliverPending(player);
+        plugin.specialAuction().flushWins(player);
 
         boolean wildEveryJoin = plugin.getConfig().getBoolean("rtp.wild-on-join", false);
         boolean wildFirstJoin = firstJoin

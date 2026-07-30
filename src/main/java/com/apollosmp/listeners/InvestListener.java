@@ -10,6 +10,7 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -51,7 +52,10 @@ public class InvestListener implements Listener {
                 + " <gray>[L" + level + "]</gray> <green>here! Right-click it to manage.");
     }
 
-    @EventHandler
+    // Runs after protection listeners; if town protection (or anything else)
+    // cancelled the break, ignoreCancelled skips this so the business can't be
+    // taken off protected town land.
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBreak(BlockBreakEvent event) {
         BusinessBlock block = plugin.businesses().getAt(event.getBlock().getLocation());
         if (block == null) return;

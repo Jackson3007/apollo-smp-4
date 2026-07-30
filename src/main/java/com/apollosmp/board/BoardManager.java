@@ -122,22 +122,6 @@ public class BoardManager {
             lines.add(at, " <gray>Town:</gray> <white>%town%</white> <gray>(<white>%town_rank%</white>)</gray>");
         }
 
-        // Add a "Top Richest" leaderboard block just above the footer.
-        if (plugin.getConfig().getBoolean("scoreboard.baltop", true)
-                && lines.stream().noneMatch(l -> l.contains("%top1%")
-                        || l.contains("%top2%") || l.contains("%top3%"))) {
-            int at = -1;
-            for (int i = 0; i < lines.size(); i++) {
-                if (lines.get(i).contains("/menu")) { at = i; break; }
-            }
-            if (at < 0) at = Math.max(0, lines.size() - 1);
-            at = Math.min(at, lines.size());
-            lines.add(at, " <#c8843c>3.</#c8843c> %top3%");
-            lines.add(at, " <#dfe4ea>2.</#dfe4ea> %top2%");
-            lines.add(at, " <#ffd54a>1.</#ffd54a> %top1%");
-            lines.add(at, "<#f9d423><bold>Top Richest</bold></#f9d423>");
-        }
-
         // Over the limit? Drop blank spacers first, never the header or footer.
         while (lines.size() > MAX_LINES) {
             int blank = -1;
@@ -211,28 +195,6 @@ public class BoardManager {
         for (Player p : Bukkit.getOnlinePlayers()) update(p);
     }
 
-    // Cache the top-3 lookup briefly so it isn't re-sorted for every sidebar line.
-    private List<Map.Entry<UUID, Double>> cachedTop = new ArrayList<>();
-    private long cachedTopAt = 0L;
-
-    private List<Map.Entry<UUID, Double>> topCached() {
-        long now = System.currentTimeMillis();
-        if (now - cachedTopAt > 5000L) {
-            cachedTop = plugin.economy().top(3);
-            cachedTopAt = now;
-        }
-        return cachedTop;
-    }
-
-    private String topLine(int index) {
-        List<Map.Entry<UUID, Double>> top = topCached();
-        if (index >= top.size()) return "<dark_gray>-</dark_gray>";
-        Map.Entry<UUID, Double> entry = top.get(index);
-        String name = plugin.economy().nameOf(entry.getKey());
-        if (name == null || name.isBlank()) name = "Unknown";
-        return "<white>" + name + "</white> <#f9d423>" + plugin.msg().money(entry.getValue()) + "</#f9d423>";
-    }
-
     private String resolve(Player player, String line) {
         Location loc = player.getLocation();
         UUID id = player.getUniqueId();
@@ -240,7 +202,7 @@ public class BoardManager {
         String ip = plugin.serverIp();
         com.apollosmp.town.Town ownTown = plugin.towns().getTownOf(id);
         com.apollosmp.town.Town hereTown = plugin.towns().getTownAtLoc(loc);
-        String out = line
+        return line
                 // Older configs had the placeholder IP hard-coded into the line.
                 .replace("play.apollosmp.net", ip)
                 .replace("%ip%", ip)
@@ -263,11 +225,5 @@ public class BoardManager {
                 .replace("%x%", String.valueOf(loc.getBlockX()))
                 .replace("%y%", String.valueOf(loc.getBlockY()))
                 .replace("%z%", String.valueOf(loc.getBlockZ()));
-        if (out.contains("%top")) {
-            out = out.replace("%top1%", topLine(0))
-                    .replace("%top2%", topLine(1))
-                    .replace("%top3%", topLine(2));
-        }
-        return out;
     }
 }

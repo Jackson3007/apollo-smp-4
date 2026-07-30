@@ -44,6 +44,10 @@ public class SpecialAuctionManager {
     /** Businesses won but not yet collected. */
     private final Map<UUID, List<SpecialBusiness>> claims = new LinkedHashMap<>();
 
+    /** Wins that happened while the winner was offline, to greet them on return. */
+    private record Win(String name, double paid) {}
+    private final Map<UUID, List<Win>> pendingWins = new LinkedHashMap<>();
+
     public SpecialAuctionManager(ApolloSMP plugin) {
         this.plugin = plugin;
         this.file = new File(plugin.getDataFolder(), "specialauction.yml");
@@ -283,6 +287,10 @@ public class SpecialAuctionManager {
                 revealTo(online, won);
                 plugin.msg().send(online,
                         "<yellow>Your inventory was full - collect it with <white>/specialauction claim</white>.");
+            } else {
+                // They won while offline - greet them personally on next login.
+                pendingWins.computeIfAbsent(winner, k -> new ArrayList<>())
+                        .add(new Win(won.name(), paid));
             }
         }
         save();
@@ -307,6 +315,19 @@ public class SpecialAuctionManager {
     }
 
     // ---- claims ----
+    /** Deliver any "you won while away" notices, then clear them. Call on join. */
+    public void flushWins(Player player) {
+        List<Win> wins = pendingWins.remove(player.getUniqueId());
+        if (wins == null || wins.isEmpty()) return;
+        for (Win win : wins) {
+            plugin.msg().send(player, "<gradient:#f9d423:#ff4e50><bold>Auction Won!</bold></gradient> "
+                    + "<gray>While you were away you won <white>" + win.name()
+                    + "</white> <gray>for <#f9d423>" + plugin.msg().money(win.paid()) + "</#f9d423><gray>.");
+        }
+        plugin.msg().send(player, "<gray>Collect your winnings with <white>/specialauction claim</white>.");
+        save();
+    }
+
     public List<SpecialBusiness> claimsFor(UUID id) {
         return new ArrayList<>(claims.getOrDefault(id, new ArrayList<>()));
     }
@@ -386,6 +407,15 @@ public class SpecialAuctionManager {
                 i++;
             }
         }
+        int w = 0;
+        for (Map.Entry<UUID, List<Win>> e : pendingWins.entrySet()) {
+            for (Win win : e.getValue()) {
+                cfg.set("pending-wins." + w + ".owner", e.getKey().toString());
+                cfg.set("pending-wins." + w + ".name", win.name());
+                cfg.set("pending-wins." + w + ".paid", win.paid());
+                w++;
+            }
+        }
         try {
             cfg.save(file);
         } catch (IOException ex) {
@@ -416,6 +446,22 @@ public class SpecialAuctionManager {
                     SpecialBusiness b = readBusiness(cfg, "claims." + key + ".business");
                     UUID owner = UUID.fromString(cfg.getString("claims." + key + ".owner"));
                     if (b != null) claims.computeIfAbsent(owner, k -> new ArrayList<>()).add(b);
+                } catch (Exception ignored) {
+                    // skip malformed entries
+                }
+            }
+        }
+
+        ConfigurationSection winSection = cfg.getConfigurationSection("pending-wins");
+        if (winSection != null) {
+            for (String key : winSection.getKeys(false)) {
+                try {
+                    UUID owner = UUID.fromString(cfg.getString("pending-wins." + key + ".owner"));
+                    String name = cfg.getString("pending-wins." + key + ".name");
+                    double paid = cfg.getDouble("pending-wins." + key + ".paid");
+                    if (name != null) {
+                        pendingWins.computeIfAbsent(owner, k -> new ArrayList<>()).add(new Win(name, paid));
+                    }
                 } catch (Exception ignored) {
                     // skip malformed entries
                 }
