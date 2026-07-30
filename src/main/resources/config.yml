@@ -297,6 +297,8 @@ ranks:
   apollo-plus:
     # Extra % added to every sale an Apollo+ member makes. 10 = +10%.
     sell-bonus-percent: 10.0
+    # How many homes Apollo+ members can set.
+    homes: 10
     # Announce to the server when an Apollo+ member logs in.
     join-flair: true
     # Periodically advertise the Apollo+ rank in chat.

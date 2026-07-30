@@ -142,6 +142,11 @@ public class HomesManager {
                 }
             }
         }
+        // Apollo+ always gets its home allowance, even if homes.limits is missing
+        // the apollo.homes.10 entry in an older config file.
+        if (player.hasPermission("apollo.plus")) {
+            limit = Math.max(limit, plugin.getConfig().getInt("ranks.apollo-plus.homes", 10));
+        }
         return limit;
     }
 }
