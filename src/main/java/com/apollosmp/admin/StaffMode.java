@@ -35,6 +35,8 @@ public class StaffMode {
     private final File file;
     private final Map<UUID, Saved> saved = new ConcurrentHashMap<>();
     private final Set<UUID> vanished = ConcurrentHashMap.newKeySet();
+    /** Admins who "left" but are still here, hidden, in adventure mode. Value = saved gamemode. */
+    private final Map<UUID, String> observers = new ConcurrentHashMap<>();
 
     public StaffMode(ApolloSMP plugin) {
         this.plugin = plugin;
@@ -131,6 +133,70 @@ public class StaffMode {
         plugin.getLogger().info("[StaffMode] " + player.getName() + " left staff mode.");
     }
 
+    // ---- hidden observer ("leave but stay") ----
+
+    public boolean isObserver(UUID id) {
+        return observers.containsKey(id);
+    }
+
+    /** Toggle "leave the server but stay, hidden, in adventure mode." */
+    public boolean toggleObserver(Player player) {
+        if (isObserver(player.getUniqueId())) {
+            exitObserver(player);
+            return false;
+        }
+        enterObserver(player);
+        return true;
+    }
+
+    public void enterObserver(Player player) {
+        if (isObserver(player.getUniqueId())) return;
+        observers.put(player.getUniqueId(), player.getGameMode().name());
+        save();
+        setVanished(player, true);
+        announceFakeLeave(player);
+        player.setGameMode(GameMode.ADVENTURE);
+        player.setAllowFlight(true);
+        player.setFlying(true);
+        plugin.msg().send(player, "<green>You've \"left\" - <gray>hidden from tab, locator & the world, "
+                + "in adventure mode. Open <white>/admin</white> and click again to return.");
+    }
+
+    public void exitObserver(Player player) {
+        String gm = observers.remove(player.getUniqueId());
+        save();
+        setVanished(player, false);
+        announceFakeJoin(player);
+        restoreGameMode(player, gm);
+        plugin.msg().send(player, "<yellow>You're back and visible again.");
+    }
+
+    /** On quit, put their real gamemode back so it saves, and clear the flag. */
+    public void handleObserverQuit(Player player) {
+        String gm = observers.remove(player.getUniqueId());
+        if (gm == null) return;
+        restoreGameMode(player, gm);
+        save();
+    }
+
+    /** After a crash, recover an admin left in observer mode. */
+    public void restoreObserverOnJoin(Player player) {
+        String gm = observers.remove(player.getUniqueId());
+        if (gm == null) return;
+        restoreGameMode(player, gm);
+        setVanished(player, false);
+        save();
+    }
+
+    private void restoreGameMode(Player player, String gm) {
+        if (gm == null) return;
+        try {
+            player.setGameMode(GameMode.valueOf(gm));
+        } catch (IllegalArgumentException ignored) {
+            player.setGameMode(GameMode.SURVIVAL);
+        }
+    }
+
     // ---- vanish ----
 
     /**
@@ -221,6 +287,9 @@ public class StaffMode {
             cfg.set(base + ".exp", s.exp());
             cfg.set(base + ".level", s.level());
         }
+        for (Map.Entry<UUID, String> e : observers.entrySet()) {
+            cfg.set("observers." + e.getKey(), e.getValue());
+        }
         try {
             cfg.save(file);
         } catch (IOException ex) {
@@ -232,24 +301,35 @@ public class StaffMode {
         if (!file.exists()) return;
         FileConfiguration cfg = YamlConfiguration.loadConfiguration(file);
         ConfigurationSection root = cfg.getConfigurationSection("staff");
-        if (root == null) return;
+        if (root != null) {
+            for (String key : root.getKeys(false)) {
+                try {
+                    String base = "staff." + key;
+                    saved.put(UUID.fromString(key), new Saved(
+                            readList(cfg, base + ".contents"),
+                            readList(cfg, base + ".armor"),
+                            cfg.getItemStack(base + ".offhand"),
+                            cfg.getString(base + ".gamemode", "SURVIVAL"),
+                            cfg.getBoolean(base + ".allowFlight"),
+                            cfg.getBoolean(base + ".flying"),
+                            cfg.getDouble(base + ".health", 20),
+                            cfg.getInt(base + ".food", 20),
+                            (float) cfg.getDouble(base + ".exp"),
+                            cfg.getInt(base + ".level")));
+                } catch (Exception ignored) {
+                    plugin.getLogger().warning("Skipped a malformed staff-mode entry: " + key);
+                }
+            }
+        }
 
-        for (String key : root.getKeys(false)) {
-            try {
-                String base = "staff." + key;
-                saved.put(UUID.fromString(key), new Saved(
-                        readList(cfg, base + ".contents"),
-                        readList(cfg, base + ".armor"),
-                        cfg.getItemStack(base + ".offhand"),
-                        cfg.getString(base + ".gamemode", "SURVIVAL"),
-                        cfg.getBoolean(base + ".allowFlight"),
-                        cfg.getBoolean(base + ".flying"),
-                        cfg.getDouble(base + ".health", 20),
-                        cfg.getInt(base + ".food", 20),
-                        (float) cfg.getDouble(base + ".exp"),
-                        cfg.getInt(base + ".level")));
-            } catch (Exception ignored) {
-                plugin.getLogger().warning("Skipped a malformed staff-mode entry: " + key);
+        ConfigurationSection obs = cfg.getConfigurationSection("observers");
+        if (obs != null) {
+            for (String key : obs.getKeys(false)) {
+                try {
+                    observers.put(UUID.fromString(key), cfg.getString("observers." + key, "SURVIVAL"));
+                } catch (IllegalArgumentException ignored) {
+                    // skip malformed
+                }
             }
         }
     }

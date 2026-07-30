@@ -111,6 +111,16 @@ public class AdminPlayersMenu extends Gui {
                         "<gray>fresh start to spy on the server.",
                         "<dark_gray>Only /adminmode works until you return.",
                         "", "<yellow>Click to disguise").build());
+        boolean observing = plugin.staffMode().isObserver(viewer.getUniqueId());
+        inventory.setItem(52, Items.of(observing ? Material.LIME_DYE : Material.ENDER_EYE)
+                .name(observing ? "<green><bold>Return to Server</bold>" : "<#f9d423><bold>Leave (Stay Hidden)</bold>")
+                .lore(observing
+                                ? new String[]{"<gray>Come back and be visible again.", "", "<yellow>Click to return"}
+                                : new String[]{"<gray>Look like you left, but stay on -",
+                                        "<gray>hidden from tab, locator & the world,",
+                                        "<gray>in adventure mode to watch quietly.",
+                                        "", "<yellow>Click to leave"})
+                .glow(observing).hideAttributes().build());
         inventory.setItem(53, Items.of(Material.ARROW).name("<gray>Next Page").build());
     }
 
@@ -135,6 +145,10 @@ public class AdminPlayersMenu extends Gui {
             case 51 -> {
                 player.closeInventory();
                 plugin.incognito().enter(player);
+            }
+            case 52 -> {
+                player.closeInventory();
+                plugin.staffMode().toggleObserver(player);
             }
             case 53 -> new AdminPlayersMenu(plugin, player, page + 1, onlineOnly).open();
             default -> { /* no-op */ }

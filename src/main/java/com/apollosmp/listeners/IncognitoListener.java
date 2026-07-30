@@ -29,11 +29,17 @@ public class IncognitoListener implements Listener {
         int colon = root.indexOf(':');
         if (colon >= 0) root = root.substring(colon + 1);
 
-        if (root.equals("adminmode")) return; // the one allowed command
+        // Still allowed while disguised: return to normal, and the admin panel.
+        switch (root) {
+            case "adminmode", "incognito", "disguise", "admin", "apanel", "adminpanel" -> {
+                return;
+            }
+            default -> { /* fall through and block */ }
+        }
 
         event.setCancelled(true);
-        plugin.msg().send(player, "<red>You're incognito - only <white>/adminmode</white> works. "
-                + "Run it to return to normal.");
+        plugin.msg().send(player, "<red>You're incognito - only <white>/adminmode</white> "
+                + "<red>and <white>/admin</white> <red>work. Run <white>/adminmode</white> to return.");
     }
 
     @EventHandler

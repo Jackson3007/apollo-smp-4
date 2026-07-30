@@ -43,6 +43,7 @@ public class PlayerListener implements Listener {
         plugin.voting().deliverPending(player);
         plugin.specialAuction().flushWins(player);
         plugin.incognito().restoreOnJoin(player);
+        plugin.staffMode().restoreObserverOnJoin(player);
 
         boolean wildEveryJoin = plugin.getConfig().getBoolean("rtp.wild-on-join", false);
         boolean wildFirstJoin = firstJoin
@@ -156,6 +157,7 @@ public class PlayerListener implements Listener {
         if (plugin.staffMode().isVanished(event.getPlayer().getUniqueId())) {
             event.quitMessage(null);
         }
+        plugin.staffMode().handleObserverQuit(event.getPlayer());
         plugin.ranks().clearAttachment(event.getPlayer());
         plugin.snapshots().capture(event.getPlayer());
         plugin.board().remove(event.getPlayer());

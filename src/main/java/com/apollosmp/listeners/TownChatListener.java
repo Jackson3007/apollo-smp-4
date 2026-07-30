@@ -22,6 +22,16 @@ public class TownChatListener implements Listener {
 
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     public void onChat(AsyncChatEvent event) {
+        // In incognito/disguise mode: no rank badge, no town tag, no channels -
+        // just the random display name, so nothing gives the admin away.
+        if (plugin.incognito().isIncognito(event.getPlayer().getUniqueId())) {
+            event.renderer((source, sourceName, message, viewer) ->
+                    sourceName.colorIfAbsent(NamedTextColor.WHITE)
+                            .append(Component.text(": ", NamedTextColor.GRAY))
+                            .append(message.colorIfAbsent(NamedTextColor.WHITE)));
+            return;
+        }
+
         Town town = plugin.towns().getTownOf(event.getPlayer().getUniqueId());
 
         // If they're in a town or ally channel, this never reaches public chat.
